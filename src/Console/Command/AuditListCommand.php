@@ -40,7 +40,7 @@ class AuditListCommand extends DrutinyBaseCommand
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $this->getTargetFactory()->create('@none');
+        $this->getTargetFactory()->create('none:none');
 
         $finder = new Finder();
         $finder->directories()
