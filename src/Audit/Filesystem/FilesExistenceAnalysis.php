@@ -15,11 +15,12 @@ class FilesExistenceAnalysis extends AbstractAnalysis {
 
   public function configure() {
     parent::configure();
+    $dir = $this->target instanceof FilesystemInterface ? $this->target->getDirectory() : "";
     $this->addParameter(
       'directories',
       static::PARAMETER_OPTIONAL,
       'List of absolute filepath to directory to scan',
-      [$this->target->getDirectory()]
+      [$dir]
     );
     $this->addParameter(
       'filenames',

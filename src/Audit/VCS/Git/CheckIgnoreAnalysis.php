@@ -6,6 +6,7 @@ use Drutiny\Audit\AbstractAnalysis;
 use Drutiny\Sandbox\Sandbox;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
+use Drutiny\Target\FilesystemInterface;
 
 class CheckIgnoreAnalysis extends AbstractAnalysis {
     /**
@@ -14,6 +15,7 @@ class CheckIgnoreAnalysis extends AbstractAnalysis {
     public function configure()
     {
         parent::configure();
+        $dir = $this->target instanceof FilesystemInterface ? $this->target->getDirectory() : "";
         $this->addParameter(
             'paths',
             static::PARAMETER_REQUIRED,
@@ -23,7 +25,7 @@ class CheckIgnoreAnalysis extends AbstractAnalysis {
           'repository',
           static::PARAMETER_OPTIONAL,
           'Location of the git repository.',
-          $this->target->getDirectory()
+          $dir
         );
     }
 
