@@ -123,7 +123,7 @@ class DrushTarget extends Target implements
      */
     public function getAvailableTargets():array
     {
-      $aliases = $this['service.exec']->get('local')->run('drush site-alias --format=json', function ($output) {
+      $aliases = $this['service.exec']->get('local')->run('drush site:alias --format=json', function ($output) {
         return json_decode($output, true);
       });
       $valid = array_filter(array_keys($aliases), function ($a) {
