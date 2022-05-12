@@ -11,8 +11,12 @@ class RemoteDrushBridge implements EventSubscriberInterface {
   public static function getSubscribedEvents()
   {
     return [
+      // Drush 8 Support.
       'set:drush.remote-user' => 'loadRemoteService',
       'set:drush.remote-host' => 'loadRemoteService',
+      // Drush 10 Support.
+      'set:drush.user' => 'loadRemoteService',
+      'set:drush.host' => 'loadRemoteService',
       'set:drush.ssh-options' => 'parseSshOptions',
     ];
   }
@@ -48,6 +52,14 @@ class RemoteDrushBridge implements EventSubscriberInterface {
       $value = $event->getValue();
       try {
           switch ($event->getPropertyPath()) {
+              case 'host':
+                  $user = $value;
+                  $host = $target['drush.host'];
+                  break;
+              case 'user':
+                  $user = $value;
+                  $host = $target['drush.user'];
+                  break;
               case 'remote-user':
                   $user = $value;
                   $host = $target['drush.remote-host'];
