@@ -5,6 +5,7 @@ namespace Drutiny;
 use Async\ForkManager;
 use Async\ForkInterface;
 use Async\Exception\ChildExceptionDetected;
+use Drutiny\Audit\AuditInterface;
 use Drutiny\AuditResponse\AuditResponse;
 use Drutiny\AuditResponse\NoAuditResponseFoundException;
 use Drutiny\Entity\ExportableInterface;
@@ -26,6 +27,7 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
      * @var string URI
      */
     protected string $uri = '';
+    protected string $type = 'assessment';
     protected array $results = [];
     protected bool $successful = true;
     protected int $severityCode = 1;
@@ -61,10 +63,21 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
       return $this->uuid;
     }
 
-    public function setUri($uri = 'default')
+    public function setUri($uri = 'default'):Assessment
     {
         $this->uri = $uri;
         return $this;
+    }
+
+    public function setType(string $type):Assessment
+    {
+      $this->type = $type;
+      return $this;
+    }
+
+    public function getType():string
+    {
+      return $this->type;
     }
 
     /**
@@ -75,7 +88,7 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
      * @param DateTime $start The start date of the reporting period. Defaults to -1 day.
      * @param DateTime $end The end date of the reporting period. Defaults to now.
      */
-    public function assessTarget(TargetInterface $target, array $policies, \DateTime $start = null, \DateTime $end = null)
+    public function assessTarget(TargetInterface $target, array $policies, \DateTime $start = null, \DateTime $end = null):Assessment
     {
         $this->target = $target;
         $this->uri = $target->getUri();
@@ -109,7 +122,6 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
             if ($target !== $audit->getTarget()) {
               throw new \Exception("Audit target not the same as assessment target.");
             }
-            // $audit->getTarget()->setUri($this->uri);
 
             $this->forkManager->create()
             ->setLabel($policy->name)
@@ -128,13 +140,21 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
               }
               $this->setPolicyResult($response);
             })
-            ->onError(function (ChildExceptionDetected $e, ForkInterface $fork) {
+            ->onError(function (ChildExceptionDetected $e, ForkInterface $fork) use ($policy) {
               $err_msg = $e->getMessage();
               $this->progressBar->advance();
               $this->progressBar->setMessage('Audit response of ' . $fork->getLabel() . ' failed to complete.');
-              $this->logger->error($fork->getLabel().': '.$err_msg);
+              $this->logger->error('Fork error: ' . $fork->getLabel().': '.$err_msg);
               $this->successful = false;
               $this->errorCode = $e->code;
+
+              // Capture the error as a policy error outcome.
+              $response = new AuditResponse($policy);
+              $response->set(AuditInterface::ERROR, [
+                'exception' => $err_msg,
+                'exception_type' => get_class($e),
+              ]);
+              $this->setPolicyResult($response);
             });
         }
 
