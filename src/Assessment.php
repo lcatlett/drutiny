@@ -202,6 +202,11 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
         $this->statsBySeverity[$response->getSeverity()][$response->getType()]++;
     }
 
+    /**
+     *  Get severity code.
+     *
+     * @return int [description]
+     */
     public function getSeverityCode(): int
     {
         return $this->severityCode;
@@ -221,7 +226,7 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
      * @param string $name
      * @return AuditResponse
      */
-    public function getPolicyResult(string $name)
+    public function getPolicyResult(string $name):AuditResponse
     {
         if (!isset($this->results[$name])) {
             throw new NoAuditResponseFoundException($name, "Policy '$name' does not have an AuditResponse. Found " . implode(', ', array_keys($this->results)));
