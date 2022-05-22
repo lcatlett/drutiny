@@ -45,7 +45,7 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
     public function __construct(LoggerInterface $logger, ContainerInterface $container, ProgressBar $progressBar, ForkManager $forkManager)
     {
         if (method_exists($logger, 'withName')) {
-          $logger = $logger->withName('assessment');
+            $logger = $logger->withName('assessment');
         }
         $this->logger = $logger;
         $this->container = $container;
@@ -58,26 +58,26 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
         $this->uuid = vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
     }
 
-    public function getUuid():string
+    public function getUuid(): string
     {
-      return $this->uuid;
+        return $this->uuid;
     }
 
-    public function setUri($uri = 'default'):Assessment
+    public function setUri($uri = 'default'): Assessment
     {
         $this->uri = $uri;
         return $this;
     }
 
-    public function setType(string $type):Assessment
+    public function setType(string $type): Assessment
     {
-      $this->type = $type;
-      return $this;
+        $this->type = $type;
+        return $this;
     }
 
-    public function getType():string
+    public function getType(): string
     {
-      return $this->type;
+        return $this->type;
     }
 
     /**
@@ -88,7 +88,7 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
      * @param DateTime $start The start date of the reporting period. Defaults to -1 day.
      * @param DateTime $end The end date of the reporting period. Defaults to now.
      */
-    public function assessTarget(TargetInterface $target, array $policies, \DateTime $start = null, \DateTime $end = null):Assessment
+    public function assessTarget(TargetInterface $target, array $policies, \DateTime $start = null, \DateTime $end = null): Assessment
     {
         $this->target = $target;
         $this->uri = $target->getUri();
@@ -120,47 +120,47 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
                   ->setParameter('reporting_period_end', $end);
 
             if ($target !== $audit->getTarget()) {
-              throw new \Exception("Audit target not the same as assessment target.");
+                throw new \Exception("Audit target not the same as assessment target.");
             }
 
             $this->forkManager->create()
             ->setLabel($policy->name)
             ->run(function (ForkInterface $fork) use ($audit, $policy) {
-              return $audit->execute($policy);
+                return $audit->execute($policy);
             })
             ->onSuccess(function (AuditResponse $response, ForkInterface $fork) {
-              $this->progressBar->advance();
-              $this->progressBar->setMessage('Audit response of ' . $response->getPolicy()->name . ' recieved.');
-              $this->logger->info(sprintf('Policy "%s" assessment on %s completed: %s.', $response->getPolicy()->title, $this->uri(), $response->getType()));
+                $this->progressBar->advance();
+                $this->progressBar->setMessage('Audit response of ' . $response->getPolicy()->name . ' recieved.');
+                $this->logger->info(sprintf('Policy "%s" assessment on %s completed: %s.', $response->getPolicy()->title, $this->uri(), $response->getType()));
 
-              // Attempt remediation.
-              if ($response->isIrrelevant()) {
-                  $this->logger->info("Omitting policy result from assessment: ".$response->getPolicy()->name);
-                  return;
-              }
-              $this->setPolicyResult($response);
+                // Attempt remediation.
+                if ($response->isIrrelevant()) {
+                    $this->logger->info("Omitting policy result from assessment: ".$response->getPolicy()->name);
+                    return;
+                }
+                $this->setPolicyResult($response);
             })
             ->onError(function (ChildExceptionDetected $e, ForkInterface $fork) use ($policy) {
-              $err_msg = $e->getMessage();
-              $this->progressBar->advance();
-              $this->progressBar->setMessage('Audit response of ' . $fork->getLabel() . ' failed to complete.');
-              $this->logger->error('Fork error: ' . $fork->getLabel().': '.$err_msg);
-              $this->successful = false;
-              $this->errorCode = $e->code;
+                $err_msg = $e->getMessage();
+                $this->progressBar->advance();
+                $this->progressBar->setMessage('Audit response of ' . $fork->getLabel() . ' failed to complete.');
+                $this->logger->error('Fork error: ' . $fork->getLabel().': '.$err_msg);
+                $this->successful = false;
+                $this->errorCode = $e->code;
 
-              // Capture the error as a policy error outcome.
-              $response = new AuditResponse($policy);
-              $response->set(AuditInterface::ERROR, [
+                // Capture the error as a policy error outcome.
+                $response = new AuditResponse($policy);
+                $response->set(AuditInterface::ERROR, [
                 'exception' => $err_msg,
                 'exception_type' => get_class($e),
               ]);
-              $this->setPolicyResult($response);
+                $this->setPolicyResult($response);
             });
         }
 
         foreach ($this->forkManager->waitWithUpdates(400) as $remaining) {
-          $this->progressBar->setMessage(sprintf("%d/%d policy audits remaining for %s.",  count($policies) - $remaining, count($policies), $this->uri));
-          $this->progressBar->display();
+            $this->progressBar->setMessage(sprintf("%d/%d policy audits remaining for %s.", count($policies) - $remaining, count($policies), $this->uri));
+            $this->progressBar->display();
         }
 
         $returned = count($this->forkManager->getForkResults());
@@ -202,7 +202,7 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
         $this->statsBySeverity[$response->getSeverity()][$response->getType()]++;
     }
 
-    public function getSeverityCode():int
+    public function getSeverityCode(): int
     {
         return $this->severityCode;
     }
@@ -243,7 +243,7 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
 
     public function getErrorCode()
     {
-      return $this->errorCode ?? false;
+        return $this->errorCode ?? false;
     }
 
     /**
@@ -258,17 +258,17 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
 
     public function getStatsByResult()
     {
-      return $this->statsByResult;
+        return $this->statsByResult;
     }
 
     public function getStatsBySeverity()
     {
-      return $this->statsBySeverity;
+        return $this->statsBySeverity;
     }
 
-    public function getTarget():TargetInterface
+    public function getTarget(): TargetInterface
     {
-      return $this->target;
+        return $this->target;
     }
 
     /**
@@ -276,7 +276,7 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
      */
     public function export()
     {
-      return [
+        return [
         'uri' => $this->uri,
         'uuid' => $this->uuid,
         'results' => $this->results,
@@ -289,18 +289,18 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
 
     public function import(array $export)
     {
-      foreach ($export['results'] as $result) {
-          $this->setPolicyResult($result);
-      }
-      unset($export['results']);
-      $this->importUnserialized($export);
-      $this->container = drutiny();
-      $this->logger = drutiny()->get('logger');
-      $this->async = drutiny()->get('async');
-      $this->target = drutiny()
+        foreach ($export['results'] as $result) {
+            $this->setPolicyResult($result);
+        }
+        unset($export['results']);
+        $this->importUnserialized($export);
+        $this->container = drutiny();
+        $this->logger = drutiny()->get('logger');
+        $this->async = drutiny()->get('async');
+        $this->target = drutiny()
              ->get('target.factory')
              ->create($export['targetReference'], $export['uri']);
-      $this->errorCode = $export['errorCode'];
-      $this->successful = $export['successful'];
+        $this->errorCode = $export['errorCode'];
+        $this->successful = $export['successful'];
     }
 }
