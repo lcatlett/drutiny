@@ -20,6 +20,7 @@ class Profile extends StrictEntity
     protected Profile $parent;
     protected bool $compiled = false;
     protected array $policyOverrides = [];
+    protected array $dependencies = [];
     protected array $includes = [];
     protected array $bypassPropertyValidationOnSet = ['include', 'policies'];
 
@@ -29,6 +30,10 @@ class Profile extends StrictEntity
     protected function setPropertyData($property, $value)
     {
       switch ($property) {
+        case 'dependencies':
+          $this->setDependencies($value);
+          break;
+
         case 'policies':
           $this->setPolicies($value);
           break;
@@ -55,11 +60,36 @@ class Profile extends StrictEntity
     }
 
     /**
-     * Append policy definitions.
+     * Set profile dependencies.
+     *
+     * These must pass on the target for the profile to be valid for the target.
      */
-    public function addPolicies(array $policy_definitions):Profile
+    public function setDependencies(array $policy_definitions):Profile
     {
-      $new_policies = [];
+      $this->dependencies = $this->buildPolicyDefinitions($policy_definitions);
+      $this->dataBag->set('dependencies', array_map(
+        fn (PolicyOverride $policy) => $policy->export(),
+        $this->dependencies
+      ));
+      return $this;
+    }
+
+    public function getDependencyDefinitions():array
+    {
+      return $this->dependencies;
+    }
+
+    /**
+     * Build an array of policy definitions.
+     *
+     * @param array $policy_definitions
+     *  An array of policy definitions. Can be an indexed array of keys or an
+     *  assoc array of definitions.
+     * @return array of PolicyOverride objects.
+     */
+    protected function buildPolicyDefinitions(array $policy_definitions):array
+    {
+      $policies = [];
       foreach ($policy_definitions as $idx => $definition) {
           $name = is_string($idx) ? $idx : $definition;
           $policy = new PolicyOverride($name);
@@ -69,14 +99,21 @@ class Profile extends StrictEntity
               $policy->{$key} = $value;
             }
             if (!isset($policy->weight)) {
-              $weight = array_search($idx, array_keys($policy_definitions)) + count($this->policies);
+              $weight = count($policies);
               $policy->weight = $weight;
             }
           }
-
-          $new_policies[$name] = $policy;
+          $policies[$name] = $policy;
       }
+      return $policies;
+    }
 
+    /**
+     * Append policy definitions.
+     */
+    public function addPolicies(array $policy_definitions):Profile
+    {
+      $new_policies = $this->buildPolicyDefinitions($policy_definitions);
       $this->policyOverrides = array_merge($this->policyOverrides, $new_policies);
 
       $policies = array_map(function (PolicyOverride $policy) {
