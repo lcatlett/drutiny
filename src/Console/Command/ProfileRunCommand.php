@@ -195,24 +195,55 @@ class ProfileRunCommand extends DrutinyBaseCommand
             ->setLabel(sprintf("Assessment of '%s': %s", $target, $uri))
             ->run(function (ForkInterface $fork) use ($target, $uri, $profile):Assessment
               {
-              $this->getLogger()->notice($fork->getLabel());
-              return $this->getContainer()
-                ->get('assessment')
-                ->setUri($uri ?? '')
-                ->assessTarget(
-                // Instance of TargetInterface.
-                $this->getTargetFactory()->create($target, $uri),
-                // Array of Policy objects.
-                array_map(
-                  fn($p):Policy => $p->getPolicy($this->getPolicyFactory()),
-                  $profile->getAllPolicyDefinitions()
-                ),
-                $profile->getReportingPeriodStart(),
-                $profile->getReportingPeriodEnd()
-              );
+                // Check profile dependencies.
+                $assessment = $this->getContainer()
+                  ->get('assessment')
+                  ->setUri($uri ?? '')
+                  ->setType('dependencies');
+                $assessment->assessTarget(
+                  $this->getTargetFactory()->create($target, $uri),
+                  array_map(
+                    fn($p):Policy => $p->getPolicy($this->getPolicyFactory()),
+                    $profile->getDependencyDefinitions()
+                  ),
+                  $profile->getReportingPeriodStart(),
+                  $profile->getReportingPeriodEnd()
+                );
+
+                // If the dependency policies failed then we should return this
+                // assessment rather than following on with the actual profile
+                // policies.
+                if (!$assessment->isSuccessful()) {
+                  return $assessment;
+                }
+
+                $this->getLogger()->notice($fork->getLabel());
+                return $this->getContainer()
+                  ->get('assessment')
+                  ->setUri($uri ?? '')
+                  ->assessTarget(
+                  // Instance of TargetInterface.
+                  $this->getTargetFactory()->create($target, $uri),
+                  // Array of Policy objects.
+                  array_map(
+                    fn($p):Policy => $p->getPolicy($this->getPolicyFactory()),
+                    $profile->getAllPolicyDefinitions()
+                  ),
+                  $profile->getReportingPeriodStart(),
+                  $profile->getReportingPeriodEnd()
+                );
             })
             // Write the report to the provided formats.
-            ->onSuccess(function (Assessment $a, ForkInterface $f) use ($profile, $input, $console, $target) {
+            ->onSuccess(function (Assessment $a, ForkInterface $f) use ($profile, $input, $console) {
+              // If this wasn't the actual assessment, then it means the target
+              // failed a dependency check.
+              if ($a->getType() != 'assessment') {
+                $console->error($a->uri() . " failed to meet profile dependencies.");
+                $format = $this->getContainer()->get('format.factory')->create('terminal');
+                $format->render($profile, $a);
+                foreach ($format->write() as $location) {}
+                return;
+              }
               foreach ($this->getFormats($input, $profile) as $format) {
                   $format->setNamespace($this->getReportNamespace($input, $a->uri()));
                   $format->render($profile, $a);
