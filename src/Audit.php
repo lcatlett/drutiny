@@ -39,6 +39,7 @@ abstract class Audit implements AuditInterface
     protected Policy $policy;
     protected ProgressBar $progressBar;
     protected bool $deprecated = false;
+    protected string $deprecationMessage = '';
     private CacheInterface $cache;
 
     final public function __construct(
@@ -100,6 +101,12 @@ abstract class Audit implements AuditInterface
     {
         if ($this->deprecated) {
           $this->logger->warning(sprintf("Policy '%s' is using '%s' which is a deprecated class. This may fail in the future.", $policy->name, get_class($this)));
+          if (!empty($this->deprecationMessage)) {
+            $this->logger->warning("Class {class} is deprecated: {msg}", [
+              "class" => get_class($this),
+              "msg" => $this->deprecationMessage,
+            ]);
+          }
         }
         $this->policy = $policy;
         $response = new AuditResponse($policy);
@@ -211,7 +218,6 @@ abstract class Audit implements AuditInterface
             // Log the parameters output.
             $tokens = $this->dataBag->export();
             $this->logger->debug("Tokens:\n".Yaml::dump($tokens, 4, 4, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK));
-            // $this->logger->debug("Parameters:\n" . Yaml::dump($this->dataBag->get('parameters')->all(), 4, 4, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK));
             // Set the response.
             $response->set($outcome ?? AuditInterface::ERROR, $tokens);
         }
@@ -421,9 +427,10 @@ abstract class Audit implements AuditInterface
     /**
      * Set audit class as deprecated and shouldn't be used anymore.
      */
-    protected function setDeprecated(bool $deprecated = true):AuditInterface
+    protected function setDeprecated(string $message = ''):AuditInterface
     {
-      $this->deprecated = $deprecated;
+      $this->deprecated = true;
+      $this->deprecationMessage = $message;
       return $this;
     }
 
