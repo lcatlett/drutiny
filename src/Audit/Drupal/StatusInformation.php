@@ -8,18 +8,20 @@ use Drutiny\Annotation\Token;
 
 /**
  * Drush Status Information
- * @Token(
- *  name = "status",
- *  type = "array",
- *  description = "The status object returned by drush."
- * )
  */
 class StatusInformation extends Audit
 {
+    /**
+     * {@inheritdoc}
+     */
+    public function configure()
+    {
+        $this->setDeprecated("Use AbstractAnalysis and evaluate drush target status information.");
+    }
 
-  /**
-   *
-   */
+    /**
+     * {@inheritdoc}
+     */
     public function audit(Sandbox $sandbox)
     {
         $stat = $sandbox->drush(['format' => 'json'])->status();
