@@ -108,10 +108,15 @@ class SelfUpdateCommand extends DrutinyBaseCommand
 
         $logger->notice("New release downloaded to $tmpfile.");
 
-        if (!rename($tmpfile, $current_script)) {
-            $logger->error("Could not overwrite $current_script with $tmpfile.");
-            return 1;
-        }
+        // Avoid errors shutting down the current process my replacing the phar
+        // file on shutdown.
+        register_shutdown_function(function () use ($tmpfile, $current_script) {
+            if (!rename($tmpfile, $current_script)) {
+                echo "ERROR: Could not overwrite $current_script with $tmpfile.";
+                return 1;
+            }
+        });
+
         $io->newLine();
         $io->success("Updated to $new_version.");
         return 0;
