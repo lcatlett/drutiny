@@ -42,6 +42,12 @@ class AbstractAnalysis extends Audit
         static::PARAMETER_OPTIONAL,
         'The expression language to evaludate if the analysis is not applicable. See https://symfony.com/doc/current/components/expression_language/syntax.html',
         'false'
+      )
+      ->addParameter(
+        'fail_on_error',
+        static::PARAMETER_OPTIONAL,
+        'Set to true if you want an error during data gathering to result in a failure.',
+        false
       );
   }
 
@@ -52,7 +58,19 @@ class AbstractAnalysis extends Audit
 
     final public function audit(Sandbox $sandbox)
     {
-        $this->gather($sandbox);
+        try {
+          $this->gather($sandbox);
+        }
+        catch (\Exception $e) {
+          if ($this->getParameter('fail_on_error')) {
+            $this->set('exception', $e->getMessage());
+            $this->set('exception_type', get_class($e));
+            return self::FAIL;
+          }
+          // Continue the error as normal.
+          throw $e;
+        }
+
         $syntax = $this->getParameter('syntax', 'expression_language');
 
         if ($expression = $this->getParameter('not_applicable', 'false')) {
