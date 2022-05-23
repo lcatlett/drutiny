@@ -1,0 +1,23 @@
+{% block title %}# Unmet profile dependencies for {{ profile.title }}{% endblock %}
+{% block findings %}
+{{ assessment.uri }} has unmet dependencies that enable {{ profile.title }} to be
+successfully run on it. Please review the issue summary and remediate the issues
+before reattempting the assessment.
+
+## Issue Summary
+
+{% include 'report/page/summary_table.md.twig' %}
+{% if assessment.results|filter(r => r.isFailure) is not empty %}
+## Issues
+  {% for response in assessment.results|filter(r => r.isFailure) %}
+    {{ policy_result(response, assessment) }}
+  {% endfor %}
+{% endif %}
+
+{% if assessment.results|filter(r => r.hasWarning) is not empty %}
+## Warnings
+  {% for response in assessment.results|filter(r => r.hasWarning) %}
+    {{ policy_result(response, assessment) }}
+  {% endfor %}
+{% endif %}
+{% endblock %}
