@@ -60,7 +60,7 @@ class LandoTarget extends DrushTarget implements TargetInterface, TargetSourceIn
 
         $urls = array_filter($urls);
         // Provide a default URI if none already provided.
-        $this->setUri(array_shift($urls));
+        $this->setUri(array_pop($urls));
         return $this;
     }
 
@@ -80,13 +80,13 @@ class LandoTarget extends DrushTarget implements TargetInterface, TargetSourceIn
       $targets = [];
       foreach ($apps as $app) {
         $dir = dirname($app['src'][0]);
-        $edge = $this['service.exec']->get('local')->run(sprintf('cd %s && lando info --format=json -s edge', $dir), function ($output) {
-          return json_decode($output, true);
+        $edge = $this['service.exec']->get('local')->run(sprintf('cd %s && lando info --format=json', $dir), function ($output) {
+          return array_filter(json_decode($output, true), fn ($d) => isset($d['urls']));
         });
 
         $targets[] = [
           'id' => $app['app'],
-          'uri' => $edge[0]['urls'][1] ?? $edge[0]['urls'][0],
+          'uri' => end($edge[0]['urls']),
           'name' => $app['app']
         ];
       }
