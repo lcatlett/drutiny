@@ -52,11 +52,12 @@ class LandoTarget extends DrushTarget implements TargetInterface, TargetSourceIn
           return json_decode($output, true);
         });
 
-        $urls = [$uri];
+        $urls = [];
         foreach ($info as $service) {
           $this['lando.'.$service['service']] = $service;
           $urls += $service['urls'] ?? [];
         }
+        $urls[] = $uri;
 
         $urls = array_filter($urls);
         // Provide a default URI if none already provided.
