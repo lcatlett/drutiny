@@ -19,7 +19,7 @@ unless you're planning on building your own auditing tool based on top of Drutin
 You can install Drutiny into your project with [composer](https://getcomposer.org).
 
 ```
-composer require drutiny/drutiny ^3.2.0
+composer require drutiny/drutiny ^3.4.0
 ```
 
 Drutiny has native target support for Git and [Drush](http://docs.drush.org/en/master/).
