@@ -236,11 +236,14 @@ class ProfileRunCommand extends DrutinyBaseCommand
             // Write the report to the provided formats.
             ->onSuccess(function (Assessment $a, ForkInterface $f) use ($profile, $input, $console) {
               // If this wasn't the actual assessment, then it means the target
-              // failed a dependency check.
+              // failed a dependency check. We'll render a dependency failure
+              // report out to the terminal.
               if ($a->getType() != 'assessment') {
-                $console->error($a->uri() . " failed to meet profile dependencies.");
+                $console->error($a->uri() . " failed to meet profile dependencies of {$profile->name}.");
                 $format = $this->getContainer()->get('format.factory')->create('terminal');
+                $format->setDependencyReport();
                 $format->render($profile, $a);
+                // write() must be iterated on to render the report.
                 foreach ($format->write() as $location) {}
                 return;
               }
