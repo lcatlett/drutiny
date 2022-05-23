@@ -7,16 +7,6 @@ use Drutiny\Sandbox\Sandbox;
 
 /**
  * Audit the first row returned from a SQL query.
- * @Token(
- *  name = "result",
- *  description = "The comparison operator to use for the comparison.",
- *  type = "string"
- * )
- * @Token(
- *  name = "results",
- *  description = "The record set.",
- *  type = "string"
- * )
  */
 class SqlResultAudit extends AbstractAnalysis
 {
@@ -41,7 +31,7 @@ class SqlResultAudit extends AbstractAnalysis
     }
 
     /**
-     *
+     * {@inheritdoc}
      */
     public function gather(Sandbox $sandbox)
     {
@@ -94,7 +84,13 @@ class SqlResultAudit extends AbstractAnalysis
         $this->set('first_row', array_shift($result));
     }
 
-    protected function getFieldsFromSql($query):array
+    /**
+     * Parse out fields from the SQL query.
+     * 
+     * @param  string $query SQL query string.
+     * @return array fields parsed from the SQL query.
+     */
+    protected function getFieldsFromSql(string $query):array
     {
       // If we can parse fields out of the SQL query, we can make the result set
       // become and associative array.
