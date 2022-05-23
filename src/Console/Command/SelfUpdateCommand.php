@@ -13,13 +13,12 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  */
 class SelfUpdateCommand extends DrutinyBaseCommand
 {
+    public const GITHUB_API_URL = 'https://api.github.com';
+    public const GITHUB_ACCEPT_VERSION = 'application/vnd.github.v3+json';
 
-    const GITHUB_API_URL = 'https://api.github.com';
-    const GITHUB_ACCEPT_VERSION = 'application/vnd.github.v3+json';
-
-  /**
-   * {@inheritdoc}
-   */
+    /**
+     * {@inheritdoc}
+     */
     protected function configure()
     {
         $this
@@ -27,17 +26,17 @@ class SelfUpdateCommand extends DrutinyBaseCommand
         ->setDescription('Update Drutiny by downloading latest phar release.');
     }
 
-  /**
-   * {@inheritdoc}
-   */
+    /**
+     * {@inheritdoc}
+     */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $io = new SymfonyStyle($input, $output);
         $logger = $this->getContainer()->get('logger');
 
         if (!\Phar::running()) {
-          $io->error("This is not a self-upgradable release. Please use the latest Phar release file.");
-          return 2;
+            $io->error("This is not a self-upgradable release. Please use the latest Phar release file.");
+            return 2;
         }
 
         $current_version = $this->getApplication()->getVersion();
@@ -60,7 +59,7 @@ class SelfUpdateCommand extends DrutinyBaseCommand
             $creds = $this->getContainer()->get('Drutiny\Plugin\GithubPlugin')->load();
             $headers['Authorization'] = 'token ' . $creds['personal_access_token'];
         } catch (\Exception $e) {
-          $io->warning($e->getMessage());
+            $io->warning($e->getMessage());
         }
 
         $client = $this->getContainer()->get('Drutiny\Http\Client')->create([
@@ -81,14 +80,19 @@ class SelfUpdateCommand extends DrutinyBaseCommand
         }
         $logger->notice('New update available: ' . $new_version);
 
-        $io->confirm('Would you like to download and install the newest version ('.$new_version.')?');
+        if (!$io->confirm('Would you like to download and install the newest version ('.$new_version.')?')) {
+            return 0;
+        }
+        $asset = $io->choice('Which version would you like to download?', array_map(fn ($a) => $a['name'], $latest_release['assets']));
 
-        // Download the first asset.
-        $download = reset($latest_release['assets']);
+        $download = array_filter($latest_release['assets'], function ($a) use ($asset) {
+            return $a['name'] == $asset;
+        });
+        $download = reset($download);
 
         $tmpfile = tempnam(sys_get_temp_dir(), $download['name']);
         $resource = fopen($tmpfile, 'w');
-      // $file_path = fopen(realpath($_SERVER['SCRIPT_NAME']),'w');
+        // $file_path = fopen(realpath($_SERVER['SCRIPT_NAME']),'w');
         $logger->notice("Downloading {$download['name']}...");
 
         $response = $client->get('repos/' . $composer_json['name'] . '/releases/assets/' . $download['id'], [
@@ -104,10 +108,11 @@ class SelfUpdateCommand extends DrutinyBaseCommand
 
         $logger->notice("New release downloaded to $tmpfile.");
 
-        // if (!rename($tmpfile, $current_script)) {
-        //     $logger->error("Could not overwrite $current_script with $tmpfile.");
-        //     return 1;
-        // }
+        if (!rename($tmpfile, $current_script)) {
+            $logger->error("Could not overwrite $current_script with $tmpfile.");
+            return 1;
+        }
+        $io->newLine();
         $io->success("Updated to $new_version.");
         return 0;
     }
