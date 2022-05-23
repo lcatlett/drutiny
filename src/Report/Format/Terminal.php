@@ -6,8 +6,6 @@ use Drutiny\Profile;
 use Drutiny\AssessmentInterface;
 use Drutiny\Report\FormatInterface;
 use Fiasco\SymfonyConsoleStyleMarkdown\Renderer;
-use Symfony\Component\Yaml\Yaml;
-use Symfony\Component\Console\Output\ConsoleOutput;
 
 class Terminal extends Markdown
 {
