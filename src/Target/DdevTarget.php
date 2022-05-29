@@ -46,7 +46,7 @@ class DdevTarget extends DrushTarget implements TargetInterface, TargetSourceInt
         $this['service.docker']->setContainer($ddev['services']['web']['full_name']);
         $this['service.exec']->addHandler($this['service.docker'], 'docker');
 
-        $this['drush.root'] = '/var/www/html';
+        $this['drush.root'] = '/var/www/html/'.$ddev['docroot'];
 
         // Provide a default URI if none already provided.
         $this->setUri($uri ?? $ddev['primary_url']);
