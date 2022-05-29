@@ -185,16 +185,16 @@
         },
         {
             "name": "fiasco/async",
-            "version": "3.0",
+            "version": "3.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/fiasco/async.git",
-                "reference": "5dbc45af3ea238172c84e89537f4ea067092a59b"
+                "reference": "ad92c1e49820f3f318d8ba1a9c0d2645e08a8211"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/fiasco/async/zipball/5dbc45af3ea238172c84e89537f4ea067092a59b",
-                "reference": "5dbc45af3ea238172c84e89537f4ea067092a59b",
+                "url": "https://api.github.com/repos/fiasco/async/zipball/ad92c1e49820f3f318d8ba1a9c0d2645e08a8211",
+                "reference": "ad92c1e49820f3f318d8ba1a9c0d2645e08a8211",
                 "shasum": ""
             },
             "require": {
@@ -226,9 +226,9 @@
             "description": "PHP library for running asynchronous runtime php forks using pcntl.",
             "support": {
                 "issues": "https://github.com/fiasco/async/issues",
-                "source": "https://github.com/fiasco/async/tree/3.0"
+                "source": "https://github.com/fiasco/async/tree/3.1"
             },
-            "time": "2022-04-02T20:38:48+00:00"
+            "time": "2022-04-03T09:13:28+00:00"
         },
         {
             "name": "fiasco/symfony-console-style-markdown",
@@ -6302,5 +6302,5 @@
         "php": "^7.4 | ^8"
     },
     "platform-dev": [],
-    "plugin-api-version": "2.0.0"
+    "plugin-api-version": "2.3.0"
 }
