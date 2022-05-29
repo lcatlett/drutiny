@@ -18,7 +18,7 @@
     "require": {
         "composer/semver": "^1.4.2",
         "erusev/parsedown": "^1.6.3",
-        "fiasco/async": "^3.0",
+        "fiasco/async": "^3.1",
         "fiasco/symfony-console-style-markdown": "^1.2",
         "guzzlehttp/guzzle": "~6.0",
         "kevinrob/guzzle-cache-middleware": "^3.2.1",
