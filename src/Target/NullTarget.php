@@ -7,21 +7,21 @@ namespace Drutiny\Target;
  */
 class NullTarget extends Target implements TargetInterface
 {
-  /**
-   * {@inheritdoc}
-   */
-  public function getId():string
-  {
-    return 'null';
-  }
+    /**
+     * {@inheritdoc}
+     */
+    public function getId(): string
+    {
+        return 'null';
+    }
 
-  /**
-   * @inheritdoc
-   * Implements Target::parse().
-   */
-  public function parse(string $data, ?string $uri = NULL):TargetInterface
-  {
-      $this->setUri($uri ?? 'http://example.com');
-      return $this;
-  }
+    /**
+     * @inheritdoc
+     * Implements Target::parse().
+     */
+    public function parse(string $data = '', ?string $uri = null): TargetInterface
+    {
+        $this->setUri($uri ?? 'http://example.com');
+        return $this;
+    }
 }
