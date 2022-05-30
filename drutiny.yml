@@ -13,7 +13,7 @@ parameters:
   config.local: '%drutiny_config_dir%/config.yml'
   config.credentials: '%drutiny_config_dir%/.credentials.yml'
   config.old_path: '%drutiny_config_dir%/.drutiny_creds.yml'
-  log.directory: '%user_home_dir%/.drutiny/logs'
+  log.directory: '%drutiny_config_dir%/logs'
   log.name: drutiny
   log.filepath: '%log.directory%/%log.name%.log'
   log.level: WARNING
