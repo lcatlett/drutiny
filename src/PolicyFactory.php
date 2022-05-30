@@ -15,7 +15,6 @@ use Psr\Log\LoggerInterface;
 
 class PolicyFactory
 {
-
     use ContainerAwareTrait;
 
     protected $languageManager;
@@ -25,18 +24,18 @@ class PolicyFactory
     {
         $this->setContainer($container);
         if (method_exists($logger, 'withName')) {
-          $logger = $logger->withName('policy.factory');
+            $logger = $logger->withName('policy.factory');
         }
         $this->logger = $logger;
         $this->languageManager = $languageManager;
         $this->progress = $progress;
     }
 
-  /**
-   * Load policy by name.
-   *
-   * @param $name string
-   */
+    /**
+     * Load policy by name.
+     *
+     * @param $name string
+     */
     public function loadPolicyByName($name)
     {
         $list = $this->getPolicyList();
@@ -49,6 +48,7 @@ class PolicyFactory
             throw new UnavailablePolicyException("$name requires {$list[$name]['class']} but is not available in this environment.");
         }
         $definition = $list[$name];
+        unset($definition['sources']);
 
         try {
             $policy = $this->getSource($definition['source'])->load($definition);
@@ -60,11 +60,11 @@ class PolicyFactory
         }
     }
 
-  /**
-   * Acquire a list of available policies.
-   *
-   * @return array of policy information arrays.
-   */
+    /**
+     * Acquire a list of available policies.
+     *
+     * @return array of policy information arrays.
+     */
     public function getPolicyList($include_invalid = false)
     {
         static $policy_list, $available_list;
@@ -89,7 +89,7 @@ class PolicyFactory
                     $item['source'] = $source->getName();
 
                     if (isset($policy_list[$name])) {
-                      $item['sources'] = $policy_list[$name]['sources'] ?? [];
+                        $item['sources'] = $policy_list[$name]['sources'] ?? [];
                     }
                     $item['sources'][] = $item['source'];
                     $policy_list[$name] = $item;
@@ -117,39 +117,37 @@ class PolicyFactory
         return $available_list;
     }
 
-  /**
-   * Load the policies from a single source.
-   */
-   public function getSourcePolicyList(string $source):array
-   {
-       return $this->getSource($source)
+    /**
+     * Load the policies from a single source.
+     */
+    public function getSourcePolicyList(string $source): array
+    {
+        return $this->getSource($source)
         ->getList($this->languageManager);
-   }
+    }
 
-  /**
-   * Load the sources that provide policies.
-   *
-   * @return array of PolicySourceInterface objects.
-   */
+    /**
+     * Load the sources that provide policies.
+     *
+     * @return array of PolicySourceInterface objects.
+     */
     public function getSources()
     {
         static $sources;
         if (!empty($sources)) {
-          return $sources;
+            return $sources;
         }
 
         $sources = [];
         foreach ($this->container->findTaggedServiceIds('policy.source') as $id => $info) {
-            if (strpos($id, 'PolicyStorage') !== FALSE) {
-              continue;
+            if (strpos($id, 'PolicyStorage') !== false) {
+                continue;
             }
             try {
-              $sources[] = new PolicyStorage($this->container->get($id), $this->container, $this->container->get('Drutiny\LanguageManager'));
+                $sources[] = new PolicyStorage($this->container->get($id), $this->container, $this->container->get('Drutiny\LanguageManager'));
+            } catch (PluginRequiredException $e) {
+                $this->logger->warning("Cannot load policy source: $id: " . $e->getMessage());
             }
-            catch (PluginRequiredException $e) {
-              $this->logger->warning("Cannot load policy source: $id: " . $e->getMessage());
-            }
-
         }
 
         // If multiple sources provide the same policy by name, then the policy from
@@ -164,10 +162,10 @@ class PolicyFactory
         return $sources;
     }
 
-  /**
-   * Load a single source.
-   */
-    public function getSource($name):PolicySourceInterface
+    /**
+     * Load a single source.
+     */
+    public function getSource($name): PolicySourceInterface
     {
         foreach ($this->getSources() as $source) {
             if ($source->getName() == $name) {
