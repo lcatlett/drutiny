@@ -116,8 +116,8 @@ class Profile extends StrictEntity
 
         $policies = array_map(
             function (PolicyOverride $policy) {
-            return $policy->export();
-        },
+                return $policy->export();
+            },
             $this->policyOverrides
         );
 
@@ -207,7 +207,18 @@ class Profile extends StrictEntity
 
     public function export()
     {
-        return $this->build()->dataBag->export();
+        $profile = $this->build()->dataBag->export();
+        foreach (['dependencies', 'policies'] as $category) {
+            foreach ($profile[$category] as &$policy) {
+                if ($policy['weight'] === 0) {
+                    unset($policy['weight']);
+                }
+                if (empty($policy['parameters'])) {
+                    unset($policy['parameters']);
+                }
+            }
+        }
+        return $profile;
     }
 
     /**
