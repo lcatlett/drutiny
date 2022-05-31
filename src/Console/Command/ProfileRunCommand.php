@@ -18,7 +18,6 @@ use Symfony\Component\Console\Output\StreamOutput;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Console\Helper\ProgressBar;
 
-
 /**
  * Run a profile and generate a report.
  */
@@ -28,11 +27,11 @@ class ProfileRunCommand extends DrutinyBaseCommand
     use DomainSourceCommandTrait;
     use LanguageCommandTrait;
 
-    const EXIT_INVALID_TARGET = 114;
+    public const EXIT_INVALID_TARGET = 114;
 
-  /**
-   * @inheritdoc
-   */
+    /**
+     * @inheritdoc
+     */
     protected function configure()
     {
         parent::configure();
@@ -62,7 +61,7 @@ class ProfileRunCommand extends DrutinyBaseCommand
             'x',
             InputOption::VALUE_OPTIONAL,
             'Send an exit code to the console if a policy of a given severity fails. Defaults to none (exit code 0). (Options: none, low, normal, high, critical)',
-            FALSE
+            false
         )
         ->addOption(
             'exclude-policy',
@@ -100,7 +99,7 @@ class ProfileRunCommand extends DrutinyBaseCommand
     /**
      * Prepare profile from input options.
      */
-    protected function prepareProfile(InputInterface $input, ProgressBar $progress):Profile
+    protected function prepareProfile(InputInterface $input, ProgressBar $progress): Profile
     {
         $profile = $this->getProfileFactory()
           ->loadProfileByName($input->getArgument('profile'))
@@ -136,7 +135,7 @@ class ProfileRunCommand extends DrutinyBaseCommand
     /**
      * Load URIs from input options.
      */
-    protected function loadUris(InputInterface $input):array
+    protected function loadUris(InputInterface $input): array
     {
         // Get the URLs.
         $uris = $input->getOption('uri');
@@ -148,16 +147,16 @@ class ProfileRunCommand extends DrutinyBaseCommand
         }
 
         if (!empty($domains)) {
-          // Merge domains in with the $uris argument.
-          // Omit the "default" key that is present by default.
+            // Merge domains in with the $uris argument.
+            // Omit the "default" key that is present by default.
             $uris = array_merge($domains, ($uris === ['default']) ? [] : $uris);
         }
         return empty($uris) ? [null] : $uris;
     }
 
-  /**
-   * {@inheritdoc}
-   */
+    /**
+     * {@inheritdoc}
+     */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $this->initLanguage($input);
@@ -191,30 +190,30 @@ class ProfileRunCommand extends DrutinyBaseCommand
         $target = $input->getArgument('target');
 
         foreach ($uris as $uri) {
-          $forkManager->create()
+            $forkManager->create()
             ->setLabel(sprintf("Assessment of '%s': %s", $target, $uri))
-            ->run(function (ForkInterface $fork) use ($target, $uri, $profile):Assessment
-              {
+            ->run(function (ForkInterface $fork) use ($target, $uri, $profile): Assessment {
+                $target = $this->getTargetFactory()->create($target, $uri);
                 // Check profile dependencies.
                 $assessment = $this->getContainer()
                   ->get('assessment')
                   ->setUri($uri ?? '')
                   ->setType('dependencies');
                 $assessment->assessTarget(
-                  $this->getTargetFactory()->create($target, $uri),
-                  array_map(
-                    fn($p):Policy => $p->getPolicy($this->getPolicyFactory()),
-                    $profile->getDependencyDefinitions()
-                  ),
-                  $profile->getReportingPeriodStart(),
-                  $profile->getReportingPeriodEnd()
+                    $target,
+                    array_map(
+                        fn ($p): Policy => $p->getPolicy($this->getPolicyFactory()),
+                        $profile->getDependencyDefinitions()
+                    ),
+                    $profile->getReportingPeriodStart(),
+                    $profile->getReportingPeriodEnd()
                 );
 
                 // If the dependency policies failed then we should return this
                 // assessment rather than following on with the actual profile
                 // policies.
                 if (!$assessment->isSuccessful()) {
-                  return $assessment;
+                    return $assessment;
                 }
 
                 $this->getLogger()->notice($fork->getLabel());
@@ -223,48 +222,49 @@ class ProfileRunCommand extends DrutinyBaseCommand
                   ->setUri($uri ?? '')
                   ->assessTarget(
                   // Instance of TargetInterface.
-                  $this->getTargetFactory()->create($target, $uri),
+                  $target,
                   // Array of Policy objects.
                   array_map(
-                    fn($p):Policy => $p->getPolicy($this->getPolicyFactory()),
-                    $profile->getAllPolicyDefinitions()
+                      fn ($p): Policy => $p->getPolicy($this->getPolicyFactory()),
+                      $profile->getAllPolicyDefinitions()
                   ),
-                  $profile->getReportingPeriodStart(),
-                  $profile->getReportingPeriodEnd()
-                );
+                      $profile->getReportingPeriodStart(),
+                      $profile->getReportingPeriodEnd()
+                  );
             })
             // Write the report to the provided formats.
             ->onSuccess(function (Assessment $a, ForkInterface $f) use ($profile, $input, $console) {
-              // If this wasn't the actual assessment, then it means the target
-              // failed a dependency check. We'll render a dependency failure
-              // report out to the terminal.
-              if ($a->getType() != 'assessment') {
-                $console->error($a->uri() . " failed to meet profile dependencies of {$profile->name}.");
-                $format = $this->getContainer()->get('format.factory')->create('terminal');
-                $format->setDependencyReport();
-                $format->render($profile, $a);
-                // write() must be iterated on to render the report.
-                foreach ($format->write() as $location) {}
-                return;
-              }
-              foreach ($this->getFormats($input, $profile) as $format) {
-                  $format->setNamespace($this->getReportNamespace($input, $a->uri()));
-                  $format->render($profile, $a);
-                  foreach ($format->write() as $written_location) {
-                    $console->success("Writen $written_location");
-                  }
-              }
+                // If this wasn't the actual assessment, then it means the target
+                // failed a dependency check. We'll render a dependency failure
+                // report out to the terminal.
+                if ($a->getType() != 'assessment') {
+                    $console->error($a->uri() . " failed to meet profile dependencies of {$profile->name}.");
+                    $format = $this->getContainer()->get('format.factory')->create('terminal');
+                    $format->setDependencyReport();
+                    $format->render($profile, $a);
+                    // write() must be iterated on to render the report.
+                    foreach ($format->write() as $location) {
+                    }
+                    return;
+                }
+                foreach ($this->getFormats($input, $profile) as $format) {
+                    $format->setNamespace($this->getReportNamespace($input, $a->uri()));
+                    $format->render($profile, $a);
+                    foreach ($format->write() as $written_location) {
+                        $console->success("Writen $written_location");
+                    }
+                }
             })
             ->onError(function (ChildExceptionDetected $e, ForkInterface $fork) use ($console) {
-              $this->getLogger()->error($fork->getLabel()." failed: " . $e->getMessage());
-              $console->error($fork->getLabel()." failed: " . $e->getMessage());
+                $this->getLogger()->error($fork->getLabel()." failed: " . $e->getMessage());
+                $console->error($fork->getLabel()." failed: " . $e->getMessage());
             });
         }
         $progress->advance();
 
         foreach ($forkManager->waitWithUpdates(600) as $remaining) {
-          $progress->setMessage(sprintf("%d/%d assessments remaining.", count($uris) - $remaining, count($uris)));
-          $progress->display();
+            $progress->setMessage(sprintf("%d/%d assessments remaining.", count($uris) - $remaining, count($uris)));
+            $progress->display();
         }
 
         $exit_codes = [0];
@@ -280,7 +280,6 @@ class ProfileRunCommand extends DrutinyBaseCommand
         $progress->clear();
 
         if ($input->getOption('report-summary')) {
-
             $report_filename = strtr($filepath, [
               'uri' => 'multiple_target',
             ]);
@@ -292,13 +291,13 @@ class ProfileRunCommand extends DrutinyBaseCommand
             $format->render($profile, $assessment_manager)->write();
 
             if ($filepath != 'stdout') {
-              $console->success(sprintf("%s report written to %s", $format->getName(), $report_filename));
+                $console->success(sprintf("%s report written to %s", $format->getName(), $report_filename));
             }
         }
 
         // Do not use a non-zero exit code when no severity is set (Default).
         $exit_severity = $input->getOption('exit-on-severity');
-        if ($exit_severity === FALSE) {
+        if ($exit_severity === false) {
             return 0;
         }
         $exit_code = max($exit_codes);
