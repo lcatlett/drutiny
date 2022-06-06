@@ -270,10 +270,15 @@ class ProfileRunCommand extends DrutinyBaseCommand
         $exit_codes = [0];
         $assessment_manager = new AssessmentManager();
 
-        foreach ($forkManager->getForkResults() as $assessment) {
+        foreach ($forkManager->getForkResults(true) as $assessment) {
             $progress->advance();
-            $assessment_manager->addAssessment($assessment);
-            $exit_codes[] = $assessment->getSeverityCode();
+            if ($assessment instanceof Assessment) {
+                $assessment_manager->addAssessment($assessment);
+                $exit_codes[] = $assessment->getSeverityCode();
+            } else {
+                // Distinct error code denoting assessment error.
+                $exit_codes[] = 5;
+            }
         }
 
         $progress->finish();
