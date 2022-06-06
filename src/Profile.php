@@ -209,7 +209,7 @@ class Profile extends StrictEntity
     {
         $profile = $this->build()->dataBag->export();
         foreach (['dependencies', 'policies'] as $category) {
-            foreach ($profile[$category] as &$policy) {
+            foreach ($profile[$category] ?? [] as &$policy) {
                 if ($policy['weight'] === 0) {
                     unset($policy['weight']);
                 }
