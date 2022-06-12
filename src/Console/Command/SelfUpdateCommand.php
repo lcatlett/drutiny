@@ -112,7 +112,7 @@ class SelfUpdateCommand extends DrutinyBaseCommand
         // file on shutdown.
         register_shutdown_function(function () use ($tmpfile, $current_script) {
             if (!rename($tmpfile, $current_script)) {
-                echo "ERROR: Could not overwrite $current_script with $tmpfile.";
+                echo "ERROR: Could not overwrite $current_script with $tmpfile.\n";
                 return 1;
             }
         });
