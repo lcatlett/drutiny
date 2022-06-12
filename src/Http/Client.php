@@ -5,6 +5,7 @@ namespace Drutiny\Http;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
+use GuzzleHttp\MessageFormatter;
 use Kevinrob\GuzzleCache\CacheMiddleware;
 use Kevinrob\GuzzleCache\Storage\Psr6CacheStorage;
 use Kevinrob\GuzzleCache\Strategy\PrivateCacheStrategy;
@@ -41,6 +42,11 @@ class Client
                 return $service->handle($request);
             }), $id);
         }
+
+        $message_format = "{code} {phrase} {uri} {error}\n\n{res_headers}\n\n{res_body}";
+        //"\n\nHTTP Request\n\n{req_headers}\n\n{req_body}";
+        $formatter = new MessageFormatter($message_format);
+        $config['handler']->push(Middleware::log($this->container->get('logger'), $formatter));
 
         $config['handler']->unshift(cache_middleware($this->cache), 'cache');
 
