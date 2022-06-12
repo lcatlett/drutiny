@@ -11,7 +11,6 @@ use Drutiny\Sandbox\Sandbox;
  */
 class ModuleAnalysis extends AbstractAnalysis
 {
-
   /**
    *
    */
@@ -23,7 +22,7 @@ class ModuleAnalysis extends AbstractAnalysis
             'type' => 'module'
           ])
           ->run(function ($output) {
-            return $this->target->getService('drush')->decodeDirtyJson($output);
+              return $this->target->getService('drush')->decodeDirtyJson($output);
           });
         $this->set('modules', $list);
     }
