@@ -277,7 +277,8 @@ class ProfileRunCommand extends DrutinyBaseCommand
                 $exit_codes[] = $assessment->getSeverityCode();
             } else {
                 // Distinct error code denoting assessment error.
-                $exit_codes[] = 5;
+                // Audit errors are < 16.
+                $exit_codes[] = 17;
             }
         }
 
