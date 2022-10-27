@@ -13,7 +13,7 @@ use Composer\Semver\Semver;
 class ModuleUpdateAnalysis extends ModuleAnalysis
 {
 
-  const UPDATES_URL = 'https://updates.drupal.org/release-history/%module%/current';
+  const UPDATES_URL = 'https://updates.drupal.org/release-history/%module%/%core_version%';
 
   /**
    *
@@ -27,6 +27,9 @@ class ModuleUpdateAnalysis extends ModuleAnalysis
         $modules = $this->getModuleFilepathData($modules);
         $modules = $this->getDecoratedModuleData($modules);
         $this->set('modules', $modules);
+        $core = $this->getRecentVersions('drupal', $this->target['drush.drupal-version']);
+        $core['version'] = $this->target['drush.drupal-version'];
+        $this->set('core', $core);
     }
 
     /**
@@ -35,7 +38,7 @@ class ModuleUpdateAnalysis extends ModuleAnalysis
     protected function getModuleFilepathData($modules):array
     {
       // Get the locations of all the modules in the codebase.
-      $filepaths = $this->target->getService('exec')->run('find $DRUSH_ROOT -name \*.info.yml -type f', function ($output) {
+      $filepaths = $this->target->getService('exec')->run('find $DRUSH_ROOT \( -name \*.info.yml -or -name \*.info \) -type f', function ($output) {
         return array_map(function ($line) {
           return trim($line);
         }, explode(PHP_EOL, $output));
@@ -122,9 +125,11 @@ class ModuleUpdateAnalysis extends ModuleAnalysis
       list($major, ) = explode('.', $version, 2);
 
       $core_version = $this->target['drush.drupal-version'];
+      list($core_major_version, ) = explode('.', $core_version);
 
       $url = strtr(self::UPDATES_URL, [
         '%module%' => $project,
+        '%core_version%' => ($core_major_version == 7) ? $core_major_version . '.x' : 'current',
       ]);
 
       if (!isset($responses[$url])) {
@@ -148,7 +153,7 @@ class ModuleUpdateAnalysis extends ModuleAnalysis
 
         // Only include newer releases. This keeps memory usage down.
         $semantic_version = $this->getSemanticVersion($version);
-        $history['releases'] = array_filter($history['releases'], function ($release) use ($semantic_version, $core_version) {
+        $history['releases'] = array_filter($history['releases'], function ($release) use ($semantic_version, $core_major_version) {
           if (isset($release['terms'])) {
             $tags = array_map(function ($term) {
               return $term['value'];
@@ -226,6 +231,9 @@ class ModuleUpdateAnalysis extends ModuleAnalysis
 
     protected function getSemanticVersion($version)
     {
+      // Sanitize the version.
+      $version = preg_replace('/([^ ])( .*)/', '$1', $version);
+
       if (preg_match('/([0-9]+).x-(.*)/', $version, $matches)) {
         $version = $matches[2];
       }
