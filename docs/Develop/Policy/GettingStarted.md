@@ -116,6 +116,36 @@ parameters:
     description: The name of the module to check is enabled.
 ```
 
+## parameters.variables
+
+For audit classes that extend `Drutiny\Audit\AbstractAnalysis`, you can provide a `variables` key under
+the `parameters` declaration that will be evaluated after the audit to help process audit data into
+formats that are easier to render policy messaging. `variables` require the `syntax` key is also set
+to determine which rendering engine is used (`twig` or `expression_language`).
+
+The recommended syntax is `twig` however `expression_language` is default for backwards compatibility.
+
+
+```yaml
+parameters:
+  syntax: twig
+  variables:
+      core_needs_update: '(core.releases|first).version != core.version'
+```
+
+## build_parameters
+
+If you need to dynamically produce your parameters inside the policy you can do so with `build_parameters`.
+This is often required when a policy must provide arguments to its audit class but needs
+an opportunity to do so before policy `variables` are executed (exclusive to `Drutiny\Audit\AbstractAnalysis`).
+`build_parameters` consists of key value pairs where the values are executed through the twig engine
+and the result is set as a parameter for the provided key.
+
+```yaml
+build_parameters:
+  domain: 'parse_url(url, 1)'
+```
+
 ## depends
 
 The depends directive allows policies to only apply if one or more conditions are
