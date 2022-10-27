@@ -2,7 +2,7 @@
 
 namespace Drutiny\Console\Command;
 
-use Symfony\Component\Console\Command\Command;
+use Drutiny\Event\RuntimeDependencyCheckEvent;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -11,12 +11,11 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 /**
  *
  */
-class StatusCommand extends Command
+class StatusCommand extends DrutinyBaseCommand
 {
-
-  /**
-   * @inheritdoc
-   */
+    /**
+     * @inheritdoc
+     */
     protected function configure()
     {
         $this
@@ -25,29 +24,29 @@ class StatusCommand extends Command
         ;
     }
 
-  /**
-   * @inheritdoc
-   */
-    protected function execute(InputInterface $input, OutputInterface $output):int
+    /**
+     * @inheritdoc
+     */
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $style = new SymfonyStyle($input, $output);
 
-        $headers = ['Criteria', 'Status', 'Details'];
+        $headers = ['Criteria', 'Status', 'Value', 'Details'];
         $rows = [];
 
-      // PHP version
-        $rows[] = [
-        'PHP version',
-        phpversion(),
-        'Drutiny requires PHP 7.4 or later.'
-        ];
+        $event = new RuntimeDependencyCheckEvent();
+        $this->getContainer()
+          ->get('event_dispatcher')
+          ->dispatch($event, 'status');
 
-      // PHP Memory Limit
-        $rows[] = [
-        'PHP Memory Limit',
-        ini_get('memory_limit'),
-        'Drutiny recommends no memory limit (-1)'
-        ];
+        foreach ($event->getRuntimeDependencies() as $dependency) {
+            $rows[] = [
+              $dependency->getName(),
+              $dependency->getStatus() ? 'Pass' : 'Fail',
+              $dependency->getValue(),
+              $dependency->getDetails(),
+            ];
+        }
 
         $style->table($headers, $rows);
         return 0;
