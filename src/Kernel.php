@@ -27,22 +27,22 @@ class Kernel
     private $container;
     private $environment;
     private $loadingPaths = [];
-    private $initialized = FALSE;
+    private $initialized = false;
 
     public function __construct($environment)
     {
-      $this->environment = $environment;
-      $this->addServicePath($this->getProjectDir());
-      $this->addServicePath('./vendor/*/*');
+        $this->environment = $environment;
+        $this->addServicePath($this->getProjectDir());
+        $this->addServicePath('./vendor/*/*');
     }
 
     public function addServicePath($path)
     {
-      if ($this->initialized) {
-        throw new \RuntimeException("Cannot add $path as service path. Container already initialized.");
-      }
-      $this->loadingPaths[] = $path;
-      return $this;
+        if ($this->initialized) {
+            throw new \RuntimeException("Cannot add $path as service path. Container already initialized.");
+        }
+        $this->loadingPaths[] = $path;
+        return $this;
     }
 
     public function getContainer()
@@ -58,44 +58,43 @@ class Kernel
         return DRUTINY_LIB;
     }
 
-  /**
-   * Initializes the service container.
-   *
-   * The cached version of the service container is used when fresh, otherwise the
-   * container is built.
-   */
+    /**
+     * Initializes the service container.
+     *
+     * The cached version of the service container is used when fresh, otherwise the
+     * container is built.
+     */
     protected function initializeContainer()
     {
         $file = DRUTINY_LIB . '/' . self::CACHED_CONTAINER;
         if (file_exists($file)) {
-          require_once $file;
-          $this->container = new ProjectServiceContainer();
-        }
-        else {
-          $this->container = $this->buildContainer();
-          $this->container->compile();
+            require_once $file;
+            $this->container = new ProjectServiceContainer();
+        } else {
+            $this->container = $this->buildContainer();
+            $this->container->compile();
 
-          // Ensure the Drutiny config directory is available.
-          is_dir($this->container->getParameter('drutiny_config_dir')) or
+            // Ensure the Drutiny config directory is available.
+            is_dir($this->container->getParameter('drutiny_config_dir')) or
           mkdir($this->container->getParameter('drutiny_config_dir'), 0744, true);
 
-          // TODO: cache container. Need workaround for Twig.
+            // TODO: cache container. Need workaround for Twig.
           // if (is_writeable(dirname($file))) {
           //     $dumper = new PhpDumper($this->container);
           //     file_put_contents($file, $dumper->dump());
           // }
         }
-        $this->initialized = TRUE;
+        $this->initialized = true;
         return $this->container;
     }
 
-  /**
-     * Builds the service container.
-     *
-     * @return ContainerBuilder The compiled service container
-     *
-     * @throws \RuntimeException
-     */
+    /**
+       * Builds the service container.
+       *
+       * @return ContainerBuilder The compiled service container
+       *
+       * @throws \RuntimeException
+       */
     protected function buildContainer()
     {
         $container = new ContainerBuilder();
@@ -112,20 +111,20 @@ class Kernel
 
         // Remove duplicates.
         $idx = array_search($this->getProjectDir(), $this->loadingPaths);
-        if ($idx !== FALSE) {
+        if ($idx !== false) {
             unset($this->loadingPaths[$idx]);
         }
 
         // Create config loader.
         $load = function () use ($loader) {
-          $args = func_get_args();
-          $args[] = '{drutiny}'.self::CONFIG_EXTS;
-          $loading_path = implode('/', $args);
-          $loader->load($loading_path, 'glob');
+            $args = func_get_args();
+            $args[] = '{drutiny}'.self::CONFIG_EXTS;
+            $loading_path = implode('/', $args);
+            $loader->load($loading_path, 'glob');
         };
 
         foreach ($this->loadingPaths as $path) {
-          $load($this->getProjectDir(), $path);
+            $load($this->getProjectDir(), $path);
         }
 
         // Load project level config last as it should override all others.
@@ -134,23 +133,23 @@ class Kernel
         // Load any available global configuration. This should really use
         // user_home_dir but since the container isn't compiled we can't.
         if (file_exists(getenv('HOME').'/.drutiny')) {
-          $load(getenv('HOME').'/.drutiny');
+            $load(getenv('HOME').'/.drutiny');
         }
 
         // If we're in a different working directory (e.g. executing from phar)
         // then there may be one last level of config we should inherit from.
         if ($this->getProjectDir() != getcwd()) {
-          $load(getcwd());
+            $load(getcwd());
         }
 
         return $container;
     }
 
-  /**
-     * Returns a loader for the container.
-     *
-     * @return DelegatingLoader The loader
-     */
+    /**
+       * Returns a loader for the container.
+       *
+       * @return DelegatingLoader The loader
+       */
     protected function getContainerLoader(ContainerInterface $container)
     {
         $locator = new FileLocator([$this->getProjectDir()]);
