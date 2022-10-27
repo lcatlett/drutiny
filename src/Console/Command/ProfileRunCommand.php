@@ -244,6 +244,11 @@ class ProfileRunCommand extends DrutinyBaseCommand
                     $format->render($profile, $a);
                     // write() must be iterated on to render the report.
                     foreach ($format->write() as $location) {
+                        $this->dispatchEvent('assessment', [
+                          'type' => $a->getType(),
+                          'profile' => $profile->name,
+                          'uri' => $a->uri()
+                        ]);
                     }
                     return;
                 }
@@ -252,12 +257,22 @@ class ProfileRunCommand extends DrutinyBaseCommand
                     $format->render($profile, $a);
                     foreach ($format->write() as $written_location) {
                         $console->success("Writen $written_location");
+                        $this->dispatchEvent('assessment', [
+                          'type' => $a->getType(),
+                          'profile' => $profile->name,
+                          'uri' => $a->uri()
+                        ]);
                     }
                 }
             })
-            ->onError(function (ChildExceptionDetected $e, ForkInterface $fork) use ($console) {
+            ->onError(function (ChildExceptionDetected $e, ForkInterface $fork) use ($console, $profile, $uri) {
                 $this->getLogger()->error($fork->getLabel()." failed: " . $e->getMessage());
                 $console->error($fork->getLabel()." failed: " . $e->getMessage());
+                $this->dispatchEvent('assessment', [
+                  'type' => 'error',
+                  'profile' => $profile->name,
+                  'uri' => $uri
+                ]);
             });
         }
         $progress->advance();
