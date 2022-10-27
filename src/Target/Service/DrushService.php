@@ -23,6 +23,7 @@ class DrushService
       'sqlq' => 'sqlq',
       'updb' => 'updb',
       'updatedbStatus' => 'updatedb:status',
+      'variableGet' => 'vget',
     ];
     public function __construct(ExecutionInterface $service)
     {
