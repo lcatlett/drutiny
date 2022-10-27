@@ -22,6 +22,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
+use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\EventDispatcher\GenericEvent;
 use Symfony\Component\Yaml\Yaml;
 use Twig\Error\RuntimeError;
 
@@ -31,6 +33,7 @@ use Twig\Error\RuntimeError;
 abstract class Audit implements AuditInterface
 {
     protected InputDefinition $definition;
+    protected EventDispatcher $eventDispatcher;
     protected LoggerInterface $logger;
     protected ContainerInterface $container;
     protected TargetInterface $target;
@@ -43,17 +46,19 @@ abstract class Audit implements AuditInterface
     private CacheInterface $cache;
 
     final public function __construct(
-      ContainerInterface $container,
-      TargetInterface $target,
-      LoggerInterface $logger,
-      ExpressionLanguage $expressionLanguage,
-      ProgressBar $progressBar,
-      CacheInterface $cache
-      ) {
+        ContainerInterface $container,
+        TargetInterface $target,
+        LoggerInterface $logger,
+        ExpressionLanguage $expressionLanguage,
+        ProgressBar $progressBar,
+        CacheInterface $cache,
+        EventDispatcher $eventDispatcher
+    ) {
         $this->container = $container;
+        $this->eventDispatcher = $eventDispatcher;
         $this->target = $target;
         if (method_exists($logger, 'withName')) {
-          $logger = $logger->withName('audit');
+            $logger = $logger->withName('audit');
         }
         $this->logger = $logger;
         $this->definition = new InputDefinition();
@@ -84,7 +89,7 @@ abstract class Audit implements AuditInterface
     /**
      * Validate the contexts of the audit and target,
      */
-    protected function validate():bool
+    protected function validate(): bool
     {
         return true;
     }
@@ -97,16 +102,16 @@ abstract class Audit implements AuditInterface
      *
      * @throws \Drutiny\Audit\AuditValidationException
      */
-    final public function execute(Policy $policy, $remediate = false):AuditResponse
+    final public function execute(Policy $policy, $remediate = false): AuditResponse
     {
         if ($this->deprecated) {
-          $this->logger->warning(sprintf("Policy '%s' is using '%s' which is a deprecated class. This may fail in the future.", $policy->name, get_class($this)));
-          if (!empty($this->deprecationMessage)) {
-            $this->logger->warning("Class {class} is deprecated: {msg}", [
-              "class" => get_class($this),
-              "msg" => $this->deprecationMessage,
-            ]);
-          }
+            $this->logger->warning(sprintf("Policy '%s' is using '%s' which is a deprecated class. This may fail in the future.", $policy->name, get_class($this)));
+            if (!empty($this->deprecationMessage)) {
+                $this->logger->warning("Class {class} is deprecated: {msg}", [
+                  "class" => get_class($this),
+                  "msg" => $this->deprecationMessage,
+                ]);
+            }
         }
         $this->policy = $policy;
         $response = new AuditResponse($policy);
@@ -115,7 +120,7 @@ abstract class Audit implements AuditInterface
         $outcome = AuditInterface::ERROR;
         try {
             if (!$this->validate()) {
-              throw new AuditValidationException("Target of type ".get_class($this->target)." is not suitable for audit class ".get_class($this). " with policy: ".$policy->name);
+                throw new AuditValidationException("Target of type ".get_class($this->target)." is not suitable for audit class ".get_class($this). " with policy: ".$policy->name);
             }
 
             $dependencies = $policy->getDepends();
@@ -129,22 +134,20 @@ abstract class Audit implements AuditInterface
 
             // Build parameters to be used in the audit.
             foreach ($policy->build_parameters ?? [] as $key => $value) {
-              try {
-                $this->logger->debug(__CLASS__ . ':build_parameters('.$key.'): ' . $value);
-                $value = $this->evaluate($value, 'twig');
+                try {
+                    $this->logger->debug(__CLASS__ . ':build_parameters('.$key.'): ' . $value);
+                    $value = $this->evaluate($value, 'twig');
 
-                // Set the token to be available for other build_parameters.
-                $this->set($key, $value);
+                    // Set the token to be available for other build_parameters.
+                    $this->set($key, $value);
 
-                // Set the parameter to be available in the audit().
-                if ($this->definition->hasArgument($key)) {
-                  $policy->addParameter($key, $value);
+                    // Set the parameter to be available in the audit().
+                    if ($this->definition->hasArgument($key)) {
+                        $policy->addParameter($key, $value);
+                    }
+                } catch (RuntimeError $e) {
+                    throw new \Exception("Failed to create key: $key. Encountered Twig runtime error: " . $e->getMessage());
                 }
-              }
-              catch (RuntimeError $e)
-              {
-                throw new \Exception("Failed to create key: $key. Encountered Twig runtime error: " . $e->getMessage());
-              }
             }
 
             $input = new ArrayInput($policy->getAllParameters(), $this->definition);
@@ -220,6 +223,13 @@ abstract class Audit implements AuditInterface
             $this->logger->debug("Tokens:\n".Yaml::dump($tokens, 4, 4, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK));
             // Set the response.
             $response->set($outcome ?? AuditInterface::ERROR, $tokens);
+
+            $this->eventDispatcher->dispatch(new GenericEvent('audit', [
+              'class' => get_class($this),
+              'policy' => $policy->name,
+              'outcome' => $response->getType(),
+              'uri' => $this->target->getUri(),
+            ]), 'audit');
         }
         $execution_end_time = new \DateTime();
         $total_execution_time = $execution_start_time->diff($execution_end_time);
@@ -233,13 +243,13 @@ abstract class Audit implements AuditInterface
      * @param string $policy_name
      *    The name of the policy to audit.
      */
-    public function withPolicy(string $policy_name):AuditResponse
+    public function withPolicy(string $policy_name): AuditResponse
     {
-      $this->logger->debug("->withPolicy($policy_name)");
-      $policy = $this->container
+        $this->logger->debug("->withPolicy($policy_name)");
+        $policy = $this->container
         ->get('policy.factory')
         ->loadPolicyByName($policy_name);
-      return $this->container->get($policy->class)->execute($policy);
+        return $this->container->get($policy->class)->execute($policy);
     }
 
     /**
@@ -248,23 +258,22 @@ abstract class Audit implements AuditInterface
     public function evaluate(string $expression, $language = 'expression_language', array $contexts = [])
     {
         try {
-          $contexts = array_merge($contexts, $this->getContexts());
-          switch ($language) {
+            $contexts = array_merge($contexts, $this->getContexts());
+            switch ($language) {
             case 'twig':
               return $this->evaluateTwigSyntax($expression, $contexts);
             case 'expression_language':
             default:
               return $this->expressionLanguage->evaluate($expression, $contexts);
           }
-        }
-        catch (\Exception $e) {
-          $this->logger->error("Evaluation failure {syntax}: {expression}: {message}", [
+        } catch (\Exception $e) {
+            $this->logger->error("Evaluation failure {syntax}: {expression}: {message}", [
             'syntax' => $language,
             'expression' => $expression,
             'exception' => get_class($e),
             'message' => $e->getMessage(),
           ]);
-          throw $e;
+            throw $e;
         }
     }
 
@@ -323,7 +332,7 @@ abstract class Audit implements AuditInterface
 
         $reflection = new \ReflectionClass(__CLASS__);
         foreach ($reflection->getConstants() as $key => $value) {
-          $contexts[$key] = $value;
+            $contexts[$key] = $value;
         }
 
         $contexts['audit'] = $this;
@@ -348,8 +357,7 @@ abstract class Audit implements AuditInterface
     {
         try {
             return $this->dataBag->get('parameters')->get($name) ?? $default_value;
-        }
-        catch (DataNotFoundException $e) {
+        } catch (DataNotFoundException $e) {
             return $default_value;
         }
     }
@@ -413,10 +421,9 @@ abstract class Audit implements AuditInterface
         $input = new InputArgument($name, $mode, $description, $default);
 
         if ($mode == self::PARAMETER_REQUIRED) {
-          array_unshift($args, $input);
-        }
-        else {
-          $args[] = $input;
+            array_unshift($args, $input);
+        } else {
+            $args[] = $input;
         }
 
         $this->definition->setArguments($args);
@@ -427,21 +434,21 @@ abstract class Audit implements AuditInterface
     /**
      * Set audit class as deprecated and shouldn't be used anymore.
      */
-    protected function setDeprecated(string $message = ''):AuditInterface
+    protected function setDeprecated(string $message = ''): AuditInterface
     {
-      $this->deprecated = true;
-      $this->deprecationMessage = $message;
-      return $this;
+        $this->deprecated = true;
+        $this->deprecationMessage = $message;
+        return $this;
     }
 
-    public function isDeprecated():bool
+    public function isDeprecated(): bool
     {
-      return $this->deprecated;
+        return $this->deprecated;
     }
 
     protected function runCacheable($contexts, callable $func)
     {
-      $cid = md5(get_class($this) . json_encode($contexts));
-      return $this->cache->get($cid, $func);
+        $cid = md5(get_class($this) . json_encode($contexts));
+        return $this->cache->get($cid, $func);
     }
 }
