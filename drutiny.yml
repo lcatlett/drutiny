@@ -140,6 +140,8 @@ services:
     event_dispatcher:
         class: Symfony\Component\EventDispatcher\EventDispatcher
 
+    Drutiny\Event\EventSubscriber:
+
     expression_language:
       class: Symfony\Component\ExpressionLanguage\ExpressionLanguage
       arguments: [null, ['@Drutiny\ExpressionLanguage\ExpressionFunctionProvider']]
