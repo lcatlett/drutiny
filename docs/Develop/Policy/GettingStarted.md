@@ -100,20 +100,22 @@ or fail in some scenarios.
 
 ## parameters
 
-Parameters allow a policy to define values for variables used by the Audit. They
-are also used in `policy:info` to inform on the parameters available to customize.
-A parameter consists of three key value pairs:
+Parameters allow a policy to define values for variables used by the Audit. An audit
+typically defines parameters as "arguments" and the policy sets these by declaring
+them as parameters under this declaration.
 
--   **default** (required): The actual value to pass through to the audit.
--   **type**: The data type of the parameter. Used to advise profile builders on how to use the parameter.
--   **description**: A description of what the parameter is used for. Used to advise profile builders.
+The available parameters vary by audit which is depended by the `class` declaration.
+Use the `audit:info` command to learn more about the available arguments to configure
+the audit class with.
+
+Parameters are statically set and are typically used for configuring the audit
+specifically for how the policy wished to evaluate the target. If the parameters
+need to be dynamically set, then use `build_parameters`.
 
 ```yaml
 parameters:
-  module_name:
-    default: shield
-    type: string
-    description: The name of the module to check is enabled.
+  module: dblog
+  status: Enabled
 ```
 
 ## parameters.variables
@@ -143,7 +145,7 @@ and the result is set as a parameter for the provided key.
 
 ```yaml
 build_parameters:
-  domain: 'parse_url(url, 1)'
+  domain: 'parse_url(target.url, 1)'
 ```
 
 ## depends
