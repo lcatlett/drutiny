@@ -37,4 +37,10 @@ class ConfigFile
         $this->config[$namespace] = $data;
         return $this->doWrite();
     }
+
+    public function delete(string $namespace)
+    {
+      unset($this->config[$namespace]);
+      return $this->doWrite();
+    }
 }

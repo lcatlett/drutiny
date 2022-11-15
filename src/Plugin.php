@@ -186,4 +186,14 @@ abstract class Plugin {
         return $this;
     }
 
+    /**
+     * Delete the configuration from the plugin storage.
+     * @return void
+     */
+    public function delete()
+    {
+      foreach (array_keys($this->fields) as $key) {
+        $this->getStorage($key)->delete();
+      }
+    }
 }

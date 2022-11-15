@@ -35,4 +35,9 @@ class Config
     {
       return array_keys($this->data);
     }
+
+    public function delete()
+    {
+      return $this->parent->delete($this->name);
+    }
 }
