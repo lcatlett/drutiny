@@ -79,7 +79,8 @@ class PolicyListCommand extends DrutinyBaseCommand
         }
 
         // Restrict visibility of policies to those in profile allow list.
-        if ($this->getContainer()->hasParameter('profile.allow_list')) {
+        $allow_list = $this->getContainer()->hasParameter('profile.allow_list') ? $this->getContainer()->getParameter('profile.allow_list') : [];
+        if (!empty($allow_list)) {
           $rows = array_filter($rows, fn($r) => $r['profile_util']);
         }
 
