@@ -221,6 +221,17 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
     }
 
     /**
+     * Check if an AuditResponse exists by name.
+     *
+     * @param string $name
+     * @return bool
+     */
+    public function hasPolicyResult(string $name):bool
+    {
+        return isset($this->results[$name]);
+    }
+
+    /**
      * Get an AuditResponse object by Policy name.
      *
      * @param string $name
