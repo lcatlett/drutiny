@@ -243,18 +243,18 @@ abstract class Target implements \ArrayAccess, ExecutionInterface
     /**
      * {@inheritdoc}
      */
-    public function offsetSet($offset, $value)
+    public function offsetSet($offset, $value): void
     {
         if (is_null($offset)) {
             throw new \Exception(__CLASS__ . ' does not support numeric indexes as properties.');
         }
-        return $this->setProperty($offset, $value);
+        $this->setProperty($offset, $value);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function offsetExists($offset)
+    public function offsetExists($offset): bool
     {
         return $this->hasProperty($offset);
     }
@@ -262,7 +262,7 @@ abstract class Target implements \ArrayAccess, ExecutionInterface
     /**
      * {@inheritdoc}
      */
-    public function offsetUnset($offset)
+    public function offsetUnset($offset): void
     {
         throw new \Exception("Cannot unset $offset. Properties cannot be removed. Please set to null instead.");
     }
@@ -270,7 +270,7 @@ abstract class Target implements \ArrayAccess, ExecutionInterface
     /**
      * {@inheritdoc}
      */
-    public function offsetGet($offset)
+    public function offsetGet($offset): mixed
     {
         return $this->hasProperty($offset) ? $this->getProperty($offset) : null;
     }
