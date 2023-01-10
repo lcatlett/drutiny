@@ -21,3 +21,12 @@ before reattempting the assessment.
   {% endfor %}
 {% endif %}
 {% endblock %}
+
+
+{% if assessment.results|filter(r => r.hasError) is not empty %}
+## Errors
+  {% for response in assessment.results|filter(r => r.hasError) %}
+    {{ policy_result(response, assessment) }}
+  {% endfor %}
+{% endif %}
+{% endblock %}
