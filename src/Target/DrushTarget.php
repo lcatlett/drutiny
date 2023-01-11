@@ -126,6 +126,12 @@ class DrushTarget extends Target implements
       $aliases = $this['service.exec']->get('local')->run('drush site:alias --format=json', function ($output) {
         return json_decode($output, true);
       });
+
+      if (empty($aliases)) {
+        $this->logger->error("Drush failed to return any aliases. Please ensure your local drush is up to date, has aliases available and returns a valid json response for `drush site:alias --format=json`.");
+        return [];
+      }
+
       $valid = array_filter(array_keys($aliases), function ($a) {
         return strpos($a, '.') !== FALSE;
       });
