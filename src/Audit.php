@@ -37,6 +37,10 @@ abstract class Audit implements AuditInterface
     protected LoggerInterface $logger;
     protected ContainerInterface $container;
     protected TargetInterface $target;
+
+    /**
+     * @deprecated
+     */
     protected ExpressionLanguage $expressionLanguage;
     protected DataBag $dataBag;
     protected Policy $policy;
