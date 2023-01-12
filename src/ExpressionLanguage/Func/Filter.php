@@ -2,14 +2,16 @@
 
 namespace Drutiny\ExpressionLanguage\Func;
 
+use Closure;
+
 class Filter extends ExpressionFunction implements FunctionInterface
 {
-    public function getName()
+    public function getName():string
     {
         return 'filter';
     }
 
-    public function getCompiler()
+    public function getCompiler():Closure
     {
         return function ($array, $property, $match, $equals) {
             list($array, $property, $match, $equals) = array_slice(func_get_args(), 1);
@@ -17,7 +19,7 @@ class Filter extends ExpressionFunction implements FunctionInterface
         };
     }
 
-    public function getEvaluator()
+    public function getEvaluator():Closure
     {
         return function ($args, $array, $property, $match = true, $equals = true) {
             list($array, $property, $match, $equals) = array_slice(func_get_args(), 1);

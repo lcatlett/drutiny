@@ -2,14 +2,16 @@
 
 namespace Drutiny\ExpressionLanguage\Func;
 
+use Closure;
+
 class ArraySelect extends ExpressionFunction implements FunctionInterface
 {
-    public function getName()
+    public function getName():string
     {
         return 'array_select';
     }
 
-    public function getCompiler()
+    public function getCompiler():Closure
     {
         return function () {
             list($input, $property, $value, $strict_match) = array_slice(func_get_args(), 1);
@@ -17,7 +19,7 @@ class ArraySelect extends ExpressionFunction implements FunctionInterface
         };
     }
 
-    public function getEvaluator()
+    public function getEvaluator():Closure
     {
         return function ($a, $input, $property, $value, $strict_match = false) {
             foreach ($input as $set) {

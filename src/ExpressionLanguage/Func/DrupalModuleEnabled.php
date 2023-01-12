@@ -2,6 +2,7 @@
 
 namespace Drutiny\ExpressionLanguage\Func;
 
+use Closure;
 use Drutiny\Target\TargetInterface;
 
 class DrupalModuleEnabled extends ExpressionFunction implements ContainerDependentFunctionInterface
@@ -13,19 +14,19 @@ class DrupalModuleEnabled extends ExpressionFunction implements ContainerDepende
       $this->target = $target;
     }
 
-    public function getName()
+    public function getName():string
     {
         return 'drupal_module_enabled';
     }
 
-    public function getCompiler()
+    public function getCompiler():Closure
     {
         return function ($module_name) {
             return sprintf("(%s is enabled)", $module_name);
         };
     }
 
-    public function getEvaluator()
+    public function getEvaluator():Closure
     {
         return function ($args, $module_name) {
           $list = $this->target->getService('drush')

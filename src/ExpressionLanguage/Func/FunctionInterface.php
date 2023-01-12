@@ -2,12 +2,14 @@
 
 namespace Drutiny\ExpressionLanguage\Func;
 
+use Closure;
+
 interface FunctionInterface {
-  public function getName();
+  public function getName():string;
 
-  public function getCompiler();
+  public function getCompiler():Closure;
 
-  public function getEvaluator();
+  public function getEvaluator():Closure;
 }
 
 

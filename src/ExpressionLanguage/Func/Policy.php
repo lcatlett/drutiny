@@ -6,6 +6,7 @@ use Drutiny\Target\TargetInterface;
 use Drutiny\Assessment;
 use Drutiny\PolicyFactory;
 use Drutiny\AuditResponse\NoAuditResponseFoundException;
+use Closure;
 
 class Policy extends ExpressionFunction implements ContainerDependentFunctionInterface
 {
@@ -20,19 +21,19 @@ class Policy extends ExpressionFunction implements ContainerDependentFunctionInt
       $this->factory = $factory;
     }
 
-    public function getName()
+    public function getName():string
     {
         return 'policy';
     }
 
-    public function getCompiler()
+    public function getCompiler():Closure
     {
         return function ($policy_name) {
             return 'policy('.$policy_name.')';
         };
     }
 
-    public function getEvaluator()
+    public function getEvaluator():Closure
     {
         return function ($args, $policy_name) {
           try {
