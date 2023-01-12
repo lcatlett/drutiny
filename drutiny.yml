@@ -39,6 +39,7 @@ services:
         public: true
 
     _instanceof:
+        
       # Any symfony commands found can be loaded in as drutiny commands.
       # Drutiny uses the "command" tag to load commands into the Console
       # Application.
@@ -73,6 +74,10 @@ services:
       Drutiny\Http\MiddlewareInterface:
         tags: [http.middleware]
 
+    # Services
+    Symfony\Component\DependencyInjection\ContainerInterface:
+      alias: service_container
+    
     async:
         shared: false
         class: Async\ForkManager
@@ -143,6 +148,9 @@ services:
     Drutiny\Event\EventSubscriber:
 
     expression_language:
+      deprecated: 
+        package: drutiny/core
+        version: 3.5.0
       class: Symfony\Component\ExpressionLanguage\ExpressionLanguage
       arguments: [null, ['@Drutiny\ExpressionLanguage\ExpressionFunctionProvider']]
       calls:
