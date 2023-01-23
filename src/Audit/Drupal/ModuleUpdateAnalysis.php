@@ -35,7 +35,7 @@ class ModuleUpdateAnalysis extends ModuleAnalysis
     /**
      * Decorate module data with filepath metadata.
      */
-    protected function getModuleFilepathData($modules):array
+    protected function getModuleFilepathData(array $modules):array
     {
       // Get the locations of all the modules in the codebase.
       $filepaths = $this->target->getService('exec')->run('find $DRUSH_ROOT \( -name \*.info.yml -or -name \*.info \) -type f', function ($output) {
@@ -81,7 +81,7 @@ class ModuleUpdateAnalysis extends ModuleAnalysis
     /**
      * Get decorated module data.
      */
-    protected function getDecoratedModuleData($modules):array
+    protected function getDecoratedModuleData(array $modules):array
     {
       foreach ($modules as $module => $info) {
 
@@ -102,7 +102,7 @@ class ModuleUpdateAnalysis extends ModuleAnalysis
         $modules[$module]['supported'] = false;
 
         if ($modules[$module]['type'] == 'contrib') {
-          $modules[$module]['available_releases'] = $this->getRecentVersions($info['type'] == 'core' ? 'drupal' : $module, $info['version']);
+          $modules[$module]['available_releases'] = $this->getRecentVersions($info['type'] == 'core' ? 'drupal' : $module, $info['version'] ?? '');
 
           if (!$modules[$module]['available_releases']) {
             $modules[$module]['type'] = 'custom';
@@ -118,11 +118,9 @@ class ModuleUpdateAnalysis extends ModuleAnalysis
       return $modules;
     }
 
-    protected function getRecentVersions($project, $version)
+    protected function getRecentVersions(string $project, string $version)
     {
       static $responses;
-
-      list($major, ) = explode('.', $version, 2);
 
       $core_version = $this->target['drush.drupal-version'];
       list($core_major_version, ) = explode('.', $core_version);
@@ -132,73 +130,78 @@ class ModuleUpdateAnalysis extends ModuleAnalysis
         '%core_version%' => ($core_major_version == 7) ? $core_major_version . '.x' : 'current',
       ]);
 
-      if (!isset($responses[$url])) {
-        $responses[$url] = false;
+      if (isset($responses[$url])) {
+        return $responses[$url];
+      }
+      // Set to fail in the event of failure to retrieve information later on.
+      $responses[$url] = false;
 
-        $history = $this->runCacheable($url, function () use ($url) {
-          $client = $this->container->get('http.client')->create();
-          $response = $client->request('GET', $url);
+      if (empty($version)) {
+        return false;
+      }
 
-          if ($response->getStatusCode() != 200) {
-            return false;
-          }
+      $history = $this->runCacheable($url, function () use ($url) {
+        $client = $this->container->get('http.client')->create();
+        $response = $client->request('GET', $url);
 
-          return $this->toArray(simplexml_load_string($response->getBody()));
-        });
-
-        // No release history was found.
-        if (!is_array($history)) {
+        if ($response->getStatusCode() != 200) {
           return false;
         }
 
-        // Only include newer releases. This keeps memory usage down.
-        $semantic_version = $this->getSemanticVersion($version);
-        $history['releases'] = array_filter($history['releases'], function ($release) use ($semantic_version, $core_major_version) {
-          if (isset($release['terms'])) {
-            $tags = array_map(function ($term) {
-              return $term['value'];
-            }, $release['terms']);
-            // Don't pass through insecure releases as options.
-            if (in_array('Insecure', $tags)) {
-              return false;
-            }
-          }
-          return Comparator::greaterThanOrEqualTo($this->getSemanticVersion($release['version']), $semantic_version);
-        });
+        return $this->toArray(simplexml_load_string($response->getBody()));
+      });
 
-        if (isset($history['supported_branches'])) {
-          $history['supported_branches'] = explode(',', $history['supported_branches']);
-        }
-        else {
-          $history['supported_branches'] = [];
-        }
-
-        foreach ($history['releases'] as &$release) {
-          $release['is_current_release'] = $this->getSemanticVersion($release['version']) == $semantic_version;
-          if (!empty($semantic_version)) {
-            $release['minor_upgrade'] = Semver::satisfies($this->getSemanticVersion($release['version']), '^'.$semantic_version);
-          }
-
-          // Indicate if the release is from a supported branch.
-          $release['supported'] = count(array_filter($history['supported_branches'], function ($branch) use ($release) {
-            return strpos($release['version'], $branch) === 0;
-          })) > 0;
-
-          $release['semantic_version'] = $this->parseSemanticVersion($this->getSemanticVersion($release['version']));
-
-          if (empty($release['terms'])) {
-            continue;
-          }
-          foreach ($release['terms'] as $flag) {
-            $history['flags'][] = $flag['value'];
-          }
-        }
-
-        $history['flags'] = array_values(array_unique($history['flags'] ?? []));
-
-        $responses[$url] = $history;
+      // No release history was found.
+      if (!is_array($history)) {
+        return false;
       }
 
+      // Only include newer releases. This keeps memory usage down.
+      $semantic_version = $this->getSemanticVersion($version);
+      $history['releases'] = array_filter($history['releases'], function ($release) use ($semantic_version, $core_major_version) {
+        if (isset($release['terms'])) {
+          $tags = array_map(function ($term) {
+            return $term['value'];
+          }, $release['terms']);
+          // Don't pass through insecure releases as options.
+          if (in_array('Insecure', $tags)) {
+            return false;
+          }
+        }
+        return Comparator::greaterThanOrEqualTo($this->getSemanticVersion($release['version']), $semantic_version);
+      });
+
+      if (isset($history['supported_branches'])) {
+        $history['supported_branches'] = explode(',', $history['supported_branches']);
+      }
+      else {
+        $history['supported_branches'] = [];
+      }
+
+      foreach ($history['releases'] as &$release) {
+        $release['is_current_release'] = $this->getSemanticVersion($release['version']) == $semantic_version;
+        if (!empty($semantic_version)) {
+          $release['minor_upgrade'] = Semver::satisfies($this->getSemanticVersion($release['version']), '^'.$semantic_version);
+        }
+
+        // Indicate if the release is from a supported branch.
+        $release['supported'] = count(array_filter($history['supported_branches'], function ($branch) use ($release) {
+          return strpos($release['version'], $branch) === 0;
+        })) > 0;
+
+        $release['semantic_version'] = $this->parseSemanticVersion($this->getSemanticVersion($release['version']));
+
+        if (empty($release['terms'])) {
+          continue;
+        }
+        foreach ($release['terms'] as $flag) {
+          $history['flags'][] = $flag['value'];
+        }
+      }
+
+      $history['flags'] = array_values(array_unique($history['flags'] ?? []));
+
+      $responses[$url] = $history;
       return $responses[$url];
     }
 
@@ -229,7 +232,7 @@ class ModuleUpdateAnalysis extends ModuleAnalysis
       return $array;
     }
 
-    protected function getSemanticVersion($version)
+    protected function getSemanticVersion(string $version):string
     {
       // Sanitize the version.
       $version = preg_replace('/([^ ])( .*)/', '$1', $version);
