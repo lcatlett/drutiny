@@ -57,6 +57,9 @@ class ExecutionService implements ExecutionInterface {
    */
   public function get(string $name):ExecutionInterface
   {
+    if (!$this->has($name)) {
+      throw new \Exception("No such service: '$name'.");
+    }
     return $this->serviceHandlers[$name];
   }
 
