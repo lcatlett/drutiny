@@ -20,7 +20,6 @@ before reattempting the assessment.
     {{ policy_result(response, assessment) }}
   {% endfor %}
 {% endif %}
-{% endblock %}
 
 
 {% if assessment.results|filter(r => r.hasError) is not empty %}
