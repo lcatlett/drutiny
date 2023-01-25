@@ -9,7 +9,6 @@ use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Exception\InvalidArgumentException;
 use Symfony\Contracts\Cache\CacheInterface;
-use Symfony\Contracts\Cache\ItemInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 
@@ -61,7 +60,8 @@ class LocalService implements ExecutionInterface {
         if (is_callable($outputProcessor)) {
           $reflect = new \ReflectionFunction($outputProcessor);
           $params = $reflect->getParameters();
-          if (!empty($params) && $params[0]->getType()) {
+
+          if (!empty($params) && ($params[0]->getType() == Process::class)) {
             // This allows the output processor to evaluate the result of the
             // process inclusive of its exit code.
             $process->run();
