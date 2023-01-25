@@ -37,11 +37,11 @@ class TshRemoteService extends RemoteService {
     }
     unset($options['telesync.region']);
 
-    $activeRegion = $this->getActiveTelesyncRegion();
+    $activeRegions = $this->getActiveTelesyncRegions();
 
     // This means telesync is connected to a different region and we'd have to change that.
-    if (!empty($activeRegion) && ($activeRegion != $this->telesyncRegion)) {
-      throw new InvalidTargetException("Cannot access target on current telesync cluster '$activeRegion'. You must connect to '{$this->telesyncRegion}' instead.");
+    if (!empty($activeRegions) && !in_array($this->telesyncRegion, $activeRegions)) {
+      throw new InvalidTargetException("Cannot access target on current telesync clusters: " . implode(', ', $activeRegions) . ". You must connect to '{$this->telesyncRegion}' instead.");
     }
 
     foreach ($options as $key => $value) {
@@ -52,8 +52,11 @@ class TshRemoteService extends RemoteService {
     return implode(' ', $args);
   }
 
-  protected function getActiveTelesyncRegion():string
+  protected function getActiveTelesyncRegions():array
   {
-    return $this->local->run('telesync us-east-1 | grep Cluster | head -1 | awk \'{print $2}\'', fn($o) => trim($o), 60);
+    return $this->local->run('telesync status | grep Cluster | awk \'{print $2}\'', function (string $output):array {
+      $clusters = explode("\n", $output);
+      return array_filter(array_map('trim', $clusters));
+    }, 60);
   }
 }
