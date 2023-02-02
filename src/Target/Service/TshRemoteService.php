@@ -37,13 +37,16 @@ class TshRemoteService extends RemoteService {
     }
     unset($options['telesync.region']);
 
-    $activeRegions = $this->getActiveTelesyncRegions();
-
-    // This means telesync is connected to a different region and we'd have to change that.
-    if (!empty($activeRegions) && !in_array($this->telesyncRegion, $activeRegions)) {
-      throw new InvalidTargetException("Cannot access target on current telesync clusters: " . implode(', ', $activeRegions) . ". You must connect to '{$this->telesyncRegion}' instead.");
+    // If telesync is enabled, then specify an explicit proxy.
+    if (!empty($this->telesyncRegion)) {
+      $activeRegions = $this->getActiveTelesyncRegions();
+      // This means telesync is connected to a different region and we'd have to change that.
+      if (!empty($activeRegions) && !in_array($this->telesyncRegion, $activeRegions)) {
+        throw new InvalidTargetException("Cannot access target on current telesync clusters: " . implode(', ', $activeRegions) . ". You must connect to '{$this->telesyncRegion}' instead.");
+      }
+      $args[] = '--proxy=' . $this->telesyncRegion;
     }
-
+    
     foreach ($options as $key => $value) {
       $args[] = '-o';
       $args[] = sprintf('%s=%s', $key, $value);
