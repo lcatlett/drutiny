@@ -35,7 +35,7 @@ class PolicyOverride extends StrictEntity
         }
 
         if (isset($this->weight)) {
-          $policy->weight = $this->weight;
+          $policy->setProperty('weight', $this->weight);
         }
         return $policy;
     }

@@ -41,7 +41,7 @@ class HtaccessRedirects extends Audit
         'RewriteRule.*\[.*R=(301|permanent).*\] *$',
         );
         $regex = '^ *(' . implode('|', $patterns) . ')';
-        $command = "grep -Ei '${regex}' %docroot%/.htaccess | wc -l";
+        $command = "grep -Ei '$regex' %docroot%/.htaccess | wc -l";
 
         $total_redirects = (int) $sandbox->exec($command);
 

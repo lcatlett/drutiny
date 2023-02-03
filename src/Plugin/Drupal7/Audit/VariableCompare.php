@@ -124,7 +124,7 @@ class VariableCompare extends Audit {
       case 'in_array':
         return in_array($reading, $value);
       case 'regex':
-        return preg_match("#${value}#", $reading);
+        return preg_match("#$value#", $reading);
       case 'equal':
       case '==':
       default:

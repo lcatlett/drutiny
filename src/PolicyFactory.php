@@ -17,8 +17,9 @@ class PolicyFactory
 {
     use ContainerAwareTrait;
 
-    protected $languageManager;
-    protected $progress;
+    protected LanguageManager $languageManager;
+    protected ProgressBar $progress;
+    protected LoggerInterface $logger;
 
     public function __construct(ContainerInterface $container, LoggerInterface $logger, LanguageManager $languageManager, ProgressBar $progress)
     {
@@ -52,7 +53,7 @@ class PolicyFactory
 
         try {
             $policy = $this->getSource($definition['source'])->load($definition);
-            $policy->source = $definition['source'];
+            $policy->setProperty('source', $definition['source']);
             return $policy;
         } catch (\InvalidArgumentException $e) {
             $this->logger->warning($e->getMessage());

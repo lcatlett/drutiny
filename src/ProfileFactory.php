@@ -16,9 +16,9 @@ class ProfileFactory
 
     use ContainerAwareTrait;
 
-    protected $cache;
-    protected $languageManager;
-    protected $style;
+    protected CacheInterface $cache;
+    protected LanguageManager $languageManager;
+    protected ProgressBar $progress;
 
     public function __construct(ContainerInterface $container, CacheInterface $cache, LanguageManager $languageManager, ProgressBar $progress)
     {

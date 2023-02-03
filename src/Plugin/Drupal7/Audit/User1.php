@@ -43,7 +43,7 @@ class User1 extends Audit {
 
     // Username.
     $pattern = $sandbox->getParameter('blacklist');
-    if (preg_match("#${pattern}#i", $user->name)) {
+    if (preg_match("#$pattern#i", $user->name)) {
       $errors[] = "Username '$user->name' is too easy to guess.";
     }
     $sandbox->setParameter('username', $user->name);
