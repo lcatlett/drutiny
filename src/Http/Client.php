@@ -3,6 +3,7 @@
 namespace Drutiny\Http;
 
 use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\ClientInterface;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\MessageFormatter;
@@ -11,9 +12,8 @@ use Kevinrob\GuzzleCache\Storage\Psr6CacheStorage;
 use Kevinrob\GuzzleCache\Strategy\PrivateCacheStrategy;
 use Psr\Http\Message\RequestInterface;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
-use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareTrait;
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\DependencyInjection\TaggedContainerInterface;
 
 class Client
 {
@@ -21,7 +21,7 @@ class Client
 
     protected $cache;
 
-    public function __construct(ContainerInterface $container, FilesystemAdapter $cache)
+    public function __construct(TaggedContainerInterface $container, FilesystemAdapter $cache)
     {
         $this->setContainer($container);
         $this->cache = $cache;
@@ -30,7 +30,7 @@ class Client
     /**
      * Factory method to create a new guzzle client instance.
      */
-    public function create(array $config = [])
+    public function create(array $config = []):ClientInterface
     {
         if (!isset($config['handler'])) {
             $config['handler'] = HandlerStack::create();

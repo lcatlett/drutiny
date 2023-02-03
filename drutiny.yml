@@ -78,6 +78,9 @@ services:
     Symfony\Component\DependencyInjection\ContainerInterface:
       alias: service_container
     
+    Symfony\Component\DependencyInjection\TaggedContainerInterface:
+      alias: service_container
+    
     async:
         shared: false
         class: Async\ForkManager
