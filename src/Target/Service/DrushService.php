@@ -11,6 +11,7 @@ class DrushService
     protected string $alias;
     protected string $url;
     protected string $bin;
+    protected ExecutionInterface $execService;
 
     protected const LAUNCHERS = ['../vendor/drush/drush/drush', 'drush-launcher', 'drush.launcher', 'drush'];
     protected $supportedCommandMap = [

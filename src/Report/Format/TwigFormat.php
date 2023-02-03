@@ -20,7 +20,6 @@ abstract class TwigFormat extends Format implements FilesystemFormatInterface
 {
     protected Environment $twig;
     protected string $directory;
-    protected BufferedOutput $buffer;
 
     public function configure()
     {

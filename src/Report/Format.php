@@ -2,9 +2,6 @@
 
 namespace Drutiny\Report;
 
-use Drutiny\AssessmentInterface;
-use Drutiny\Profile;
-use Drutiny\AuditResponse\AuditResponse;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -19,6 +16,7 @@ abstract class Format implements FormatInterface
     protected string $name = 'unknown';
     protected array $options = [];
     protected LoggerInterface $logger;
+    protected OutputInterface $buffer;
 
 
     public function __construct(ContainerInterface $container, LoggerInterface $logger)
