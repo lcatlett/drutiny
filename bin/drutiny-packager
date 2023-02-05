@@ -24,7 +24,8 @@ define('BUILD_DIRECTORY', getcwd() . '/.build');
 (new SingleCommandApplication())
     ->setName('Build Phar')
     ->addArgument('version', InputArgument::OPTIONAL, 'A git branch or tag to build from.', false)
-    ->addOption('package-file', 'f', InputOption::VALUE_OPTIONAL, 'Location of the package file', 'package.yml')
+    ->addOption('package-file', 'f', InputOption::VALUE_OPTIONAL, 'Location of the package file.', 'package.yml')
+    ->addOption('phar-dir', 'd', InputOption::VALUE_OPTIONAL, 'The directory to write the phar file too.', getcwd())
     ->setCode(function (InputInterface $input, OutputInterface $output) {
         // output arguments and options
         $output->setVerbosity(OutputInterface::VERBOSITY_VERY_VERBOSE);
@@ -68,7 +69,11 @@ define('BUILD_DIRECTORY', getcwd() . '/.build');
 
         $fs->remove($docs);
 
-        $phar_file = strtr('name-versionsuffix.phar', [
+        $phar_dir = $input->getOption('phar-dir');
+        !file_exists($phar_dir) && $fs->mkdir($phar_dir);
+
+        $phar_file = strtr('phar-dir/name-versionsuffix.phar', [
+          'phar-dir' => realpath($phar_dir),
           'name' => $package['package'],
           // Remove forward-slash references which will break writing the file.
           'version' => str_replace('/', '_', $version),
@@ -91,7 +96,7 @@ define('BUILD_DIRECTORY', getcwd() . '/.build');
 
         $console->log('info', 'Building phar...');
         // Build Phar.
-        $phar = new Phar($cwd . '/' . $phar_file);
+        $phar = new Phar($phar_file);
         // Add all files in the project.
         $phar->buildFromDirectory('.');
         $phar->setStub("#!/usr/bin/env php \n" . $phar->createDefaultStub('stub.php'));

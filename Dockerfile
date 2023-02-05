@@ -1,4 +1,4 @@
-ARG PHP_VERSION=7.4
+ARG PHP_VERSION=8.1
 FROM php:${PHP_VERSION}-cli
 
 ARG GITHUB_TOKEN
@@ -6,6 +6,8 @@ ARG GITHUB_TOKEN
 COPY --from=composer /usr/bin/composer /usr/bin/composer
 COPY . /usr/src/myapp
 WORKDIR /usr/src/myapp
+
+RUN  docker-php-ext-install sockets
 
 RUN apt-get update && apt-get install unzip tar git -y
 RUN echo "phar.readonly=0" > /usr/local/etc/php/conf.d/phar.ini
