@@ -2,6 +2,8 @@
 
 namespace Drutiny\Target;
 
+use Drutiny\Target\Service\ExecutionInterface;
+
 /**
  * Definition of a Target.
  */
@@ -20,6 +22,16 @@ interface TargetInterface
     public function getService($key);
 
     /**
+     * Allow the execution service to change depending on the target environment.
+     */
+    public function setExecService(ExecutionInterface $service):TargetInterface;
+
+    /**
+     * Run a command through the ExecutionService.
+     */
+    public function run(string $cmd, callable $preProcess, int $ttl);
+
+    /**
      * Return the target identifier.
      */
     public function getId():string;
@@ -33,4 +45,31 @@ interface TargetInterface
      * Get target reference name.
      */
     public function getTargetName():string;
+
+    /**
+     * Get the URI for the Target.
+     */
+    public function getUri(): string;
+
+    /**
+     * Get a list of properties available.
+     */
+    public function getPropertyList(): array;
+
+     /**
+     * Get a set property.
+     *
+     * @throws NoSuchIndexException
+     */
+    public function getProperty($key):mixed;
+
+    /**
+     * Check a property path exists.
+     */
+    public function hasProperty($key):bool;
+
+    /**
+     * Set a property.
+     */
+    public function setProperty($key, $value):self;
 }

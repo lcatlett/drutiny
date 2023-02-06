@@ -64,7 +64,7 @@ abstract class Target implements \ArrayAccess, ExecutionInterface
     /**
      * {@inheritdoc}
      */
-    public function getUri()
+    public function getUri(): string
     {
         return $this->getProperty('uri');
     }
@@ -88,7 +88,7 @@ abstract class Target implements \ArrayAccess, ExecutionInterface
     /**
      * Allow the execution service to change depending on the target environment.
      */
-    public function setExecService(ExecutionInterface $service)
+    public function setExecService(ExecutionInterface $service):TargetInterface
     {
         return $this->setProperty('service.exec', $service);
     }
@@ -104,7 +104,7 @@ abstract class Target implements \ArrayAccess, ExecutionInterface
     /**
      * Set a property.
      */
-    public function setProperty($key, $value)
+    public function setProperty($key, $value):TargetInterface
     {
         $this->confirmPropertyPath($key);
 
@@ -181,9 +181,9 @@ abstract class Target implements \ArrayAccess, ExecutionInterface
     /**
      * Get a set property.
      *
-     * @exception NoSuchIndexException
+     * @throws NoSuchIndexException
      */
-    public function getProperty($key)
+    public function getProperty($key):mixed
     {
         return $this->propertyAccessor->getValue($this->properties, $key);
     }
@@ -199,7 +199,7 @@ abstract class Target implements \ArrayAccess, ExecutionInterface
     /**
      * Get a list of properties available.
      */
-    public function getPropertyList()
+    public function getPropertyList():array
     {
         $paths = $this->getDataPaths($this->properties);
         sort($paths);
@@ -228,7 +228,7 @@ abstract class Target implements \ArrayAccess, ExecutionInterface
     /**
      * Check a property path exists.
      */
-    public function hasProperty($key)
+    public function hasProperty($key):bool
     {
         try {
             $this->propertyAccessor->getValue($this->properties, $key);
