@@ -77,8 +77,9 @@ class PharExtractCommand extends DrutinyBaseCommand
         if ($fs->exists($bin)) {
             unlink($bin);
         }
-        symlink($release_bin, $bin);
-        $io->success("$version is now accessible from $bin. ");
+        if (symlink($release_bin, $bin)) {
+            $io->success("$version is now accessible from $bin. ");
+        }
 
         return $this->callExtracted($bin);
     }
