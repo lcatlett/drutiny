@@ -2,6 +2,7 @@
 
 use Drutiny\Kernel;
 use Drutiny\Console\Application;
+use Symfony\Component\Console\Input\ArgvInput;
 
 if (!in_array(PHP_SAPI, ['cli', 'phpdbg', 'embed'], true)) {
     echo 'Warning: The console should be invoked via the CLI version of PHP, not the '.PHP_SAPI.' SAPI'.PHP_EOL;
@@ -53,9 +54,7 @@ if (file_exists(DRUTINY_LIB.'/BUILD_DATETIME')) {
 $kernel = new Kernel('production');
 $application = new Application($kernel, reset($versions).$suffix);
 
-if (Phar::running()) {
-  echo "Drutiny is not supported to run as a Phar file. Please extract the archive and try again.\n";
-  exit;
-}
-
-$application->run();
+$application->run(
+  // If this is a phar file, then run the extraction command. Otherwise behave as normal.
+  Phar::running() ? new ArgvInput([$_SERVER['argv'][0], 'phar-extract', '-vvv']) : null
+);

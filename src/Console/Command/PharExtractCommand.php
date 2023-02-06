@@ -7,7 +7,9 @@ use Phar;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Console\Terminal;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Process\Process;
 
 /**
  * Self update command.
@@ -43,35 +45,54 @@ class PharExtractCommand extends DrutinyBaseCommand
         $release_dir = $this->getContainer()->getParameter('drutiny_releases_dir');
         $version = $this->getApplication()->getVersion();
         $extraction_location = "$release_dir/$version";
+        $release_bin = "$extraction_location/vendor/bin/drutiny";
+        
         $fs = new Filesystem;
 
+        // Release previously extracted we can passthru to it.
+        if ($fs->exists($release_bin)) {
+            return $this->callExtracted($release_bin);
+        }
+
         if ($fs->exists($extraction_location)) {
-            $io->warning("$version already exists at $extraction_location. Will not override.");
+            $io->error("$version already exists at $extraction_location but doesn't have a known callable drutiny bin. Expecting $release_bin.");
             return 1;
         }
+
         $fs->mkdir($extraction_location);
 
         $phar = new Phar(Phar::running());
         $phar->extractTo($extraction_location);
         $io->success("$version extracted to $extraction_location.");
 
-        $bin = $this->getContainer()->getParameter('drutiny_release_bin');
-        $bin_dir = dirname($bin);
-        $fs->mkdir($bin_dir);
-
-        $release_bin = "$extraction_location/vendor/bin/drutiny";
-
         if (!$fs->exists($release_bin)) {
             $io->error("Cannot find drutiny bin in release. Expecting $release_bin.");
             return 2;
         }
 
+        $bin = $this->getContainer()->getParameter('drutiny_release_bin');
+        $bin_dir = dirname($bin);
+        $fs->mkdir($bin_dir);
+
         if ($fs->exists($bin)) {
             unlink($bin);
         }
         symlink($release_bin, $bin);
-        $io->success("$version is now accessible from $bin.");
+        $io->success("$version is now accessible from $bin. ");
 
-        return 0;
+        return $this->callExtracted($bin);
+    }
+
+    protected function callExtracted($bin):int {
+        $args = $_SERVER['argv'];
+        $args[0] = $bin;
+        $process = new Process($args);
+        $process->setTty(true);
+        $process->setPty(true);
+        $process->setTimeout(null);
+        $this->getLogger()
+            ->withName('phar-launcher')
+            ->info(Phar::running() . ' calling ' . $process->getCommandLine());
+        return $process->run();
     }
 }
