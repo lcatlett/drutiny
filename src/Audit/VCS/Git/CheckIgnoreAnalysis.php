@@ -12,7 +12,7 @@ class CheckIgnoreAnalysis extends AbstractAnalysis {
     /**
      * {@inheritdoc}
      */
-    public function configure()
+    public function configure():void
     {
         parent::configure();
         $dir = $this->target instanceof FilesystemInterface ? $this->target->getDirectory() : "";

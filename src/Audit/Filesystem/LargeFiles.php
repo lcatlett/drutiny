@@ -25,7 +25,7 @@ class LargeFiles extends Audit
     /**
      * @inheritdoc
      */
-    public function configure()
+    public function configure():void
     {
         $this->addParameter(
           'max_size',

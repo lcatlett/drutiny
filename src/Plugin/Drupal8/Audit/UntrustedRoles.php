@@ -10,7 +10,7 @@ use Drutiny\Sandbox\Sandbox;
  */
 class UntrustedRoles extends Audit
 {
-    public function configure() {
+    public function configure():void {
       $this->addParameter(
         'untrusted_roles',
         static::PARAMETER_OPTIONAL

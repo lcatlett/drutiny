@@ -19,7 +19,7 @@ use Symfony\Component\Yaml\Yaml;
 class HtaccessRedirects extends Audit
 {
 
-    public function configure()
+    public function configure():void
     {
          $this
         ->addParameter(

@@ -10,7 +10,7 @@ use Drutiny\Audit\AbstractAnalysis;
  */
 class DirectoryAnalysis extends AbstractAnalysis
 {
-    public function configure()
+    public function configure():void
     {
         parent::configure();
         $this->addParameter(

@@ -14,7 +14,7 @@ class StatusInformation extends Audit
     /**
      * {@inheritdoc}
      */
-    public function configure()
+    public function configure():void
     {
         $this->setDeprecated("Use AbstractAnalysis and evaluate drush target status information.");
     }

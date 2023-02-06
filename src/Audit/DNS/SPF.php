@@ -17,7 +17,7 @@ use Drutiny\Sandbox\Sandbox;
 class SPF extends Audit
 {
 
-    public function configure()
+    public function configure():void
     {
         $this->addParameter(
             'type',

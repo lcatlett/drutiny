@@ -27,7 +27,7 @@ use Drutiny\Annotation\Param;
 class IniGet extends AbstractComparison
 {
 
-    public function configure() {
+    public function configure():void {
       $this->addParameter(
         'setting',
         static::PARAMETER_OPTIONAL,

@@ -12,7 +12,7 @@ use Drutiny\Sandbox\Sandbox;
 class ModuleEnabled extends Audit
 {
 
-    public function configure()
+    public function configure():void
     {
            $this->addParameter(
                'module',

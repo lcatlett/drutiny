@@ -10,7 +10,7 @@ use Drutiny\Annotation\Param;
 class CodeScanAnalysis extends AbstractAnalysis
 {
 
-    public function configure()
+    public function configure():void
     {
       parent::configure();
       $this->addParameter(

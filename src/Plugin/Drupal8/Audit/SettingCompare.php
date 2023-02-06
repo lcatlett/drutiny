@@ -17,7 +17,7 @@ use Drutiny\Audit\AbstractComparison;
  */
 class SettingCompare extends AbstractComparison
 {
-    public function configure()
+    public function configure():void
     {
         $this->addParameter(
             'key',

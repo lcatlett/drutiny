@@ -9,7 +9,7 @@ use Drutiny\Sandbox\Sandbox;
  */
 class HttpHeaderMatch extends Http
 {
-    public function configure()
+    public function configure():void
     {
         $this->addParameter(
             'header',

@@ -87,7 +87,7 @@ class AuditUpgrade {
     {
       $message = "Please specify parameters in a configure method declaration:\n";
       $message .= "// Class: " . $this->reflection->getName() . "\n";
-      $message .= "public function configure() {\n";
+      $message .= "public function configure():void {\n";
       foreach ($this->getParamAnnotations() as $param) {
         $message .= $this->getParameterDeclaration($param['name'], $param['description'] ?? '', null, $param['default'] ?? null);
       }

@@ -12,7 +12,7 @@ use Drutiny\Sandbox\Sandbox;
 class LocalCommandOutputAnalysis extends AbstractAnalysis
 {
 
-    public function configure()
+    public function configure():void
     {
         parent::configure();
         $this->addParameter(

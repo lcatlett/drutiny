@@ -13,7 +13,7 @@ class User1 extends Audit
 {
 
 
-    public function configure()
+    public function configure():void
     {
         $this->addParameter(
            'email',

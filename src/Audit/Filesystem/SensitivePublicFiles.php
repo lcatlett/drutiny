@@ -24,7 +24,7 @@ use Drutiny\AuditResponse\AuditResponse;
 class SensitivePublicFiles extends Audit
 {
 
-    public function configure()
+    public function configure():void
     {
            $this->addParameter(
                'extensions',

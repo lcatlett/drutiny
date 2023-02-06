@@ -6,7 +6,7 @@ use Drutiny\Sandbox\Sandbox;
 
 class HttpStatusCode extends Http
 {
-  public function configure()
+  public function configure():void
   {
       $this->addParameter(
           'status_code',

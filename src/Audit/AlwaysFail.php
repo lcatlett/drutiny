@@ -14,7 +14,7 @@ use Drutiny\Sandbox\Sandbox;
  */
 class AlwaysFail extends Audit
 {
-    public function configure()
+    public function configure():void
     {
           $this->setDeprecated();
     }

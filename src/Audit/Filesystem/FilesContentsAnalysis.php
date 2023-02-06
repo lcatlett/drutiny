@@ -14,7 +14,7 @@ use Drutiny\Audit\AuditValidationException;
  */
 class FilesContentsAnalysis extends FilesExistenceAnalysis {
 
-  public function configure() {
+  public function configure():void {
     parent::configure();
     $this->addParameter(
       'contents_index',

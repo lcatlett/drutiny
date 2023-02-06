@@ -10,7 +10,7 @@ use Drutiny\Annotation\Param;
 class PhpEnvironmentVariableAnalysis extends AbstractAnalysis
 {
 
-  public function configure()
+  public function configure():void
   {
     $this->addParameter(
         'expression',

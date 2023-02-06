@@ -10,7 +10,7 @@ use Psr\Http\Message\RequestInterface;
 
 trait HttpTrait
 {
-    public function configure()
+    public function configure():void
     {
       $this->addParameter(
         'use_cache',

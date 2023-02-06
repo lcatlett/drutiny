@@ -14,7 +14,7 @@ class SqlResultAudit extends AbstractAnalysis
     /**
      * {@inheritdoc}
      */
-    public function configure()
+    public function configure():void
     {
         parent::configure();
         $this->addParameter(

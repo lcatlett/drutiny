@@ -10,7 +10,7 @@ use Drutiny\Sandbox\Sandbox;
 class HttpHeaderRegex extends Http
 {
 
-    public function configure()
+    public function configure():void
     {
         $this->addParameter(
             'header',

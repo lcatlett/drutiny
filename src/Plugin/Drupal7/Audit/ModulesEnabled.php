@@ -11,7 +11,7 @@ use Drutiny\Annotation\Param;
  */
 class ModulesEnabled extends Audit {
 
-  public function configure() {
+  public function configure():void {
     $this->setDeprecated();
   }
 

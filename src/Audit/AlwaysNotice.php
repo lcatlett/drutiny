@@ -15,7 +15,7 @@ use Drutiny\Sandbox\Sandbox;
 class AlwaysNotice extends Audit
 {
 
-    public function configure()
+    public function configure():void
     {
           $this->setDeprecated();
     }

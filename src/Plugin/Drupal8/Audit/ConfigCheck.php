@@ -13,7 +13,7 @@ class ConfigCheck extends AbstractComparison
 {
 
 
-    public function configure()
+    public function configure():void
     {
            $this->addParameter(
                'collection',

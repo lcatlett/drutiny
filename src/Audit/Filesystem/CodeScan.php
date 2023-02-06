@@ -18,7 +18,7 @@ use Drutiny\AuditResponse\AuditResponse;
 class CodeScan extends Audit
 {
 
-    public function configure()
+    public function configure():void
     {
         $this->addParameter(
             'directory',

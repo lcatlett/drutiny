@@ -10,7 +10,7 @@ use Drutiny\Sandbox\Sandbox;
  */
 class CronHasRun extends Audit
 {
-    public function configure()
+    public function configure():void
     {
            $this->addParameter(
                'cron_max_interval',

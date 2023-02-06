@@ -8,10 +8,11 @@ use Drutiny\AuditResponse\AuditResponse;
 use Drutiny\Entity\DataBag;
 use Drutiny\Policy\DependencyException;
 use Drutiny\Sandbox\Sandbox;
-use Drutiny\Target\NoSuchPropertyException;
 use Drutiny\Target\TargetInterface;
 use Drutiny\Upgrade\AuditUpgrade;
 use Drutiny\Entity\Exception\DataNotFoundException;
+use Drutiny\Target\TargetPropertyException;
+use Monolog\Logger;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Component\Console\Exception\InvalidArgumentException;
@@ -32,51 +33,40 @@ use Twig\Error\RuntimeError;
  */
 abstract class Audit implements AuditInterface
 {
-    protected InputDefinition $definition;
-    protected EventDispatcher $eventDispatcher;
-    protected LoggerInterface $logger;
-    protected ContainerInterface $container;
-    protected TargetInterface $target;
-
-    /**
-     * @deprecated
-     */
-    protected ExpressionLanguage $expressionLanguage;
     protected DataBag $dataBag;
     protected Policy $policy;
-    protected ProgressBar $progressBar;
+    protected InputDefinition $definition;
     protected bool $deprecated = false;
     protected string $deprecationMessage = '';
-    private CacheInterface $cache;
 
     final public function __construct(
-        ContainerInterface $container,
-        TargetInterface $target,
-        LoggerInterface $logger,
-        ExpressionLanguage $expressionLanguage,
-        ProgressBar $progressBar,
-        CacheInterface $cache,
-        EventDispatcher $eventDispatcher
+        protected ContainerInterface $container,
+        protected TargetInterface $target,
+        protected LoggerInterface $logger,
+
+         /**
+         * @deprecated
+         */
+        protected ExpressionLanguage $expressionLanguage,
+        protected ProgressBar $progressBar,
+        protected CacheInterface $cache,
+        protected EventDispatcher $eventDispatcher
     ) {
-        $this->container = $container;
-        $this->eventDispatcher = $eventDispatcher;
-        $this->target = $target;
-        if (method_exists($logger, 'withName')) {
-            $logger = $logger->withName('audit');
+        if ($logger instanceof Logger) {
+            $this->logger = $logger->withName('audit');
         }
-        $this->logger = $logger;
         $this->definition = new InputDefinition();
-        $this->expressionLanguage = $expressionLanguage;
-        $this->progressBar = $progressBar;
         $this->dataBag = new DataBag();
         $this->dataBag->add([
         'parameters' => new DataBag(),
       ]);
-        $this->cache = $cache;
         $this->configure();
     }
 
-    public function configure()
+    /**
+     * {@inheritdoc}
+     */
+    public function configure():void
     {
     }
 
@@ -85,7 +75,7 @@ abstract class Audit implements AuditInterface
      */
     abstract public function audit(Sandbox $sandbox);
 
-    protected function getPolicy()
+    protected function getPolicy():Policy
     {
         return $this->policy;
     }
@@ -99,12 +89,7 @@ abstract class Audit implements AuditInterface
     }
 
     /**
-     * @param Policy $policy
-     * @param bool $remediate (@deprecated)
-     *
-     * @return AuditResponse
-     *
-     * @throws \Drutiny\Audit\AuditValidationException
+     * {@inheritdoc}
      */
     final public function execute(Policy $policy, $remediate = false): AuditResponse
     {
@@ -181,7 +166,7 @@ abstract class Audit implements AuditInterface
               'uri' => $this->target->getUri(),
               'policy' => $policy->name
             ]);
-        } catch (NoSuchPropertyException $e) {
+        } catch (TargetPropertyException $e) {
             $outcome = AuditInterface::NOT_APPLICABLE;
             $message = $e->getMessage();
             $this->set('exception', $message);
@@ -251,15 +236,15 @@ abstract class Audit implements AuditInterface
     {
         $this->logger->debug("->withPolicy($policy_name)");
         $policy = $this->container
-        ->get('policy.factory')
-        ->loadPolicyByName($policy_name);
+            ->get('policy.factory')
+            ->loadPolicyByName($policy_name);
         return $this->container->get($policy->class)->execute($policy);
     }
 
     /**
      * Evaluate an expression using the Symfony ExpressionLanguage engine.
      */
-    public function evaluate(string $expression, $language = 'expression_language', array $contexts = [])
+    public function evaluate(string $expression, $language = 'expression_language', array $contexts = []):mixed
     {
         try {
             $contexts = array_merge($contexts, $this->getContexts());
@@ -284,7 +269,7 @@ abstract class Audit implements AuditInterface
     /**
      * Evaluate a twig expression.
      */
-    private function evaluateTwigSyntax(string $expression, array $contexts = [])
+    private function evaluateTwigSyntax(string $expression, array $contexts = []):mixed
     {
         $code = '{{ ('.$expression.')|json_encode()|raw }}';
         $twig = $this->container->get('Twig\Environment');

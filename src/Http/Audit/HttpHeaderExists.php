@@ -22,7 +22,7 @@ use Psr\Http\Message\ResponseInterface;
 class HttpHeaderExists extends Http
 {
 
-    public function configure()
+    public function configure():void
     {
          $this->addParameter(
              'header',

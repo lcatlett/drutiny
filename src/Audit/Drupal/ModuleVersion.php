@@ -12,7 +12,7 @@ use Drutiny\Annotation\Param;
 class ModuleVersion extends Audit
 {
 
-    public function configure() {
+    public function configure():void {
       $this->setDeprecated();
     }
 

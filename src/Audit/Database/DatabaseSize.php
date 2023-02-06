@@ -22,7 +22,7 @@ use Drutiny\AuditResponse\AuditResponse;
 class DatabaseSize extends Audit
 {
 
-    public function configure()
+    public function configure():void
     {
          $this->addParameter(
              'max_size',

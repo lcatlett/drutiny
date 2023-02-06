@@ -13,7 +13,7 @@ use Drutiny\Target\FilesystemInterface;
  */
 class FilesExistenceAnalysis extends AbstractAnalysis {
 
-  public function configure() {
+  public function configure():void {
     parent::configure();
     $dir = $this->target instanceof FilesystemInterface ? $this->target->getDirectory() : "";
     $this->addParameter(

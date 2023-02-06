@@ -12,7 +12,7 @@ use Twig\Error\RuntimeError;
  */
 class AbstractAnalysis extends Audit
 {
-  public function configure()
+  public function configure(): void
   {
     $this->addParameter(
         'expression',

@@ -11,7 +11,7 @@ use Drutiny\Sandbox\Sandbox;
 class PurgePluginExists extends Audit
 {
 
-    public function configure()
+    public function configure():void
     {
          $this->addParameter(
              'plugin',

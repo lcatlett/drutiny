@@ -15,7 +15,7 @@ class HttpAnalysis extends AbstractAnalysis
         configure as HttpTrait_configure;
     }
 
-    public function configure()
+    public function configure():void
     {
         parent::configure();
         $this->addParameter(

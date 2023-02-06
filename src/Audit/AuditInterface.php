@@ -2,6 +2,7 @@
 
 namespace Drutiny\Audit;
 
+use Drutiny\AuditResponse\AuditResponse;
 use Drutiny\Sandbox\Sandbox;
 use Drutiny\Policy;
 
@@ -64,7 +65,25 @@ interface AuditInterface
     const PARAMETER_OPTIONAL = 2;
     const PARAMETER_IS_ARRAY = 4;
 
-    public function configure();
+    /**
+     * Define how the audit class is to be
+     */
+    public function configure():void;
+
+    /**
+     * Audit the target against the policy and evaluate the result.
+     */
     public function audit(Sandbox $sandbox);
-    public function execute(Policy $policy, $remediate = false);
+    
+    /**
+     * Execute an audit against a given policy.
+     * 
+     * @param Policy $policy
+     * @param bool $remediate (@deprecated)
+     *
+     * @return AuditResponse
+     *
+     * @throws \Drutiny\Audit\AuditValidationException
+     */
+    public function execute(Policy $policy, $remediate = false): AuditResponse;
 }

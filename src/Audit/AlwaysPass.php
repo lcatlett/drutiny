@@ -14,7 +14,7 @@ use Drutiny\Sandbox\Sandbox;
  */
 class AlwaysPass extends Audit
 {
-    public function configure()
+    public function configure():void
     {
           $this->setDeprecated();
     }
