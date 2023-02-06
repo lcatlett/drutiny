@@ -6,7 +6,6 @@ use Drutiny\Policy;
 use Drutiny\Policy\UnavailablePolicyException;
 use Drutiny\LanguageManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\Finder\Finder;
 use Psr\Log\LoggerInterface;
 
 class PolicyStorage implements PolicySourceInterface
