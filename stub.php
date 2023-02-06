@@ -17,8 +17,15 @@ if ($major < 7 || ($major == 7 && $minor < 4)) {
 
 set_time_limit(0);
 
-$lib = Phar::running() ?: '.';
-define('DRUTINY_LIB', $lib);
+$project_dir = Phar::running() ?: getcwd();
+
+// Drutiny is installed as a composer dependency and the project directory
+// is further up.
+if (preg_match('#^(.*)/vendor/drutiny/drutiny$#', __DIR__, $matches)) {
+  $project_dir = $matches[1];
+}
+
+define('DRUTINY_LIB', $project_dir);
 
 require DRUTINY_LIB.'/vendor/autoload.php';
 
@@ -30,7 +37,7 @@ $versions = array_filter(array_map(function($file) {
 }, $version_files));
 
 // Load from git.
-if (empty($versions) && !Phar::running() && file_exists(DRUTINY_LIB . '/.git') && $git_bin = exec('which git')) {
+if (empty($versions) && file_exists(DRUTINY_LIB . '/.git') && $git_bin = exec('which git')) {
   $versions[] = exec(sprintf('%s -C %s branch --no-color | cut -b 3-', $git_bin, DRUTINY_LIB)) . '-dev';
 }
 
@@ -44,6 +51,11 @@ if (file_exists(DRUTINY_LIB.'/BUILD_DATETIME')) {
 }
 
 $kernel = new Kernel('production');
-
 $application = new Application($kernel, reset($versions).$suffix);
+
+if (Phar::running()) {
+  echo "Drutiny is not supported to run as a Phar file. Please extract the archive and try again.\n";
+  exit;
+}
+
 $application->run();

@@ -6,6 +6,9 @@
 parameters:
   name: Drutiny
   drutiny_config_dir: '%user_home_dir%/.drutiny'
+  # Where phar release files will be extracted too.
+  drutiny_releases_dir: '%drutiny_config_dir%/releases'
+  drutiny_release_bin: '%drutiny_config_dir%/bin/drutiny'
   policy.library.fs: '%drutiny_config_dir%/policy'
   cache.directory: '%drutiny_config_dir%/cache'
   cache.ttl: 3600
