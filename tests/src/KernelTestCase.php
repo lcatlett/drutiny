@@ -4,53 +4,79 @@ namespace DrutinyTests;
 
 use Drutiny\Audit\TwigEvaluator;
 use Drutiny\Kernel;
+use Drutiny\LocalCommand;
 use Drutiny\ProfileFactory;
-use Drutiny\Target\Service\DrushService;
-use Drutiny\Target\Service\RemoteService;
+use Drutiny\Settings;
 use Drutiny\Target\TargetFactory;
 use Drutiny\Target\TargetInterface;
+use PHPUnit\Framework\MockObject\MockBuilder;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-
+use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
+use Symfony\Component\DependencyInjection\Compiler\PassConfig;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\Yaml\Yaml;
+use Symfony\Contracts\Cache\CacheInterface;
 
 abstract class KernelTestCase extends TestCase {
 
-  protected $application;
-  protected $output;
-  protected $container;
-  protected $profile;
+    protected $application;
+    protected $output;
+    protected $container;
+    protected $profile;
 
-  protected function setUp(): void
-  {
-      global $kernel;
-      $kernel = new Kernel('phpunit', 'x.y.z-dev');
-      $kernel->addServicePath(str_replace(realpath($kernel->getProjectDir()).'/', '', dirname(dirname(__FILE__))));
+    protected function setUp(): void
+    {
+        global $kernel;
+        $kernel = new Kernel('phpunit', 'x.y.z-dev');
+        $kernel->addServicePath(str_replace(realpath($kernel->getProjectDir()).'/', '', dirname(dirname(__FILE__))));
+        $builder = $this->getMockBuilder(LocalCommand::class);
 
-      $this->application = $kernel->getApplication();
-      $this->application->setAutoExit(FALSE);
-      $this->container = $kernel->getContainer();
-      $this->output = $this->container->get(OutputInterface::class);
-      $this->profile = $this->container->get(ProfileFactory::class)->loadProfileByName('empty');
-  }
+        // Mock the local command.
+        $kernel->addCompilerPass(new class($builder) implements CompilerPassInterface {
+            public function __construct (protected MockBuilder $builder) {}
+            public function process(ContainerBuilder $container)
+            {
+                $container->set(LocalCommand::class, $this->builder
+                            ->onlyMethods(['run'])
+                            ->setConstructorArgs([
+                                $container->get(CacheInterface::class),
+                                $container->get(LoggerInterface::class),
+                                $container->get(Settings::class),
+                            ])
+                            ->getMock());
+            }
+        }, PassConfig::TYPE_OPTIMIZE);
 
-  protected function loadMockTarget($type = 'null', ...$exec_responses):TargetInterface {
-    // Dependency factory loads the target from the twigEvaluator.
-    $twigEvaluator = $this->container->get(TwigEvaluator::class);
-    $targetFactory = $this->container->get(TargetFactory::class);
-    $target = $targetFactory->mock($type);
-    $target->setUri('https://example.com/');
+        $this->application = $kernel->getApplication();
+        $this->application->setAutoExit(FALSE);
+        $this->container = $kernel->getContainer();
+        $this->output = $this->container->get(OutputInterface::class);
+        $this->profile = $this->container->get(ProfileFactory::class)->loadProfileByName('empty');
+    }
 
-    // Set mock drush call.
-    $exec = $this->getMockBuilder(RemoteService::class)
-        ->onlyMethods(['run'])
-        ->setConstructorArgs([$target->getService('local')])
-        ->getMock();
-    $exec
-        ->method('run')
-        ->willReturn(...$exec_responses);
+    protected function loadMockTarget($type = 'none', ...$exec_responses):TargetInterface {
+        // Dependency factory loads the target from the twigEvaluator.
+        $twigEvaluator = $this->container->get(TwigEvaluator::class);
+        $targetFactory = $this->container->get(TargetFactory::class);
+        $target = $targetFactory->mock($type);
+        $target->setUri('https://example.com/');
 
-    $target->setProperty('service.drush', new DrushService($exec));
-    $twigEvaluator->setContext('target', $target);
-    return $target;
-}
+        if (!empty($exec_responses)) {
+            $this->container->get(LocalCommand::class)
+                ->expects($this->exactly(count($exec_responses)))
+                ->method('run')
+                ->willReturn(...$exec_responses);
+        }
+        
+        $twigEvaluator->setContext('target', $target);
+        return $target;
+    }
+
+    protected function getFixture($name) {
+        $filename = dirname(__DIR__) . '/fixtures/' . $name .'.yml';
+        if (!file_exists($filename)) return null;
+        return Yaml::parseFile($filename);
+    }
 }

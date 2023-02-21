@@ -16,7 +16,7 @@ interface TargetInterface
    * Parse the target data passed in.
    * @param $data string to parse.
    */
-    public function parse(string $data, ?string $uri = null):TargetInterface;
+    public function load(string $id, ?string $uri = null):void;
 
     /**
      * Run a command through the ExecutionService.

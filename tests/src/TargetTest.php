@@ -5,10 +5,9 @@ namespace DrutinyTests;
 use Drutiny\Target\TargetInterface;
 use Drutiny\Target\TargetPropertyException;
 use Drutiny\Entity\EventDispatchedDataBag;
-use Drutiny\Target\Service\ExecutionService;
-use DrutinyTests\Prophecies\LocalServiceDrushStub;
-use DrutinyTests\Prophecies\LocalServiceDdevStub;
-use DrutinyTests\Prophecies\LocalServiceLandoStub;
+use Drutiny\Target\DdevTarget;
+use Drutiny\Target\DrushTarget;
+use Drutiny\Target\LandoTarget;
 use Prophecy\Prophet;
 use Symfony\Component\PropertyAccess\Exception\InvalidPropertyPathException;
 
@@ -94,9 +93,6 @@ class TargetTest extends KernelTestCase
         $this->assertInstanceOf(TargetInterface::class, $target);
         $this->assertEquals($target->getUri(), $uri);
 
-        $this->assertInstanceOf(ExecutionService::class, $target['service.exec']);
-        $this->assertSame($target['service.exec'], $target->);
-
         // Existing DataBag can be overridden.
         $this->expectException(TargetPropertyException::class);
         $target['test'] = 'fault';
@@ -104,54 +100,54 @@ class TargetTest extends KernelTestCase
 
     public function testDrushTarget()
     {
-        $target = $this->loadMockTarget();
-        $this->assertInstanceOf(\Drutiny\Target\DrushTarget::class, $target);
-        $target->parse('@app.env', 'https://env.app.com');
+        $target = $this->loadMockTarget('drush',
+            $this->getFixture('drush-site:alias'),
+            $this->getFixture('drush-bin'),
+            $this->getFixture('drush-status'),
+            $this->getFixture('php-version')
+        );
+        $this->assertInstanceOf(DrushTarget::class, $target);
+
+        $target->load('@app.env', 'https://env.app.com');
         $this->runStandardTests($target, 'https://env.app.com');
 
         $this->assertEquals($target['drush.drupal-version'], '8.9.18');
         $this->assertEquals($target->getUri(), 'https://env.app.com');
 
-        $target = new \Drutiny\Target\DrushTarget(
-            new ExecutionService($local),
-            $this->container->get('logger'),
-            $this->container->get('Drutiny\Entity\EventDispatchedDataBag')
-        );
-        $target->parse('@app.env');
+        $target->load('@app.env');
         $this->assertEquals($target->getUri(), 'dev1.app.com');
     }
 
     public function testDdevTarget()
     {
-        $local = LocalServiceDdevStub::get($this->prophet)->reveal();
-
-        // Load without service container so we can use our prophecy.
-        $target = new \Drutiny\Target\DdevTarget(
-            new ExecutionService($local),
-            $this->container->get('logger'),
-            $this->container->get('Drutiny\Entity\EventDispatchedDataBag')
+        $target = $this->loadMockTarget('ddev',
+            $this->getFixture('ddev-describe'),
+            $this->getFixture('drush-bin'),
+            $this->getFixture('drush-status'),
+            $this->getFixture('php-version')
         );
-        $this->assertInstanceOf(\Drutiny\Target\DdevTarget::class, $target);
-        $target->parse('ddev_app', 'https://env.app.com');
+        
+        $this->assertInstanceOf(DdevTarget::class, $target);
+        $target->load('ddev_app', 'https://env.app.com');
 
-        $this->assertEquals($target['drush.drupal-version'], '8.9.18');
+        $this->assertEquals($target['drush.drupal-version'], '9.5.2');
         $this->assertEquals($target->getUri(), 'https://env.app.com');
     }
 
     public function testLandoTarget()
     {
-        $local = LocalServiceLandoStub::get($this->prophet)->reveal();
-
-        // Load without service container so we can use our prophecy.
-        $target = new \Drutiny\Target\LandoTarget(
-            new ExecutionService($local),
-            $this->container->get('logger'),
-            $this->container->get('Drutiny\Entity\EventDispatchedDataBag')
+        $target = $this->loadMockTarget('lando',
+            $this->getFixture('lando-list'),
+            $this->getFixture('lando-info'),
+            $this->getFixture('drush-bin'),
+            $this->getFixture('drush-status'),
+            $this->getFixture('php-version')
         );
-        $this->assertInstanceOf(\Drutiny\Target\LandoTarget::class, $target);
-        $target->parse('appenv', 'https://env.app.com');
+        
+        $this->assertInstanceOf(LandoTarget::class, $target);
+        $target->load('appenv', 'https://env.app.com');
 
-        $this->assertEquals($target['drush.drupal-version'], '8.9.18');
+        $this->assertEquals($target['drush.drupal-version'], '9.5.2');
         $this->assertEquals($target->getUri(), 'https://env.app.com');
     }
 }

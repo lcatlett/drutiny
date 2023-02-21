@@ -23,6 +23,7 @@ use Drutiny\DependencyInjection\TwigLoaderPass;
 use Psr\EventDispatcher\StoppableEventInterface;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
+use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\Finder\Finder;
 
 class Kernel
@@ -55,12 +56,12 @@ class Kernel
     /**
      * Add a compiler pass to the container.
      */
-    public function addCompilerPass(CompilerPassInterface $compiler):self
+    public function addCompilerPass(CompilerPassInterface $compiler, string $type = PassConfig::TYPE_BEFORE_OPTIMIZATION, int $priority = 0):self
     {
         if (isset($this->container)) {
             throw new \Exception("Cannot add compiler pass. Container already initialized.");
         }
-        $this->compilers[] = $compiler;
+        $this->compilers[] = [$compiler, $type, $priority];
         return $this;
     }
 
@@ -143,8 +144,8 @@ class Kernel
         $container->addCompilerPass(new TagCollectionPass('target', 'target.registry'));
         $container->addCompilerPass(new TwigEvaluatorPass());
 
-        foreach ($this->compilers as $pass) {
-            $container->addCompilerPass($pass);
+        foreach ($this->compilers as [$pass, $type, $priority]) {
+            $container->addCompilerPass($pass, $type, $priority);
         }
 
         $container->setParameter('user_home_dir', getenv('HOME'));

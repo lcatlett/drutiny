@@ -7,7 +7,9 @@ use Drutiny\Audit;
 use Drutiny\Console\Application;
 use Drutiny\Kernel;
 use Drutiny\Policy;
+use Drutiny\PolicyFactory;
 use Drutiny\Sandbox\Sandbox;
+use Drutiny\Target\TargetFactory;
 use PHPUnit\Framework\TestCase;
 
 class EntityTest extends KernelTestCase {
@@ -16,7 +18,7 @@ class EntityTest extends KernelTestCase {
 
   public function testPolicyObjectUsage()
   {
-    $policy = $this->container->get('policy.factory')->loadPolicyByName('Test:Pass');
+    $policy = $this->container->get(PolicyFactory::class)->loadPolicyByName('Test:Pass');
     $this->assertEquals($policy->name, 'Test:Pass');
 
     // Testing dynamic assignment to policy properties.
@@ -41,14 +43,14 @@ class EntityTest extends KernelTestCase {
 
   public function testTargetObjectUsage()
   {
-      $target = $this->container->get('target.factory')->create('null:none');
+      $target = $this->container->get(TargetFactory::class)->create('none:none');
       $target->setUri('bar');
       $this->assertEquals($target->getProperty('uri'), 'bar');
   }
 
   public function testAuditResponse()
   {
-    $policy = $this->container->get('policy.factory')->loadPolicyByName('Test:Pass');
+    $policy = $this->container->get(PolicyFactory::class)->loadPolicyByName('Test:Pass');
     $response = new AuditResponse($policy);
     $response->set(Audit::SUCCESS, [
       'foo' => 'bar',
@@ -64,15 +66,15 @@ class EntityTest extends KernelTestCase {
     $this->assertFalse($response->isSuccessful());
     $this->assertFalse($response->hasError());
 
-    $this->assertIsString($sleep_data = $response->serialize());
+    $this->assertIsString($sleep_data = serialize($response));
 
-    $export = unserialize($sleep_data);
-    $export['state'] = Audit::ERROR;
-    $sleep_data = serialize($export);
+    $sleep_data = serialize($response);
 
-    $response->unserialize($sleep_data);
+    $response = unserialize($sleep_data);
+    
+    $this->assertInstanceOf(AuditResponse::class, $response);
 
     $this->assertFalse($response->isSuccessful());
-    $this->assertTrue($response->hasError());
+    $this->assertFalse($response->hasError());
   }
 }

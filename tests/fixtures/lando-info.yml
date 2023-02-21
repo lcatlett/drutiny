@@ -1,0 +1,26 @@
+-
+    service: appserver
+    urls: ['https://localhost:57856', 'http://localhost:57857', 'http://contenta-cms.lndo.site:8000/', 'https://contenta-cms.lndo.site:444/']
+    type: php
+    healthy: true
+    via: apache
+    webroot: web
+    config: { php: /Users/joshua.waihi/.lando/config/drupal9/php.ini }
+    version: '7.4'
+    meUser: www-data
+    hasCerts: true
+    hostnames: [appserver.contentacms.internal]
+-
+    service: database
+    urls: {  }
+    type: mysql
+    healthy: true
+    internal_connection: { host: database, port: '3306' }
+    external_connection: { host: 127.0.0.1, port: '57855' }
+    healthcheck: 'bash -c "[ -f /bitnami/mysql/.mysql_initialized ]"'
+    creds: { database: drupal9, password: drupal9, user: drupal9 }
+    config: { database: /Users/joshua.waihi/.lando/config/drupal9/mysql.cnf }
+    version: '5.7'
+    meUser: www-data
+    hasCerts: false
+    hostnames: [database.contentacms.internal]

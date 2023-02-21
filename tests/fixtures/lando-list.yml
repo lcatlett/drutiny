@@ -1,0 +1,21 @@
+-
+    service: database
+    name: appenv_database_1
+    app: appenv
+    src: [/Users/user.name/Sandbox/appenv/site/.lando.yml]
+    kind: app
+    status: 'Up 47 seconds'
+-
+    service: appserver
+    name: appenv_appserver_1
+    app: appenv
+    src: [/Users/user.name/Sandbox/appenv/site/.lando.yml]
+    kind: app
+    status: 'Up 47 seconds'
+-
+    service: proxy
+    name: landoproxyhyperion5000gandalfedition_proxy_1
+    app: _global_
+    src: unknown
+    kind: service
+    status: 'Up 2 minutes'

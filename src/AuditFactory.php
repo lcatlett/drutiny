@@ -40,7 +40,7 @@ class AuditFactory {
         if (!$reflection->implementsInterface(AuditInterface::class)) {
             throw new AuditException("$audit_class does not implement " . AuditInterface::class);
         }
-        $target = $target ?? $this->targetFactory->create('null:none');
+        $target = $target ?? $this->targetFactory->create('none:none');
         $registry = [
             TargetInterface::class => $target,
             $target::class => $target

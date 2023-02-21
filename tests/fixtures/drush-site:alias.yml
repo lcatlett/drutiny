@@ -1,0 +1,4 @@
+root: /var/www/html/acme.prod/docroot
+uri: acme.network.acquia-sites.com
+remote-host: ssh.acme.com
+remote-user: acme.prod

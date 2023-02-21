@@ -2,12 +2,8 @@
 
 namespace DrutinyTests;
 
-use Drutiny\Console\Application;
-use Drutiny\Kernel;
-use Drutiny\Policy;
-use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Output\BufferedOutput;
+
 
 
 class ApplicationTest extends KernelTestCase {
@@ -22,7 +18,7 @@ class ApplicationTest extends KernelTestCase {
     $input = new ArrayInput([
       'command' => 'profile:run',
       'profile' => 'test',
-      'target' => 'null:none'
+      'target' => 'none:none'
     ]);
 
     $code = $this->application->run($input, $this->output);
@@ -78,7 +74,7 @@ class ApplicationTest extends KernelTestCase {
     $input = new ArrayInput([
       'command' => 'policy:audit',
       'policy' => 'Test:Pass',
-      'target' => 'null:none'
+      'target' => 'none:none'
     ]);
 
     $code = $this->application->run($input, $this->output);
@@ -105,7 +101,7 @@ class ApplicationTest extends KernelTestCase {
     $input = new ArrayInput([
       'command' => 'audit:run',
       'audit' => 'Drutiny\Audit\AlwaysPass',
-      'target' => 'null:none'
+      'target' => 'none:none'
     ]);
 
     $code = $this->application->run($input, $this->output);

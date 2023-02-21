@@ -1,0 +1,29 @@
+drupal-version: 9.5.2
+uri: 'http://www.acme.com'
+db-driver: mysql
+db-hostname: db-116
+db-port: 3306
+db-username: acme
+db-name: acme
+db-status: Connected
+bootstrap: Successful
+theme: gin
+admin-theme: gin
+php-bin: /usr/local/php8.0/bin/php
+php-conf:
+  - /usr/local/php8.0/etc/cli/php.ini
+php-os: Linux
+php-version: 8.0.25
+drush-script: /mnt/www/html/acme/vendor/bin/drush
+drush-version: 11.4.0
+drush-temp: /mnt/tmp/acme
+drush-conf:
+  - /etc/drush/drush.yml
+  - /mnt/www/html/acme/vendor/drush/drush/drush.yml
+  - /mnt/www/html/acme/drush/drush.yml
+install-profile: standard
+root: /mnt/www/html/acme/docroot
+site: sites/default
+files: sites/default/files
+private: /mnt/files/acme.prod/sites/default/files-private
+temp: /mnt/tmp/acme

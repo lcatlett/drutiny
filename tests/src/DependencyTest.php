@@ -2,18 +2,10 @@
 
 namespace DrutinyTests;
 
-use Drutiny\Policy\DependencyFactory;
 use Drutiny\Policy;
 use Drutiny\AuditFactory;
 use Drutiny\Audit\TwigEvaluator;
 use Drutiny\Target\TargetFactory;
-use Drutiny\Target\TargetInterface;
-use Drutiny\Target\Service\RemoteService;
-use Drutiny\Target\Service\DrushService;
-use PHPUnit\Framework\TestCase;
-use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Output\BufferedOutput;
-use Twig\Environment;
 
 
 
@@ -30,7 +22,7 @@ class DependencyTest extends KernelTestCase {
         // Dependency factory loads the target from the twigEvaluator.
         $twigEvaluator = $this->container->get(TwigEvaluator::class);
         $targetFactory = $this->container->get(TargetFactory::class);
-        $target = $targetFactory->mock('null');
+        $target = $targetFactory->mock('none');
         $target['drush.drupal-version'] = '8.2.1';
         $twigEvaluator->setContext('target', $target);
 
@@ -43,7 +35,7 @@ class DependencyTest extends KernelTestCase {
 
     public function testAudit():void
     {
-        $target = $this->loadMockTarget(
+        $target = $this->loadMockTarget('none',
             '/usr/local/bin/drush',
             ['syslog' => [
                 'status' => 'enabled'
@@ -59,12 +51,7 @@ class DependencyTest extends KernelTestCase {
     public function testPolicy():void
     {
         $policy = $this->getPolicyWithDepends('Drupal.isBootstrapped');
-        $target = $this->loadMockTarget(
-            '/usr/local/bin/drush',
-            ['syslog' => [
-                'status' => 'enabled'
-            ]]
-        );
+        $target = $this->loadMockTarget();
         $target['drush.bootstrap'] = 'Successful';
         $audit = $this->container->get(AuditFactory::class)->mock($policy->class, $target);
         $this->assertTrue($audit->execute($policy, $target)->isSuccessful(), "Dependency check passes.");
