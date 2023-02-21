@@ -2,12 +2,12 @@
 
 namespace Drutiny\Console\Command;
 
-use Composer\Semver\Comparator;
+use Drutiny\Settings;
 use Phar;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\Console\Terminal;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Process\Process;
 
@@ -16,6 +16,10 @@ use Symfony\Component\Process\Process;
  */
 class PharExtractCommand extends DrutinyBaseCommand
 {
+    public function __construct(protected Settings $settings, protected LoggerInterface $logger)
+    {
+        
+    }
 
     /**
      * {@inheritdoc}
@@ -42,7 +46,7 @@ class PharExtractCommand extends DrutinyBaseCommand
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $io = new SymfonyStyle($input, $output);
-        $release_dir = $this->getContainer()->getParameter('drutiny_releases_dir');
+        $release_dir = $this->settings->get('drutiny_releases_dir');
         $version = $this->getApplication()->getVersion();
         $extraction_location = "$release_dir/$version";
         $release_bin = "$extraction_location/vendor/bin/drutiny";
@@ -70,7 +74,7 @@ class PharExtractCommand extends DrutinyBaseCommand
             return 2;
         }
 
-        $bin = $this->getContainer()->getParameter('drutiny_release_bin');
+        $bin = $this->settings->get('drutiny_release_bin');
         $bin_dir = dirname($bin);
         $fs->mkdir($bin_dir);
 
@@ -91,7 +95,7 @@ class PharExtractCommand extends DrutinyBaseCommand
         $process->setTty(true);
         $process->setPty(true);
         $process->setTimeout(null);
-        $this->getLogger()
+        $this->logger
             ->withName('phar-launcher')
             ->info(Phar::running() . ' calling ' . $process->getCommandLine());
         return $process->run();

@@ -14,11 +14,7 @@ class ApplicationTest extends KernelTestCase {
 
   public function testContainer()
   {
-      $this->assertTrue(
-        $this->application
-        ->getKernel()
-        ->getContainer()
-        ->getParameter('phpunit.testing'));
+      $this->assertTrue($this->container->getParameter('phpunit.testing'));
   }
 
   public function testProfileRun()
@@ -26,7 +22,7 @@ class ApplicationTest extends KernelTestCase {
     $input = new ArrayInput([
       'command' => 'profile:run',
       'profile' => 'test',
-      'target' => 'none:none'
+      'target' => 'null:none'
     ]);
 
     $code = $this->application->run($input, $this->output);
@@ -82,7 +78,7 @@ class ApplicationTest extends KernelTestCase {
     $input = new ArrayInput([
       'command' => 'policy:audit',
       'policy' => 'Test:Pass',
-      'target' => 'none:none'
+      'target' => 'null:none'
     ]);
 
     $code = $this->application->run($input, $this->output);
@@ -109,7 +105,7 @@ class ApplicationTest extends KernelTestCase {
     $input = new ArrayInput([
       'command' => 'audit:run',
       'audit' => 'Drutiny\Audit\AlwaysPass',
-      'target' => 'none:none'
+      'target' => 'null:none'
     ]);
 
     $code = $this->application->run($input, $this->output);

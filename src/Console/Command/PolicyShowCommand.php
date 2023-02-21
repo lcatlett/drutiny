@@ -2,6 +2,7 @@
 
 namespace Drutiny\Console\Command;
 
+use Drutiny\LanguageManager;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
@@ -15,8 +16,14 @@ use Drutiny\PolicyFactory;
 class PolicyShowCommand extends DrutinyBaseCommand
 {
   use LanguageCommandTrait;
-  protected $policyFactory;
-  protected $languageManager;
+  public function __construct(
+    protected PolicyFactory $policyFactory,
+    protected LanguageManager $languageManager
+  )
+  {
+    parent::__construct();
+  }
+  
 
   /**
    * @inheritdoc
@@ -47,7 +54,7 @@ class PolicyShowCommand extends DrutinyBaseCommand
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $this->initLanguage($input);
-        $policy = $this->getPolicyFactory()->loadPolicyByName($input->getArgument('policy'));
+        $policy = $this->policyFactory->loadPolicyByName($input->getArgument('policy'));
         $export = $policy->export();
 
         foreach (['description', 'success', 'remediation', 'failure', 'warning'] as $field) {

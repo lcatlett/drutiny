@@ -4,6 +4,7 @@ namespace Drutiny;
 
 use Drutiny\Audit\AuditInterface;
 use Drutiny\Audit\AuditValidationException;
+use Drutiny\Audit\TwigEvaluator;
 use Drutiny\AuditResponse\AuditResponse;
 use Drutiny\Entity\DataBag;
 use Drutiny\Policy\DependencyException;
@@ -11,6 +12,8 @@ use Drutiny\Sandbox\Sandbox;
 use Drutiny\Target\TargetInterface;
 use Drutiny\Upgrade\AuditUpgrade;
 use Drutiny\Entity\Exception\DataNotFoundException;
+use Drutiny\Helper\ExpressionLanguageTranslation;
+use Drutiny\Policy\Dependency;
 use Drutiny\Target\TargetPropertyException;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface;
@@ -19,8 +22,8 @@ use Symfony\Component\Console\Exception\InvalidArgumentException;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputDefinition;
-use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 use Symfony\Component\EventDispatcher\EventDispatcher;
@@ -38,19 +41,22 @@ abstract class Audit implements AuditInterface
     protected InputDefinition $definition;
     protected bool $deprecated = false;
     protected string $deprecationMessage = '';
+    protected int $verbosity;
 
     final public function __construct(
         protected ContainerInterface $container,
         protected TargetInterface $target,
         protected LoggerInterface $logger,
 
-         /**
+        /**
          * @deprecated
          */
         protected ExpressionLanguage $expressionLanguage,
+        protected TwigEvaluator $twigEvaluator,
         protected ProgressBar $progressBar,
         protected CacheInterface $cache,
-        protected EventDispatcher $eventDispatcher
+        protected EventDispatcher $eventDispatcher,
+        OutputInterface $output,
     ) {
         if ($logger instanceof Logger) {
             $this->logger = $logger->withName('audit');
@@ -61,6 +67,8 @@ abstract class Audit implements AuditInterface
         'parameters' => new DataBag(),
       ]);
         $this->configure();
+        $this->twigEvaluator->setContext('target', $this->target);
+        $this->verbosity = $output->getVerbosity();
     }
 
     /**
@@ -117,7 +125,8 @@ abstract class Audit implements AuditInterface
             // Ensure policy dependencies are met.
             foreach ($policy->getDepends() as $dependency) {
                 // Throws DependencyException if dependency is not met.
-                $dependency->execute($this);
+                $this->executeDependency($dependency);
+                // $dependency->execute($this);
                 $this->progressBar->advance();
             }
 
@@ -151,7 +160,8 @@ abstract class Audit implements AuditInterface
             $message = $e->getMessage();
             $this->set('exception', $message);
             $this->set('exception_type', get_class($e));
-            $this->logger->warning("'{policy}' {class} ({uri}): $message", [
+            $log_level = $outcome == AuditInterface::IRRELEVANT ? 'debug' : 'warning';
+            $this->logger->log($log_level, "'{policy}' {class} ({uri}): $message", [
               'class' => get_class($this),
               'uri' => $this->target->getUri(),
               'policy' => $policy->name
@@ -196,7 +206,7 @@ abstract class Audit implements AuditInterface
         } catch (\Exception $e) {
             $outcome = AuditInterface::ERROR;
             $message = $e->getMessage();
-            if ($this->container->get('output')->getVerbosity() > OutputInterface::VERBOSITY_NORMAL) {
+            if ($this->verbosity > OutputInterface::VERBOSITY_NORMAL) {
                 $message .= PHP_EOL.$e->getTraceAsString();
             }
             $this->set('exception', $message);
@@ -227,6 +237,35 @@ abstract class Audit implements AuditInterface
     }
 
     /**
+     * Evaluate a dependency.
+     * 
+     * @throws DependencyException.
+     */
+    protected function executeDependency(Dependency $dependency):bool {
+        try {
+            $expression = $this->interpolate($dependency->expression);
+            $return = $this->evaluate($expression, $dependency->syntax, [
+                'dependency' => $dependency
+            ]);
+            if ($return === 1 || $return === true) {
+                return true;
+            }
+        }
+        catch (\Exception $e) {
+            $this->logger->warning($dependency->syntax . ': ' . $e->getMessage());
+        }
+        $this->logger->debug('Expression FAILED.', [
+            'class' => get_class($this),
+            'expression' => $expression,
+            'return' => print_r($return ?? 'EXCEPTION_THROWN', 1),
+            'syntax' => $dependency->syntax
+        ]);
+        // Execute the on fail behaviour.
+        throw new DependencyException($dependency);
+    }
+        
+
+    /**
      * Use a new Audit instance to audit policy.
      *
      * @param string $policy_name
@@ -247,14 +286,13 @@ abstract class Audit implements AuditInterface
     public function evaluate(string $expression, $language = 'expression_language', array $contexts = []):mixed
     {
         try {
+            if ($language == 'expression_language') {
+                $translation = new ExpressionLanguageTranslation($old = $expression);
+                $expression = $translation->toTwigSyntax();
+                $this->logger->warning("Expression language is deprecreated. Syntax will be translated to Twig. '$old' => '$expression'.");
+            }
             $contexts = array_merge($contexts, $this->getContexts());
-            switch ($language) {
-            case 'twig':
-              return $this->evaluateTwigSyntax($expression, $contexts);
-            case 'expression_language':
-            default:
-              return $this->expressionLanguage->evaluate($expression, $contexts);
-          }
+            return $this->twigEvaluator->execute($expression, $contexts);
         } catch (\Exception $e) {
             $this->logger->error("Evaluation failure {syntax}: {expression}: {message}", [
             'syntax' => $language,
@@ -264,18 +302,6 @@ abstract class Audit implements AuditInterface
           ]);
             throw $e;
         }
-    }
-
-    /**
-     * Evaluate a twig expression.
-     */
-    private function evaluateTwigSyntax(string $expression, array $contexts = []):mixed
-    {
-        $code = '{{ ('.$expression.')|json_encode()|raw }}';
-        $twig = $this->container->get('Twig\Environment');
-        $template = $twig->createTemplate($code);
-        $output = $twig->render($template, $contexts);
-        return json_decode($output, true);
     }
 
     /**
@@ -371,6 +397,14 @@ abstract class Audit implements AuditInterface
     }
 
     /**
+     * Check if an Audit has a given argument.
+     */
+    public function hasArgument(string $name): bool
+    {
+        return $this->definition->hasArgument($name);
+    }
+
+    /**
      * Used to provide target to deprecated Sandbox object.
      *
      * @deprecated
@@ -390,7 +424,7 @@ abstract class Audit implements AuditInterface
         return $this->logger;
     }
 
-    public function getDefinition()
+    public function getDefinition():InputDefinition
     {
         return $this->definition;
     }
@@ -401,7 +435,7 @@ abstract class Audit implements AuditInterface
      * This is used exclusively when the configure() method is called.
      * This allows the audit to specify and validate inputs from a policy.
      */
-    protected function addParameter(string $name, int $mode = null, string $description = '', $default = null): AuditInterface
+    protected function addParameter(string $name, int $mode = null, string $description = '', $default = null): self
     {
         if (!isset($this->definition)) {
             $this->definition = new InputDefinition();
@@ -423,7 +457,7 @@ abstract class Audit implements AuditInterface
     /**
      * Set audit class as deprecated and shouldn't be used anymore.
      */
-    protected function setDeprecated(string $message = ''): AuditInterface
+    protected function setDeprecated(string $message = ''): self
     {
         $this->deprecated = true;
         $this->deprecationMessage = $message;

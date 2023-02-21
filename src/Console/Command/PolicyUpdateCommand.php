@@ -2,6 +2,10 @@
 
 namespace Drutiny\Console\Command;
 
+use Drutiny\LanguageManager;
+use Drutiny\PolicyFactory;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -13,6 +17,15 @@ use Symfony\Component\Console\Output\OutputInterface;
 class PolicyUpdateCommand extends DrutinyBaseCommand
 {
     use LanguageCommandTrait;
+    public function __construct(
+      protected ProgressBar $progressBar,
+      protected LoggerInterface $logger,
+      protected PolicyFactory $policyFactory,
+      protected LanguageManager $languageManager
+    )
+    {
+      parent::__construct();
+    }
   /**
    * @inheritdoc
    */
@@ -35,33 +48,29 @@ class PolicyUpdateCommand extends DrutinyBaseCommand
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $progress = $this->getProgressBar();
-        $logger = $this->getLogger();
-
-
         $this->initLanguage($input);
 
         if ($source = $input->getOption('source')) {
-          $sources = [$this->getPolicyFactory()->getSource($source)];
+          $sources = [$this->policyFactory->getSource($source)];
         }
         else {
-          $sources = $this->getPolicyFactory()->getSources();
+          $sources = $this->policyFactory->getSources();
         }
 
-        $progress->start(array_sum(array_map(function ($source) {
-          return count($source->getList($this->getLanguageManager()));
+        $this->progressBar->start(array_sum(array_map(function ($source) {
+          return count($source->getList($this->languageManager));
         }, $sources)));
 
         foreach ($sources as $source) {
-            $logger->notice("Updating " . $source->getName());
+            $this->logger->notice("Updating " . $source->getName());
 
             foreach ($source->refresh() as $policy) {
-              $progress->advance();
-              $logger->notice($source->getName() . ': Updated "' . $policy->title . '"');
+              $this->progressBar->advance();
+              $this->logger->notice($source->getName() . ': Updated "' . $policy->title . '"');
             }
         }
 
-        $progress->finish();
+        $this->progressBar->finish();
 
         return 0;
     }

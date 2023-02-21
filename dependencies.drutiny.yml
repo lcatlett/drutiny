@@ -1,0 +1,92 @@
+Policy:
+  succeeds:
+    description: A given policy passes an audit against the given target.
+    arguments:
+      # Map the first argument in the twig function to the 'policy' parameter in the 'use_audit'.
+      - policy
+    use_audit: Drutiny\Audit\AuditResponseAnalysis
+    expression: response.isSuccessful
+  fails:
+    description: A given policy fails an audit against the given target.
+    arguments:
+      $policy_name: policy
+    use_audit: Drutiny\Audit\AuditResponseAnalysis
+    expression: response.isFailure
+  errors:
+    description: A given policy errors an audit against the given target.
+    arguments:
+      $policy_name: policy
+    use_audit: Drutiny\Audit\AuditResponseAnalysis
+    expression: response.hasError
+  warns:
+    description: A given policy warns an audit against the given target.
+    arguments:
+      $policy_name: policy
+    use_audit: Drutiny\Audit\AuditResponseAnalysis
+    expression: response.hasWarning
+
+Drupal:
+  isBootstrapped: 
+    description: Drupal is bootstrapped
+    expression: drush.bootstrap is defined and drush.bootstrap == 'Successful'
+
+  versionSatisfies:
+    description: The core version of Drupal statisfies a given version constraint.
+    arguments:
+      # Map the order of inputs in the twig function to twig variables for the 'expression'
+      - constraint
+    expression: semver_satisfies(attribute(drush, 'drupal-version'), constraint)
+  
+  isVersion10orLater:
+    description: Drupal version is version 10 or later
+    expression: semver_satisfies(attribute(drush, 'drupal-version'), '^10')
+
+  isVersion10:
+    description: Drupal version is version 10 with any minor or patch version.
+    expression: semver_satisfies(attribute(drush, 'drupal-version'), '^10.0')
+  
+  isVersion9orLater:
+    description: Drupal version is version 9 or later
+    expression: semver_satisfies(attribute(drush, 'drupal-version'), '^9')
+  
+  isVersion9:
+    description: Drupal version is version 9 with any minor or patch version.
+    expression: semver_satisfies(attribute(drush, 'drupal-version'), '^9.0')
+  
+  isVersion8orLater:
+    description: Drupal version is version 8 or later
+    expression: semver_satisfies(attribute(drush, 'drupal-version'), '^8')
+
+  isVersion8:
+    description: Drupal version is version 8 with any minor or patch version.
+    expression: semver_satisfies(attribute(drush, 'drupal-version'), '^8.0')
+  
+  isVersion7:
+    description: Drupal version is version 7 with any minor or patch version.
+    expression: semver_satisfies(attribute(drush, 'drupal-version'), '^7.0')
+
+  isVersion6:
+    description: Drupal version is version 6 with any minor or patch version.
+    expression: semver_satisfies(attribute(drush, 'drupal-version'), '^6.0')
+
+  installProfileIs:
+    description: Ensures Drupal is using a given install profile
+    arguments:
+      - profile
+    expression: attribute(drush, 'install-profile') == profile
+
+  moduleIsEnabled:
+    description: Ensures a given Drupal module is enabled.
+    use_audit: Drutiny\Audit\Drupal\ModuleAnalysis
+    expression: Drupal.isBootstrapped and modules[$module] is defined and modules[$module].status == 'enabled'
+    arguments:
+      # Map the order of arguments in the twig function to tokens server in the 'expression'.
+      - $module
+
+  moduleVersionSatisfies:
+    description: Ensures a given Drupal module is enabled and its version meets a given version constraint.
+    use_audit: Drutiny\Audit\Drupal\ModuleAnalysis
+    arguments:
+      - $module
+      - $constraint
+    expression: Drupal.modulesIsEnabled($module) and semver_satisfies(modules[$module].version, $constraint)

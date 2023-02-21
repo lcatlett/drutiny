@@ -3,15 +3,17 @@
 namespace Drutiny\Report\Format;
 
 use Drutiny\AssessmentInterface;
+use Drutiny\Attribute\AsFormat;
 use Drutiny\Profile;
 use Drutiny\Report\FilesystemFormatInterface;
-use Drutiny\Report\Format;
 use Drutiny\Report\FormatInterface;
-use Symfony\Component\Console\Exception\InvalidArgumentException;
-use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Output\StreamOutput;
 
-class JSON extends Format implements FilesystemFormatInterface
+#[AsFormat(
+  name: 'json',
+  extension: 'json'
+)]
+class JSON extends FilesystemFormat implements FilesystemFormatInterface
 {
     protected string $name = 'json';
     protected string $extension = 'json';
@@ -69,7 +71,7 @@ class JSON extends Format implements FilesystemFormatInterface
      */
     public function write():iterable
     {
-      $filepath = $this->directory . '/' . $this->namespace . '.' .  $this->extension;
+      $filepath = $this->directory . '/' . $this->namespace . '.' .  $this->getExtension();
       $stream = new StreamOutput(fopen($filepath, 'w'));
       $stream->write($this->buffer->fetch());
       $this->logger->info("Written $filepath.");
@@ -82,13 +84,5 @@ class JSON extends Format implements FilesystemFormatInterface
     public function setWriteableDirectory(string $dir):void
     {
       $this->directory = $dir;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getExtension():string
-    {
-      return $this->extension;
     }
 }

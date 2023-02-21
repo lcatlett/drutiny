@@ -11,6 +11,7 @@ use Symfony\Component\Yaml\Yaml;
 use Drutiny\PolicyFactory;
 use Drutiny\Profile;
 use Drutiny\LanguageManager;
+use Drutiny\Settings;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -19,15 +20,13 @@ use Psr\Log\LoggerInterface;
 class PolicyDownloadCommand extends DrutinyBaseCommand
 {
 
-  protected $policyFactory;
-  protected $languageManager;
-  protected $logger;
-
-  public function __construct(LoggerInterface $logger, PolicyFactory $factory, LanguageManager $languageManager)
+  public function __construct(
+    protected LoggerInterface $logger, 
+    protected PolicyFactory $policyFactory, 
+    protected LanguageManager $languageManager,
+    protected Settings $settings
+    )
   {
-      $this->logger = $logger;
-      $this->policyFactory = $factory;
-      $this->languageManager = $languageManager;
       parent::__construct();
   }
 
@@ -59,10 +58,8 @@ class PolicyDownloadCommand extends DrutinyBaseCommand
         $render = new SymfonyStyle($input, $output);
         $list = $this->policyFactory->getPolicyList();
         $keyword = strtolower($input->getArgument('policy'));
-        $container = $this->getApplication()->getKernel()->getContainer();
-        $directory = $container->getParameter('policy.library.fs');
+        $directory = $this->settings->get('policy.library.fs');
 
-        $rows = array();
         foreach ($list as $listedPolicy) {
             if (strpos(strtolower($listedPolicy['name']), $keyword) === false) {
               continue;
@@ -85,7 +82,7 @@ class PolicyDownloadCommand extends DrutinyBaseCommand
             file_put_contents($filename, $output);
             $render->success("$filename written.");
         }
-        $this->getPolicyFactory()->getSource('localfs')->refresh();
+        $this->policyFactory->getSource('localfs')->refresh();
         return 0;
     }
 }

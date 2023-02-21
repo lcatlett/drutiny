@@ -2,6 +2,8 @@
 
 namespace Drutiny\Console\Command;
 
+use Drutiny\Target\InvalidTargetException;
+use Drutiny\Target\TargetFactory;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -16,6 +18,13 @@ use Drutiny\Target\TargetSourceInterface;
  */
 class TargetSourceListCommand extends DrutinyBaseCommand
 {
+
+  public function __construct(
+    protected TargetFactory $targetFactory
+  )
+  {
+    parent::__construct();
+  }
 
   /**
    * @inheritdoc
@@ -38,7 +47,7 @@ class TargetSourceListCommand extends DrutinyBaseCommand
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $source = $input->getArgument('source');
-        $target = $this->getContainer()->get('target.' . $source);
+        $target = $this->targetFactory->mock($input->getArgument('source'));
 
         if (!($target instanceof TargetSourceInterface)) {
           throw new InvalidTargetException('Target source does not support listing available targets: ' . $source);

@@ -3,17 +3,15 @@
 namespace Drutiny\Console\Command;
 
 use Drutiny\Assessment;
+use Drutiny\LanguageManager;
 use Drutiny\Policy;
-use Drutiny\Profile;
-use Drutiny\Target\Target;
-use Drutiny\Report\Format\Terminal;
-use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Exception\InvalidArgumentException;
+use Drutiny\ProfileFactory;
+use Drutiny\Report\FormatFactory;
+use Drutiny\Target\TargetFactory;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Output\StreamOutput;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -23,6 +21,18 @@ class AuditRunCommand extends DrutinyBaseCommand
 {
   use ReportingCommandTrait;
   use LanguageCommandTrait;
+
+  public function __construct(
+    protected TargetFactory $targetFactory,
+    protected Assessment $assessment,
+    protected ProfileFactory $profileFactory,
+    protected FormatFactory $formatFactory,
+    protected LanguageManager $languageManager
+  )
+  {
+    parent::__construct();
+  }
+
   /**
    * @inheritdoc
    */
@@ -66,9 +76,6 @@ class AuditRunCommand extends DrutinyBaseCommand
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $this->initLanguage($input);
-        $container = $this->getApplication()
-          ->getKernel()
-          ->getContainer();
 
         $audit_class = $input->getArgument('audit');
 
@@ -97,35 +104,35 @@ class AuditRunCommand extends DrutinyBaseCommand
         }
 
         // Setup the target.
-        $target = $container->get('target.factory')->create($input->getArgument('target'));
+        $target = $this->targetFactory->create($input->getArgument('target'));
 
         // Setup the reporting report.
         $start = new \DateTime($input->getOption('reporting-period-start'));
         $end   = new \DateTime($input->getOption('reporting-period-end'));
 
+        $uri = $input->getOption('uri');
+        
         // If a URI is provided set it on the Target.
-        if ($uri = $input->getOption('uri')) {
-            $target->setUri($uri);
-        }
+        $target->setUri($uri);
 
-        $assessment = $container->get('Drutiny\Assessment')->setUri($uri);
-        $assessment->assessTarget($target, [$policy], $this->getReportingPeriodStart($input), $this->getReportingPeriodEnd($input));
+        $this->assessment->setUri($uri);
+        $this->assessment->assessTarget($target, [$policy], $this->getReportingPeriodStart($input), $this->getReportingPeriodEnd($input));
 
-        $profile = $container->get('profile.factory')->create([
+        $profile = $this->profileFactory->create([
           'title' => 'Audit:Run',
           'name' => 'audit_run',
           'uuid' => 'audit_run',
           'description' => 'Wrapper profile for audit:run'
         ]);
 
-        foreach ($this->getFormats($input, $profile) as $format) {
+        foreach ($this->getFormats($input, $profile, $this->formatFactory) as $format) {
             $format->setNamespace($this->getReportNamespace($input, $uri));
-            $format->render($profile, $assessment);
+            $format->render($profile, $this->assessment);
             foreach ($format->write() as $written_location) {
               // To nothing.
             }
         }
 
-        return $assessment->getSeverityCode();
+        return $this->assessment->getSeverityCode();
     }
 }

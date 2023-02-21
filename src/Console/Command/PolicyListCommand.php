@@ -2,6 +2,11 @@
 
 namespace Drutiny\Console\Command;
 
+use Drutiny\LanguageManager;
+use Drutiny\PolicyFactory;
+use Drutiny\ProfileFactory;
+use Drutiny\Settings;
+use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -13,6 +18,17 @@ use Symfony\Component\Console\Output\OutputInterface;
 class PolicyListCommand extends DrutinyBaseCommand
 {
     use LanguageCommandTrait;
+
+    public function __construct(
+        protected Settings $settings,
+        protected ProgressBar $progressBar,
+        protected ProfileFactory $profileFactory,
+        protected PolicyFactory $policyFactory,
+        protected LanguageManager $languageManager
+    )
+    {
+        parent::__construct();    
+    }
   /**
    * @inheritdoc
    */
@@ -41,30 +57,29 @@ class PolicyListCommand extends DrutinyBaseCommand
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $progress = $this->getProgressBar();
-        $progress->start(4);
+        $this->progressBar->start(4);
 
         $this->initLanguage($input);
 
-        $progress->setMessage("Loading policy library from policy sources.");
-        $list = $this->getPolicyFactory()->getPolicyList();
+        $this->progressBar->setMessage("Loading policy library from policy sources.");
+        $list = $this->policyFactory->getPolicyList();
 
         if ($source_filter = $input->getOption('source')) {
-            $progress->setMessage("Filtering policies by source: $source_filter");
+            $this->progressBar->setMessage("Filtering policies by source: $source_filter");
             $list = array_filter($list, function ($policy) use ($source_filter) {
                 if ($source_filter == $policy['source']) return true;
                 if ($source_filter == preg_replace('/\<.+\>/U', '', $policy['source'])) return true;
                 return false;
             });
         }
-        $progress->advance();
+        $this->progressBar->advance();
 
-        $progress->setMessage("Mapping policy utilisation by profile.");
+        $this->progressBar->setMessage("Mapping policy utilisation by profile.");
         $profiles = array_map(function ($profile) {
-          return $this->getProfileFactory()->loadProfileByName($profile['name']);
-        }, $this->getProfileFactory()->getProfileList());
+          return $this->profileFactory->loadProfileByName($profile['name']);
+        }, $this->profileFactory->getProfileList());
 
-        $progress->advance();
+        $this->progressBar->advance();
         $rows = array();
         foreach ($list as $listedPolicy) {
             $row = array(
@@ -79,7 +94,7 @@ class PolicyListCommand extends DrutinyBaseCommand
         }
 
         // Restrict visibility of policies to those in profile allow list.
-        $allow_list = $this->getContainer()->hasParameter('profile.allow_list') ? $this->getContainer()->getParameter('profile.allow_list') : [];
+        $allow_list = $this->settings->has('profile.allow_list') ? $this->settings->get('profile.allow_list') : [];
         if (!empty($allow_list)) {
           $rows = array_filter($rows, fn($r) => $r['profile_util']);
         }
@@ -90,7 +105,7 @@ class PolicyListCommand extends DrutinyBaseCommand
 
             return $x[0] == strtolower($a['name']) ? -1 : 1;
         });
-        $progress->finish();
+        $this->progressBar->finish();
 
         $io = new SymfonyStyle($input, $output);
         $headers = ['Title', 'Name', 'Source', 'Profile Utilization'];

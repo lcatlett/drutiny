@@ -37,7 +37,7 @@ class PolicyFactory
      *
      * @param $name string
      */
-    public function loadPolicyByName($name)
+    public function loadPolicyByName($name):Policy
     {
         $list = $this->getPolicyList();
 
@@ -77,7 +77,6 @@ class PolicyFactory
         if (!empty($available_list)) {
             return $available_list;
         }
-        $lang = $this->languageManager->getCurrentLanguage();
 
         $policy_list = [];
         // Add steps to the progress bar.

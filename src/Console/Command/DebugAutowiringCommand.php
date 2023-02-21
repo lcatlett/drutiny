@@ -20,6 +20,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\HttpKernel\Debug\FileLinkFormatter;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 /**
  * A console command for autowiring information.
@@ -30,6 +31,10 @@ use Symfony\Component\Console\Command\Command;
  */
 class DebugAutowiringCommand extends Command
 {
+    public function __construct(protected ContainerBuilder $container) {
+        parent::__construct();
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -61,8 +66,7 @@ EOF
         $io = new SymfonyStyle($input, $output);
         $errorIo = $io->getErrorStyle();
 
-        $builder = $this->getApplication()->getKernel()->getContainer();
-        $serviceIds = $builder->getServiceIds();
+        $serviceIds = $this->container->getServiceIds();
         $serviceIds = array_filter($serviceIds, [$this, 'filterToServiceTypes']);
 
         uasort($serviceIds, 'strnatcmp');
@@ -90,9 +94,9 @@ EOF
 
             $serviceLine = sprintf('<fg=yellow>%s</>', $serviceId);
 
-            if ($builder->hasAlias($serviceId)) {
+            if ($this->container->hasAlias($serviceId)) {
                 $hasAlias[$serviceId] = true;
-                $serviceAlias = $builder->getAlias($serviceId);
+                $serviceAlias = $this->container->getAlias($serviceId);
                 $serviceLine .= ' <fg=cyan>('.$serviceAlias.')</>';
 
                 if ($serviceAlias->isDeprecated()) {

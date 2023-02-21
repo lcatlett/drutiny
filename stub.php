@@ -51,10 +51,9 @@ if (file_exists(DRUTINY_LIB.'/BUILD_DATETIME')) {
   $suffix = $date->format(' (Y-m-d H:i:s T)');
 }
 
-$kernel = new Kernel('production');
-$application = new Application($kernel, reset($versions).$suffix);
+$kernel = new Kernel('production', reset($versions).$suffix);
 
-$application->run(
+$kernel->getApplication()->run(
   // If this is a phar file, then run the extraction command. Otherwise behave as normal.
   Phar::running() ? new ArgvInput([$_SERVER['argv'][0], 'phar-extract', '-vvv']) : null
 );

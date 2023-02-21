@@ -6,38 +6,31 @@ use Drutiny\Target\TargetInterface;
 use Drutiny\Target\TargetPropertyException;
 use Drutiny\Entity\EventDispatchedDataBag;
 use Drutiny\Target\Service\ExecutionService;
-use Drutiny\Target\Service\LocalService;
-use Prophecy\Prophet;
-use PHPUnit\Framework\TestCase;
 use DrutinyTests\Prophecies\LocalServiceDrushStub;
 use DrutinyTests\Prophecies\LocalServiceDdevStub;
 use DrutinyTests\Prophecies\LocalServiceLandoStub;
-use Symfony\Component\PropertyAccess\Exception\UnexpectedTypeException;
+use Prophecy\Prophet;
 use Symfony\Component\PropertyAccess\Exception\InvalidPropertyPathException;
-use Symfony\Component\PropertyAccess\Exception\NoSuchPropertyException;
 
 class TargetTest extends KernelTestCase
 {
+    protected Prophet $prophet;
     protected function setUp(): void
     {
         parent::setup();
-        $this->prophet = new \Prophecy\Prophet();
+        $this->prophet = new Prophet();
     }
 
     protected function tearDown(): void
     {
         $this->prophet->checkPredictions();
+        parent::tearDown();
     }
 
     public function testProperties()
     {
-        $target = new \Drutiny\Target\NullTarget(
-            new ExecutionService(LocalServiceDrushStub::get($this->prophet)->reveal()),
-            $this->container->get('logger'),
-            $this->container->get('Drutiny\Entity\EventDispatchedDataBag')
-        );
-        $target->parse();
-
+        $target = $this->loadMockTarget();
+        
         $this->assertFalse($target->hasProperty('a.b.c.d'));
         $this->assertFalse($target->hasProperty('a.b.c'));
         $this->assertFalse($target->hasProperty('a.b'));
@@ -102,7 +95,7 @@ class TargetTest extends KernelTestCase
         $this->assertEquals($target->getUri(), $uri);
 
         $this->assertInstanceOf(ExecutionService::class, $target['service.exec']);
-        $this->assertSame($target['service.exec'], $target->getService('exec'));
+        $this->assertSame($target['service.exec'], $target->);
 
         // Existing DataBag can be overridden.
         $this->expectException(TargetPropertyException::class);
@@ -111,14 +104,7 @@ class TargetTest extends KernelTestCase
 
     public function testDrushTarget()
     {
-        $local = LocalServiceDrushStub::get($this->prophet)->reveal();
-
-        // Load without service container so we can use our prophecy.
-        $target = new \Drutiny\Target\DrushTarget(
-            new ExecutionService($local),
-            $this->container->get('logger'),
-            $this->container->get('Drutiny\Entity\EventDispatchedDataBag')
-        );
+        $target = $this->loadMockTarget();
         $this->assertInstanceOf(\Drutiny\Target\DrushTarget::class, $target);
         $target->parse('@app.env', 'https://env.app.com');
         $this->runStandardTests($target, 'https://env.app.com');

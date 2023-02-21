@@ -2,7 +2,9 @@
 
 namespace Drutiny\Console\Command;
 
-use Symfony\Component\Console\Command\Command;
+use Drutiny\Target\TargetFactory;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
@@ -15,6 +17,14 @@ use Symfony\Component\Yaml\Yaml;
  */
 class TargetMetadataCommand extends DrutinyBaseCommand
 {
+  public function __construct(
+    protected TargetFactory $targetFactory,
+    protected LoggerInterface $logger,
+    protected ProgressBar $progressBar
+  )
+  {
+    parent::__construct();
+  }
 
   /**
    * @inheritdoc
@@ -43,18 +53,16 @@ class TargetMetadataCommand extends DrutinyBaseCommand
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $progress = $this->getProgressBar(3);
-        $progress->start();
-        $progress->setMessage("Loading target..");
-        $progress->advance();
+        $this->progressBar->start();
+        $this->progressBar->setMessage("Loading target..");
+        $this->progressBar->advance();
 
-        $target = $this->getApplication()
-          ->getKernel()
-          ->getContainer()
-          ->get('target.factory')
-          ->create($input->getArgument('target'), $input->getOption('uri'));
+        $target = $this->targetFactory->create(
+          $input->getArgument('target'), 
+          $input->getOption('uri')
+        );
 
-        $progress->advance();
+        $this->progressBar->advance();
 
         $io = new SymfonyStyle($input, $output);
 
@@ -69,7 +77,7 @@ class TargetMetadataCommand extends DrutinyBaseCommand
           $rows[] = [$key, $value];
         }
 
-        $progress->finish();
+        $this->progressBar->finish();
         $io->table(['Property', 'Value'], $rows);
 
         return 0;

@@ -19,16 +19,14 @@ use Symfony\Component\Console\Command\Command;
  */
 class DomainSourceListCommand extends Command
 {
-
-    protected $domainSource;
-    protected $logger;
     protected $domainSourceOptions;
 
 
-    public function __construct(DomainSource $domainSource, LoggerInterface $logger)
+    public function __construct(
+        protected DomainSource $domainSource, 
+        protected LoggerInterface $logger
+    )
     {
-        $this->domainSource = $domainSource;
-        $this->logger = $logger;
         parent::__construct();
     }
 
@@ -41,6 +39,7 @@ class DomainSourceListCommand extends Command
 
         $this
         ->setName('domain-source:list')
+        ->setHidden()
         ->setDescription('List domains from a given source.');
         // Build a way for the command line to specify the options to derive
         // domains from their sources.

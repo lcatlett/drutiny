@@ -11,6 +11,7 @@ use Symfony\Component\Console\Input\InputInterface;
  */
 trait LanguageCommandTrait
 {
+    protected LanguageManager $languageManager;
   /**
    * @inheritdoc
    */
@@ -22,21 +23,13 @@ trait LanguageCommandTrait
             '',
             InputOption::VALUE_OPTIONAL,
             'Define which language to use for policies and profiles.',
-            $this->getLanguageManager()->getDefaultLanguage()
+            $this->languageManager->getDefaultLanguage()
         );
     }
 
     protected function initLanguage(InputInterface $input)
     {
       // Set global language used by policy/profile sources.
-      $this->getLanguageManager()->setLanguage($input->getOption('language'));
-    }
-
-    /**
-     * Get container language manager.
-     */
-    protected function getLanguageManager():LanguageManager
-    {
-        return \drutiny()->get('Drutiny\LanguageManager');
+      $this->languageManager->setLanguage($input->getOption('language'));
     }
 }

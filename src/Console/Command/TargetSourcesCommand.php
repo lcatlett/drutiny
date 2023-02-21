@@ -2,6 +2,7 @@
 
 namespace Drutiny\Console\Command;
 
+use Drutiny\Target\TargetFactory;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -11,12 +12,20 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Yaml\Yaml;
 use Drutiny\Target\TargetInterface;
 use Drutiny\Target\TargetSourceInterface;
+use ReflectionClass;
 
 /**
  *
  */
 class TargetSourcesCommand extends DrutinyBaseCommand
 {
+
+  public function __construct(
+    protected TargetFactory $targetFactory
+  )
+  {
+    parent::__construct();
+  }
 
   /**
    * @inheritdoc
@@ -33,19 +42,10 @@ class TargetSourcesCommand extends DrutinyBaseCommand
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $types = array_filter($this->getContainer()->getServiceIds(), function ($id) {
-          if (strpos($id, 'target.') !== 0) {
-            return false;
-          }
-          $target = $this->getContainer()->get($id);
-          return $target instanceof TargetInterface;
-        });
-
         $rows = [];
-        foreach ($types as $type) {
-          $instance = $this->getContainer()->get($type);
-          list($i, $tag) = explode('.', $type, 2);
-          $rows[] = [$tag, get_class($instance), $instance instanceof TargetSourceInterface ? 'yes' : 'no'];
+        foreach ($this->targetFactory->getTypes() as $type => $class) {
+          $reflection = new ReflectionClass($class);
+          $rows[] = [$type, $class, $reflection->implementsInterface(TargetSourceInterface::class) ? 'yes' : 'no'];
         }
 
         $io = new SymfonyStyle($input, $output);

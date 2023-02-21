@@ -2,6 +2,7 @@
 
 namespace Drutiny\Console\Command;
 
+use Drutiny\Settings;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputArgument;
@@ -15,11 +16,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 class PluginSetupCommand extends Command
 {
-    protected $container;
-
-    public function __construct(ContainerInterface $container)
+    public function __construct(protected Settings $settings, protected ContainerInterface $container)
     {
-        $this->container = $container;
         parent::__construct();
     }
 
@@ -46,7 +44,7 @@ class PluginSetupCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $namespace = $input->getArgument('namespace');
 
-        foreach ($this->container->findTaggedServiceIds('plugin') as $id => $info) {
+        foreach ($this->settings->get('plugin.registry') as $id) {
             $plugin = $this->container->get($id);
             if ($plugin->getName() == $namespace) {
               break;

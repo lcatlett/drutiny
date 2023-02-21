@@ -2,43 +2,36 @@
 
 namespace Drutiny\Console;
 
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Application as BaseApplication;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Command\ListCommand;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\Yaml\Yaml;
-use Drutiny\Kernel;
-use Drutiny\Plugin\PluginRequiredException;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\EventDispatcher\GenericEvent;
 
 /**
  * @author Fabien Potencier <fabien@symfony.com>
  */
 class Application extends BaseApplication
 {
-    private $kernel;
-    private $commandsRegistered = false;
     private $registrationErrors = [];
 
-    public function __construct(Kernel $kernel, $version)
+    public function __construct(
+      string $name, 
+      string $version, 
+      protected EventDispatcher $eventDispatcher,
+      protected LoggerInterface $logger,
+      protected ContainerInterface $container
+    )
     {
-        $this->kernel = $kernel;
-        parent::__construct($kernel->getContainer()->getParameter('name'), $version);
-        $this->setDispatcher($kernel->getContainer()->get('event_dispatcher'));
-    }
-
-    /**
-     * Gets the Kernel associated with this Console.
-     *
-     * @return KernelInterface A KernelInterface instance
-     */
-    public function getKernel()
-    {
-        return $this->kernel;
+        parent::__construct($name, $version);
     }
 
     /**
@@ -46,18 +39,17 @@ class Application extends BaseApplication
      */
     public function doRun(InputInterface $input = null, OutputInterface $output = null)
     {
-      $this->getKernel()->getContainer()->set('output', $output);
       $this->checkForUpdates($output);
-      $this->registerCommands();
 
       if ($this->registrationErrors) {
           $this->renderRegistrationErrors($input, $output);
       }
 
-      $this->getKernel()->dispatchEvent('application.run', [
+      $event = new GenericEvent('application.run', [
         'input' => $input,
         'output' => $output,
       ]);
+      $this->eventDispatcher->dispatch($event, $event->getSubject());
       return parent::doRun($input, $output);
     }
 
@@ -69,24 +61,25 @@ class Application extends BaseApplication
         $startTimer = microtime(TRUE);
         switch ($output->getVerbosity()) {
           case OutputInterface::VERBOSITY_VERBOSE:
-            $this->kernel->getContainer()->get('logger.logfile')->setLevel('NOTICE');
+            $this->container->get('logger.logfile')->setLevel('NOTICE');
             break;
           case OutputInterface::VERBOSITY_VERY_VERBOSE:
-            $this->kernel->getContainer()->get('logger.logfile')->setLevel('INFO');
+            $this->container->get('logger.logfile')->setLevel('INFO');
             break;
           case OutputInterface::VERBOSITY_DEBUG:
-            $this->kernel->getContainer()->get('logger.logfile')->setLevel('DEBUG');
+            $this->container->get('logger.logfile')->setLevel('DEBUG');
             break;
           default:
-            $this->kernel->getContainer()->get('logger.logfile')->setLevel('WARNING');
+            $this->container->get('logger.logfile')->setLevel('WARNING');
             break;
         }
 
-        $this->getKernel()->dispatchEvent('command.run', [
+        $event = new GenericEvent('command.run', [
           'command' => $command,
           'input' => $input,
           'output' => $output,
         ]);
+        $this->eventDispatcher->dispatch($event, $event->getSubject());
 
         if (!$command instanceof ListCommand) {
             if ($this->registrationErrors) {
@@ -97,7 +90,6 @@ class Application extends BaseApplication
             return parent::doRunCommand($command, $input, $output);
         }
 
-
         $returnCode = parent::doRunCommand($command, $input, $output);
         $endTimer = microtime(TRUE);
 
@@ -105,83 +97,12 @@ class Application extends BaseApplication
             $this->renderRegistrationErrors($input, $output);
             $this->registrationErrors = [];
         }
-        $this->kernel->getContainer()->get('logger')->notice("Application Command {command} completed in {runtime} seconds.", [
+        $this->container->get('logger')->notice("Application Command {command} completed in {runtime} seconds.", [
           'command' => $command->getName(),
           'runtime' => ($endTimer-$startTimer),
         ]);
 
         return $returnCode;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function find($name)
-    {
-        $this->registerCommands();
-
-        return parent::find($name);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function get($name)
-    {
-        $this->registerCommands();
-
-        $command = parent::get($name);
-
-        if ($command instanceof ContainerAwareInterface) {
-            $command->setContainer($this->kernel->getContainer());
-        }
-
-        return $command;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function all($namespace = null)
-    {
-        $this->registerCommands();
-
-        return parent::all($namespace);
-    }
-
-    public function add(Command $command)
-    {
-        $this->registerCommands();
-
-        return parent::add($command);
-    }
-
-    protected function registerCommands()
-    {
-        if ($this->commandsRegistered) {
-            return;
-        }
-
-        $this->commandsRegistered = true;
-
-        $container = $this->kernel->getContainer();
-        $container->findTags();
-        foreach ($container->findTaggedServiceIds('command') as $id => $definition) {
-            try {
-              $command = $container->get($id);
-              $event = $this->getKernel()->dispatchEvent('application.command.add', [
-                'command' => $command,
-                'action.add' => true,
-              ]);
-
-              if ($event['action.add']) {
-                $this->add($container->get($id));
-              }
-            }
-            catch (PluginRequiredException $e) {
-              $this->kernel->getContainer()->get('logger')->warning("Cannot initiatize command $id as it requires a plugin that is not setup: " . $e->getMessage());
-            }
-        }
     }
 
     private function renderRegistrationErrors(InputInterface $input, OutputInterface $output)
@@ -199,7 +120,7 @@ class Application extends BaseApplication
 
     private function checkForUpdates(OutputInterface $output = null)
     {
-      $container = $this->kernel->getContainer();
+      $container = $this->container;
 
       // Check for 2.x drutiny credentials and migrate them if 3.x credentials are
       // not yet setup.

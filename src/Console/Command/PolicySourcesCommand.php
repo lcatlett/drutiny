@@ -2,6 +2,8 @@
 
 namespace Drutiny\Console\Command;
 
+use Drutiny\LanguageManager;
+use Drutiny\PolicyFactory;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -14,6 +16,14 @@ use Drutiny\PolicySource\PushablePolicySourceInterface;
 class PolicySourcesCommand extends DrutinyBaseCommand
 {
     use LanguageCommandTrait;
+
+    public function __construct(
+      protected PolicyFactory $policyFactory,
+      protected LanguageManager $languageManager
+    )
+    {
+      parent::__construct();
+    }
   /**
    * @inheritdoc
    */
@@ -30,7 +40,7 @@ class PolicySourcesCommand extends DrutinyBaseCommand
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        foreach ($this->getPolicyFactory()->getSources() as $source) {
+        foreach ($this->policyFactory->getSources() as $source) {
           $pushable = ($source->getDriver() instanceof PushablePolicySourceInterface) ? 'Yes' : 'No';
           $rows[] = [$source->getName(), get_class($source->getDriver()), $source->getWeight(), $pushable];
         }

@@ -6,22 +6,19 @@ use Drutiny\AssessmentInterface;
 use Drutiny\AuditResponse\AuditResponse;
 use Drutiny\Policy;
 use Drutiny\Profile;
-use Drutiny\Report\Format;
 use Drutiny\Report\FormatInterface;
 use Drutiny\Report\FilesystemFormatInterface;
-use League\Csv\RFC4180Field;
 use League\Csv\Writer;
-use Psr\Log\LoggerInterface;
-use Symfony\Component\Console\Exception\InvalidArgumentException;
-use Symfony\Component\Console\Output\BufferedOutput;
-use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Output\StreamOutput;
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drutiny\Attribute\AsFormat;
 
-class CSV extends Format implements FilesystemFormatInterface
+
+#[AsFormat(
+  name: 'csv',
+  extension: 'csv'
+)]
+class CSV extends FilesystemFormat implements FilesystemFormatInterface
 {
-    protected string $name = 'csv';
-    protected string $extension = 'csv';
     protected array $datasets;
     protected string $directory;
 
@@ -33,22 +30,13 @@ class CSV extends Format implements FilesystemFormatInterface
       $this->directory = $dir;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getExtension():string
-    {
-      return $this->extension;
-    }
-
     public function render(Profile $profile, AssessmentInterface $assessment):FormatInterface
     {
 
         $date = $profile->getReportingPeriodEnd()->format('c');
-        $schemas = [];
         $insert = [];
 
-        $target = $this->container->get('target');
+        $target = $assessment->getTarget();
         $target_class = str_replace('\\', '', get_class($target));
         $schema_name = $target_class.'Data';
 
@@ -84,7 +72,7 @@ class CSV extends Format implements FilesystemFormatInterface
           $policy = $response->getPolicy();
           $dataset_name = $this->getPolicyDatasetName($policy);
 
-          $policy_row = $this->getPolicyDatasetValues($policy, $response);
+          $policy_row = $this->getPolicyDatasetValues($policy, $response, $assessment);
           $policy_row['assessment_uuid'] = $assessment->getUuid();
           $insert[$dataset_name][] =  $policy_row;
 
@@ -104,8 +92,6 @@ class CSV extends Format implements FilesystemFormatInterface
 
     public function write():iterable
     {
-        $logger = $this->container->get('logger');
-
         // Append new rows.
         foreach ($this->datasets as $dataset_name => $rows) {
             // Ensure the cell order matches the schema.
@@ -115,9 +101,9 @@ class CSV extends Format implements FilesystemFormatInterface
             $writer->insertAll($rows);
             $writer->setNewline("\r\n");
             //RFC4180Field::addTo($writer);
-            $logger->info("Appending rows into $dataset_name.");
+            $this->logger->info("Appending rows into $dataset_name.");
 
-            $filepath = $this->directory . '/' . $dataset_name . '__' . $this->namespace . '.' . $this->extension;
+            $filepath = $this->directory . '/' . $dataset_name . '__' . $this->namespace . '.' . $this->getExtension();
             $stream = new StreamOutput(fopen($filepath, 'w'));
             $stream->write($writer->getContent());
             $this->logger->info("Written $filepath.");
@@ -132,11 +118,11 @@ class CSV extends Format implements FilesystemFormatInterface
           ]);
     }
 
-    public function getPolicyDatasetValues(Policy $policy, AuditResponse $response):array
+    public function getPolicyDatasetValues(Policy $policy, AuditResponse $response, AssessmentInterface $assessment):array
     {
         $row = [
           'assessment_uuid' => '',
-          'target' => $this->container->get('target')['drush.alias'],
+          'target' => $assessment->getTarget()['drush.alias'],
           'title' => $policy->title,
           'name' => $policy->name,
           'class' => $policy->class,

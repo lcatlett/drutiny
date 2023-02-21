@@ -2,11 +2,13 @@
 
 namespace Drutiny\Console\Command;
 
+use Drutiny\LanguageManager;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Drutiny\PolicySource\PushablePolicySourceInterface;
+use Drutiny\ProfileFactory;
 
 /**
  *
@@ -14,6 +16,14 @@ use Drutiny\PolicySource\PushablePolicySourceInterface;
 class ProfileSourcesCommand extends DrutinyBaseCommand
 {
     use LanguageCommandTrait;
+
+    public function __construct(
+      protected ProfileFactory $profileFactory,
+      protected LanguageManager $languageManager
+    )
+    {
+      parent::__construct();
+    }
   /**
    * @inheritdoc
    */
@@ -30,7 +40,7 @@ class ProfileSourcesCommand extends DrutinyBaseCommand
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        foreach ($this->getProfileFactory()->getSources() as $source) {
+        foreach ($this->profileFactory->getSources() as $source) {
           $rows[] = [$source->getName(), get_class($source), $source->getWeight()];
         }
 

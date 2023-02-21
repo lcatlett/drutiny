@@ -2,7 +2,6 @@
 
 namespace Drutiny\DependencyInjection;
 
-use Symfony\Component\DependencyInjection\Argument\ArgumentInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 

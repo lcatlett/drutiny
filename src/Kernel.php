@@ -2,6 +2,11 @@
 
 namespace Drutiny;
 
+use Drutiny\Console\Application;
+use Drutiny\DependencyInjection\AddConsoleCommandPass;
+use Drutiny\DependencyInjection\AddTargetPass;
+use Drutiny\DependencyInjection\TagCollectionPass;
+use Drutiny\DependencyInjection\TwigEvaluatorPass;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\Config\Loader\DelegatingLoader;
 use Symfony\Component\Config\Loader\LoaderResolver;
@@ -15,23 +20,29 @@ use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\EventDispatcher\DependencyInjection\RegisterListenersPass;
 use Symfony\Component\EventDispatcher\GenericEvent;
 use Drutiny\DependencyInjection\TwigLoaderPass;
+use Psr\EventDispatcher\StoppableEventInterface;
+use Symfony\Component\Config\Loader\LoaderInterface;
+use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
+use Symfony\Component\Finder\Finder;
 
 class Kernel
 {
     private const CONFIG_EXTS = '.{php,yaml,yml}';
-    private const CACHED_CONTAINER = 'local.container.php';
-    private $container;
-    private $environment;
-    private $loadingPaths = [];
-    private $initialized = false;
+    // private const CACHED_CONTAINER = 'local.container.php';
+    private ContainerInterface $container;
+    private array $loadingPaths = [];
+    private bool $initialized = false;
+    private array $compilers = [];
 
-    public function __construct($environment)
+    public function __construct(private string $environment, private string $version)
     {
-        $this->environment = $environment;
         $this->addServicePath($this->getProjectDir());
         $this->addServicePath('./vendor/*/*');
     }
 
+    /**
+     * Add a service path to the loading paths array.
+     */
     public function addServicePath($path)
     {
         if ($this->initialized) {
@@ -41,14 +52,37 @@ class Kernel
         return $this;
     }
 
-    public function getContainer()
+    /**
+     * Add a compiler pass to the container.
+     */
+    public function addCompilerPass(CompilerPassInterface $compiler):self
     {
-        if (!$this->container) {
+        if (isset($this->container)) {
+            throw new \Exception("Cannot add compiler pass. Container already initialized.");
+        }
+        $this->compilers[] = $compiler;
+        return $this;
+    }
+
+    /**
+     * Get the dependency injection container.
+     */
+    public function getContainer():ContainerInterface
+    {
+        if (!isset($this->container)) {
             return $this->initializeContainer();
         }
         return $this->container;
     }
 
+    public function getApplication():Application
+    {
+        return $this->getContainer()->get(Application::class);
+    }
+
+    /**
+     * Get the project directory of the drutiny project.
+     */
     public function getProjectDir(): string
     {
         return DRUTINY_LIB;
@@ -60,26 +94,28 @@ class Kernel
      * The cached version of the service container is used when fresh, otherwise the
      * container is built.
      */
-    protected function initializeContainer()
+    protected function initializeContainer():ContainerInterface
     {
-        $file = DRUTINY_LIB . '/' . self::CACHED_CONTAINER;
-        if (file_exists($file)) {
-            require_once $file;
-            $this->container = new ProjectServiceContainer();
-        } else {
+        // $file = DRUTINY_LIB . '/' . self::CACHED_CONTAINER;
+        // if (file_exists($file)) {
+        //     require_once $file;
+        //     $this->container = new ProjectServiceContainer();
+        // } else {
             $this->container = $this->buildContainer();
+            $this->container->setParameter('environment', $this->environment);
+            $this->container->setParameter('version', $this->version);
             $this->container->compile();
 
             // Ensure the Drutiny config directory is available.
             is_dir($this->container->getParameter('drutiny_config_dir')) or
           mkdir($this->container->getParameter('drutiny_config_dir'), 0744, true);
 
-            // TODO: cache container. Need workaround for Twig.
+        // TODO: cache container. Need workaround for Twig.
           // if (is_writeable(dirname($file))) {
           //     $dumper = new PhpDumper($this->container);
           //     file_put_contents($file, $dumper->dump());
           // }
-        }
+        //}
         $this->initialized = true;
         return $this->container;
     }
@@ -91,7 +127,7 @@ class Kernel
        *
        * @throws \RuntimeException
        */
-    protected function buildContainer()
+    protected function buildContainer():ContainerBuilder
     {
         $container = new ContainerBuilder();
         $container->addObjectResource($this);
@@ -99,11 +135,22 @@ class Kernel
         $loader = $this->getContainerLoader($container);
 
         $container->addCompilerPass(new RegisterListenersPass('event_dispatcher', 'kernel.event_listener', 'drutiny.event_subscriber'));
-        $container->addCompilerPass(new TwigLoaderPass());
+        $container->addCompilerPass(new TwigLoaderPass);
+        $container->addCompilerPass(new AddConsoleCommandPass);
+        $container->addCompilerPass(new TagCollectionPass('plugin', 'plugin.registry'));
+        $container->addCompilerPass(new TagCollectionPass('format', 'format.registry'));
+        $container->addCompilerPass(new TagCollectionPass('service', 'service.registry'));
+        $container->addCompilerPass(new TagCollectionPass('target', 'target.registry'));
+        $container->addCompilerPass(new TwigEvaluatorPass());
+
+        foreach ($this->compilers as $pass) {
+            $container->addCompilerPass($pass);
+        }
 
         $container->setParameter('user_home_dir', getenv('HOME'));
         $container->setParameter('drutiny_core_dir', \dirname(__DIR__));
         $container->setParameter('project_dir', $this->getProjectDir());
+        $container->setParameter('extension.dirs', $this->findExtensionDirectories());
 
         // Remove duplicates.
         $idx = array_search($this->getProjectDir(), $this->loadingPaths);
@@ -112,8 +159,7 @@ class Kernel
         }
 
         // Create config loader.
-        $load = function () use ($loader) {
-            $args = func_get_args();
+        $load = function (...$args) use ($loader) {
             $args[] = '{drutiny}'.self::CONFIG_EXTS;
             $loading_path = implode('/', $args);
             $loader->load($loading_path, 'glob');
@@ -142,11 +188,30 @@ class Kernel
     }
 
     /**
+     * Locate where all drutiny extensions are in the project.
+     */
+    protected function findExtensionDirectories():array
+    {
+        $finder = new Finder;
+        $finder
+            ->in($this->getProjectDir())
+            ->files()
+            ->name('drutiny.{yaml,yml,php}');
+            
+        $dirs = [];
+        foreach ($finder as $file) {
+            $dir = $file->getRelativePath();
+            $dirs[] = $dir ?: '.';
+        }
+        return array_values(array_unique($dirs));
+    }
+
+    /**
        * Returns a loader for the container.
        *
        * @return DelegatingLoader The loader
        */
-    protected function getContainerLoader(ContainerInterface $container)
+    protected function getContainerLoader(ContainerInterface $container):LoaderInterface
     {
         $locator = new FileLocator([$this->getProjectDir()]);
         $resolver = new LoaderResolver([
@@ -163,7 +228,7 @@ class Kernel
     /**
      * Use the EventDispatcher to dispatch an event.
      */
-    public function dispatchEvent($subject = null, array $arguments = [])
+    public function dispatchEvent($subject = null, array $arguments = []):StoppableEventInterface
     {
         return $this->getContainer()
           ->get('event_dispatcher')

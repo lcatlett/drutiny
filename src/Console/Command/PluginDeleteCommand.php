@@ -2,6 +2,7 @@
 
 namespace Drutiny\Console\Command;
 
+use Drutiny\Settings;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputArgument;
@@ -15,11 +16,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 class PluginDeleteCommand extends Command
 {
-    protected $container;
-
-    public function __construct(ContainerInterface $container)
+    public function __construct(protected ContainerInterface $container, protected Settings $settings)
     {
-        $this->container = $container;
         parent::__construct();
     }
 
@@ -46,7 +44,7 @@ class PluginDeleteCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $namespace = $input->getArgument('namespace');
 
-        foreach ($this->container->findTaggedServiceIds('plugin') as $id => $info) {
+        foreach ($this->settings->get('plugin.registry') as $id) {
             $plugin = $this->container->get($id);
             if ($plugin->getName() == $namespace) {
               break;
@@ -59,7 +57,7 @@ class PluginDeleteCommand extends Command
         }
 
         $plugin->delete();
-        $io->success("Plugin deleted.");
+        $io->success("Plugin configuration removed.");
 
         return 0;
     }

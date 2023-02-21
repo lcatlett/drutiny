@@ -5,6 +5,7 @@ parameters:
   twig.debug: true
   twig.strict: true
   phpunit.testing: true
+  async.forks: false
 
 services:
   _defaults:
@@ -17,3 +18,8 @@ services:
     arguments:
       - '@Symfony\Component\Console\Output\NullOutput'
   Symfony\Component\Console\Output\NullOutput:
+
+  Symfony\Component\Console\Output\BufferedOutput:
+
+  Symfony\Component\Console\Output\OutputInterface:
+      alias: Symfony\Component\Console\Output\BufferedOutput

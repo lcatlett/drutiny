@@ -3,29 +3,30 @@
 namespace Drutiny\Report\Format;
 
 use Drutiny\AssessmentInterface;
-use Drutiny\AuditResponse\AuditResponse;
 use Drutiny\Profile;
 use Drutiny\Report\FilesystemFormatInterface;
-use Drutiny\Report\Format;
 use Drutiny\Report\FormatInterface;
-use Drutiny\Report\FormattedOutput;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Output\StreamOutput;
 use Twig\Environment;
-use Twig\TwigFunction;
 
-abstract class TwigFormat extends Format implements FilesystemFormatInterface
+
+abstract class TwigFormat extends FilesystemFormat implements FilesystemFormatInterface
 {
-    protected Environment $twig;
     protected string $directory;
+
+    public function __construct(
+      protected Environment $twig, 
+      protected OutputInterface $output, 
+      protected LoggerInterface $logger)
+    {
+      parent::__construct($output, $logger);
+    }
 
     public function configure()
     {
-        $this->twig = $this->container->get('twig');
         $this->twig->addGlobal('ext', $this->getExtension());
-        $this->buffer = new BufferedOutput($this->container->get('output')->getVerbosity(), true);
     }
 
     /**
@@ -36,15 +37,6 @@ abstract class TwigFormat extends Format implements FilesystemFormatInterface
       $this->directory = $dir;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getExtension():string
-    {
-      return $this->extension;
-    }
-
-
     public function render(Profile $profile, AssessmentInterface $assessment):FormatInterface
     {
         try {
@@ -52,9 +44,9 @@ abstract class TwigFormat extends Format implements FilesystemFormatInterface
           // 2.x backwards compatibility.
           if (strpos($template, '.twig') === false) {
             $this->logger->warning("Deprecated template declaration found: $template. Templates should explicitly specify extension (e.g. .md.twig).");
-            $template .= '.'.$this->extension.'.twig';
+            $template .= '.'.$this->getExtension().'.twig';
           }
-          $this->logger->debug("Rendering {$this->name} with template $template.");
+          $this->logger->debug("Rendering ".$this->getName()." with template $template.");
           $this->buffer->write($this->twig->render($template, [
             'profile' => $profile,
             'assessment' => $assessment,
@@ -84,7 +76,7 @@ abstract class TwigFormat extends Format implements FilesystemFormatInterface
      */
     public function write():iterable
     {
-      $filepath = $this->directory . '/' . $this->namespace . '.' . $this->extension;
+      $filepath = $this->directory . '/' . $this->namespace . '.' . $this->getExtension();
       $stream = new StreamOutput(fopen($filepath, 'w'));
       $stream->write($this->buffer->fetch());
       $this->logger->info("Written $filepath.");
@@ -101,7 +93,7 @@ abstract class TwigFormat extends Format implements FilesystemFormatInterface
      */
     final protected function loadTwigTemplate($name)
     {
-      return $this->twig->load(sprintf('%s.%s.twig', $name, $this->extension));
+      return $this->twig->load(sprintf('%s.%s.twig', $name, $this->getExtension()));
     }
 
     /**

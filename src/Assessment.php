@@ -32,25 +32,22 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
     protected bool $successful = true;
     protected int $severityCode = 1;
     protected int $errorCode;
-    protected LoggerInterface $logger;
-    protected ContainerInterface $container;
     protected array $statsByResult = [];
     protected array $statsBySeverity = [];
     protected array $policyOrder = [];
-    protected ProgressBar $progressBar;
-    protected string $uuid;
+    public readonly string $uuid;
     protected TargetInterface $target;
-    protected ForkManager $forkManager;
 
-    public function __construct(LoggerInterface $logger, ContainerInterface $container, ProgressBar $progressBar, ForkManager $forkManager)
+    public function __construct(
+        protected LoggerInterface $logger,  
+        protected ProgressBar $progressBar, 
+        protected ForkManager $forkManager,
+        protected AuditFactory $auditFactory
+        )
     {
         if (method_exists($logger, 'withName')) {
-            $logger = $logger->withName('assessment');
+            $this->logger = $logger->withName('assessment');
         }
-        $this->logger = $logger;
-        $this->container = $container;
-        $this->progressBar = $progressBar;
-        $this->forkManager = $forkManager;
 
         $data = random_bytes(16);
         $data[6] = chr(ord($data[6]) & 0x0f | 0x40);
@@ -107,7 +104,6 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
         $this->progressBar->setMaxSteps($this->progressBar->getMaxSteps() + count($policies));
         $this->forkManager->setAsync(count($policies) > 1);
 
-        $promises = [];
         foreach ($policies as $policy) {
             $this->policyOrder[] = $policy->name;
             $this->logger->info("Assessing '{policy}' against {uri}", [
@@ -115,13 +111,9 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
               'uri' => $this->uri,
             ]);
 
-            $audit = $this->container->get($policy->class);
+            $audit = $this->auditFactory->get($policy, $target);
             $audit->setParameter('reporting_period_start', $start)
                   ->setParameter('reporting_period_end', $end);
-
-            if ($target !== $audit->getTarget()) {
-                throw new \Exception("Audit target not the same as assessment target.");
-            }
 
             $this->forkManager->create()
             ->setLabel($policy->name)

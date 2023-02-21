@@ -2,19 +2,25 @@
 
 namespace Drutiny\Console\Command;
 
+use Drutiny\Settings;
 use Phar;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
-use Symfony\Component\Process\Process;
 
 /**
  * Self update command.
  */
 class VersionSelectCommand extends DrutinyBaseCommand
 {
+    public function __construct(
+        protected Settings $settings
+    )
+    {
+        parent::__construct();
+    }
 
     /**
      * {@inheritdoc}
@@ -31,7 +37,7 @@ class VersionSelectCommand extends DrutinyBaseCommand
      */
     public function isEnabled()
     {
-        return file_exists($this->getContainer()->getParameter('drutiny_releases_dir'));
+        return file_exists($this->settings->get('drutiny_releases_dir'));
     }
 
     /**
@@ -40,7 +46,7 @@ class VersionSelectCommand extends DrutinyBaseCommand
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $io = new SymfonyStyle($input, $output);
-        $release_dir = $this->getContainer()->getParameter('drutiny_releases_dir');
+        $release_dir = $this->settings->get('drutiny_releases_dir');
         $current_version = $this->getApplication()->getVersion();
 
         $finder = new Finder;
@@ -65,7 +71,7 @@ class VersionSelectCommand extends DrutinyBaseCommand
         
         $fs = new Filesystem;
 
-        $bin = $this->getContainer()->getParameter('drutiny_release_bin');
+        $bin = $this->settings->get('drutiny_release_bin');
         $fs->mkdir(dirname($bin));
 
         if ($fs->exists($bin)) {

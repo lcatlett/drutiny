@@ -23,7 +23,8 @@ class AuditGenerateCommand extends Command
     {
         $this
         ->setName('audit:generate')
-        ->setDescription('Create an Audit class');
+        ->setDescription('Create an Audit class')
+        ->setHidden();
     }
 
   /**

@@ -6,11 +6,14 @@ use Drutiny\Profile;
 use Drutiny\AssessmentInterface;
 use Drutiny\Report\FormatInterface;
 use Fiasco\SymfonyConsoleStyleMarkdown\Renderer;
+use Drutiny\Attribute\AsFormat;
 
+#[AsFormat(
+    name: 'terminal',
+    extension: 'md'
+  )]
 class Terminal extends Markdown
 {
-    protected string $name = 'terminal';
-
     /**
      * Change the report template to use a profile dependency report format.
      */
@@ -42,7 +45,7 @@ class Terminal extends Markdown
      */
     public function write():iterable
     {
-        $this->container->get('output')->write($this->buffer->fetch());
+        $this->output->write($this->buffer->fetch());
         yield 'terminal';
     }
 }

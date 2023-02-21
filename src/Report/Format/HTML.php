@@ -5,14 +5,15 @@ namespace Drutiny\Report\Format;
 use Drutiny\AssessmentInterface;
 use Drutiny\Profile;
 use Drutiny\Report\FormatInterface;
-use Twig\TemplateWrapper;
+use Drutiny\Attribute\AsFormat;
 
+
+#[AsFormat(
+  name: 'html',
+  extension: 'html'
+)]
 class HTML extends TwigFormat
 {
-    protected string $name = 'html';
-    protected string $extension = 'html';
-
-
     public function setOptions(array $options = []):FormatInterface
     {
         if (!isset($options['content'])) {

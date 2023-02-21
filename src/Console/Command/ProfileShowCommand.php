@@ -2,6 +2,8 @@
 
 namespace Drutiny\Console\Command;
 
+use Drutiny\LanguageManager;
+use Drutiny\ProfileFactory;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
@@ -14,6 +16,14 @@ use Symfony\Component\Yaml\Yaml;
 class ProfileShowCommand extends DrutinyBaseCommand
 {
     use LanguageCommandTrait;
+
+    public function __construct(
+        protected ProfileFactory $profileFactory,
+        protected LanguageManager $languageManager
+      )
+      {
+        parent::__construct();
+      }
   /**
    * @inheritdoc
    */
@@ -50,7 +60,7 @@ class ProfileShowCommand extends DrutinyBaseCommand
     {
         $this->initLanguage($input);
 
-        $profile = $this->getProfileFactory()->loadProfileByName($input->getArgument('profile'));
+        $profile = $this->profileFactory->loadProfileByName($input->getArgument('profile'));
         $export = $profile->export();
 
         if (!$input->getOption('backward-compatibility') && !is_string($export['format']['html']['content'])) {

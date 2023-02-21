@@ -2,65 +2,58 @@
 
 namespace Drutiny\Policy;
 
-use Drutiny\Sandbox\Sandbox;
-use Drutiny\ExpressionLanguage;
 use Drutiny\Audit\AuditInterface;
-use Drutiny\Container;
+use Drutiny\Helper\ExpressionLanguageTranslation;
 
 class Dependency
 {
 
-  /**
-   * On fail behaviour: Fail policy in report.
-   */
-    const ON_FAIL_DEFAULT = 'fail';
-
-  /**
-   * On fail behaviour: Omit policy from report.
-   */
-    const ON_FAIL_OMIT = 'omit';
-
-  /**
-   * On fail behaviour: Report policy as error.
-   */
-    const ON_FAIL_ERROR = 'error';
-
-  /**
-   * On fail behaviour: Report as not applicable.
-   */
-    const ON_FAIL_REPORT_ONLY = 'report_only';
-
-  /**
-   * @var string Must be one of ON_FAIL constants.
-   */
-    protected string $onFail = 'fail';
-
-  /**
-   * @var string Symfony ExpressionLanguage expression.
-   */
-    protected string $expression;
+    /**
+     * On fail behaviour: Fail policy in report.
+     */
+      const ON_FAIL_DEFAULT = 'fail';
 
     /**
-     * @var string Evaluation syntax.
+     * On fail behaviour: Omit policy from report.
      */
-    protected string $syntax;
+      const ON_FAIL_OMIT = 'omit';
 
     /**
-     * @var string A description of what the dependency is about.
+     * On fail behaviour: Report policy as error.
      */
-    protected string $description;
+      const ON_FAIL_ERROR = 'error';
+
+    /**
+     * On fail behaviour: Report as not applicable.
+     */
+      const ON_FAIL_REPORT_ONLY = 'report_only';
+
+    /**
+     * @var string Must be one of ON_FAIL constants.
+     */
+      protected string $onFail = 'fail';
+
+      public readonly string $expression;
+
+      public readonly string $syntax;
 
     public function __construct(
-      $expression = 'true',
+      string $expression = 'true',
       $on_fail = self::ON_FAIL_DEFAULT,
-      $syntax = 'expression_language',
-      $description = ''
+      string $syntax = 'expression_language',
+      public readonly string $description = ''
       )
     {
-        $this->expression = $expression;
         $this->setFailBehaviour($on_fail);
+        
+        // Gracefully port expression language syntax into twig.
+        if ($syntax == 'expression_language') {
+            $translation = new ExpressionLanguageTranslation($expression);
+            $expression = $translation->toTwigSyntax();
+            $syntax = 'twig';
+        }
         $this->syntax = $syntax;
-        $this->description = $description;
+        $this->expression = $expression;
     }
 
     public function getExpression()
@@ -91,6 +84,7 @@ class Dependency
         return [
         'on_fail' => $this->onFail,
         'expression' => $this->expression,
+        'syntax' => $this->syntax
         ];
     }
 
@@ -114,32 +108,5 @@ class Dependency
     public function getDescription():string
     {
       return $this->description;
-    }
-
-  /**
-   * Evaluate the dependency.
-   */
-    public function execute(AuditInterface $audit)
-    {
-        try {
-          $expression = $audit->interpolate($this->expression);
-          $return = $audit->evaluate($expression, $this->syntax, [
-            'dependency' => $this
-          ]);
-          if ($return === 1 || $return === true) {
-            return true;
-          }
-        } catch (\Exception $e) {
-            $audit->getLogger()->warning($this->syntax . ': ' . $e->getMessage());
-        }
-        $audit->getLogger()->debug('Expression FAILED.', [
-          'class' => get_class($this),
-          'expression' => $expression,
-          'return' => print_r($return ?? 'EXCEPTION_THROWN', 1),
-          'syntax' => $this->syntax
-        ]);
-
-        // Execute the on fail behaviour.
-        throw new DependencyException($this);
     }
 }

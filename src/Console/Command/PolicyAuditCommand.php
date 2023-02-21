@@ -3,17 +3,17 @@
 namespace Drutiny\Console\Command;
 
 use Drutiny\Assessment;
-use Drutiny\Profile;
-use Drutiny\Report\Format;
-use Drutiny\Entity\PolicyOverride;
-use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Exception\InvalidArgumentException;
+use Drutiny\LanguageManager;
+use Drutiny\PolicyFactory;
+use Drutiny\ProfileFactory;
+use Drutiny\Report\FormatFactory;
+use Drutiny\Target\TargetFactory;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Output\StreamOutput;
-use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -23,6 +23,20 @@ class PolicyAuditCommand extends DrutinyBaseCommand
 {
   use ReportingCommandTrait;
   use LanguageCommandTrait;
+
+  public function __construct(
+    protected ProfileFactory $profileFactory,
+    protected PolicyFactory $policyFactory,
+    protected TargetFactory $targetFactory,
+    protected Assessment $assessment,
+    protected FormatFactory $formatFactory,
+    protected LoggerInterface $logger,
+    protected ProgressBar $progressBar,
+    protected LanguageManager $languageManager
+  )
+  {
+    parent::__construct();
+  }
 
   /**
    * @inheritdoc
@@ -73,13 +87,12 @@ class PolicyAuditCommand extends DrutinyBaseCommand
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $progress = $this->getProgressBar();
-        $progress->start();
+        $this->progressBar->start();
         $this->initLanguage($input);
 
         $name = $input->getArgument('policy');
 
-        $profile = $this->getContainer()->get('profile.factory')->create([
+        $profile = $this->profileFactory->create([
           'title' => 'Policy audit: ' . $name,
           'name' => '_policy_audit',
           'uuid' => '_policy_audit',
@@ -108,7 +121,7 @@ class PolicyAuditCommand extends DrutinyBaseCommand
         ]]);
 
         // Setup the target.
-        $target = $this->getTargetFactory()->create($input->getArgument('target'), $input->getOption('uri'));
+        $target = $this->targetFactory->create($input->getArgument('target'), $input->getOption('uri'));
 
         // Get the URLs.
         if ($uri = $input->getOption('uri')) {
@@ -120,33 +133,28 @@ class PolicyAuditCommand extends DrutinyBaseCommand
         $profile->setReportingPeriod($this->getReportingPeriodStart($input), $this->getReportingPeriodEnd($input));
 
         $policies = [];
-        $progress->setMessage("Loading policy definitions...");
+        $this->progressBar->setMessage("Loading policy definitions...");
         foreach ($profile->getAllPolicyDefinitions() as $definition) {
-            $policies[] = $definition->getPolicy($this->getPolicyFactory());
+            $policies[] = $definition->getPolicy($this->policyFactory);
         }
 
-        $progress->setMessage("Assessing target...");
-        $assessment = $this->getContainer()->get('assessment')
-        ->setUri($uri)
-        ->assessTarget($target, $policies, $profile->getReportingPeriodStart(), $profile->getReportingPeriodEnd());
+        $this->progressBar->setMessage("Assessing target...");
 
-        $progress->finish();
-        $progress->clear();
+        $this->assessment
+          ->setUri($uri)
+          ->assessTarget($target, $policies, $profile->getReportingPeriodStart(), $profile->getReportingPeriodEnd());
 
-        foreach ($this->getFormats($input, $profile) as $format) {
+        $this->progressBar->finish();
+        $this->progressBar->clear();
+
+        foreach ($this->getFormats($input, $profile, $this->formatFactory) as $format) {
             $format->setNamespace($this->getReportNamespace($input, $uri));
-            $format->render($profile, $assessment);
+            $format->render($profile, $this->assessment);
             foreach ($format->write() as $location) {
               $output->writeln("Policy Audit written to $location.");
             }
         }
         $output->writeln("Policy Audit Complete.");
-
-        //
-        // $format = $input->getOption('format');
-        // $format = $this->getContainer()->get('format.factory')->create($format, $profile->format[$format] ?? []);
-        // $format->setOutput(($filepath != 'stdout') ? new StreamOutput(fopen($filepath, 'w')) : $output);
-        // $format->render($profile, $assessment)->write();
 
         // Do not use a non-zero exit code when no severity is set (Default).
         $exit_severity = $input->getOption('exit-on-severity');
@@ -156,7 +164,7 @@ class PolicyAuditCommand extends DrutinyBaseCommand
         $this->logger->info("Exiting with max severity code.");
 
         // Return the max severity as the exit code.
-        $exit_code = $assessment->getSeverityCode();
+        $exit_code = $this->assessment->getSeverityCode();
 
         return $exit_code >= $exit_severity ? $exit_code : 0;
     }

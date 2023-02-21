@@ -2,11 +2,26 @@
 
 namespace Drutiny;
 
+use Psr\Container\ContainerInterface;
+
 /**
  *
  */
-class AssessmentManager implements AssessmentInterface {
+class AssessmentManager {
     protected $assessments = [];
+
+    public function __construct(protected ContainerInterface $container)
+    {
+        
+    }
+
+    /**
+     * Create a new Assessment instance.
+     */
+    public function create():Assessment
+    {
+        return $this->container->get(Assessment::class);
+    }
 
     public function addAssessment(Assessment $assessment)
     {

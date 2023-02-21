@@ -2,8 +2,7 @@
 
 namespace Drutiny\Console\Command;
 
-use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputOption;
+use Drutiny\Settings;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
@@ -13,6 +12,13 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  */
 class InfoCommand extends DrutinyBaseCommand
 {
+    public function __construct(
+        protected Settings $settings
+    )
+    {
+        parent::__construct();
+    }
+
     /**
      * @inheritdoc
      */
@@ -29,8 +35,8 @@ class InfoCommand extends DrutinyBaseCommand
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $io = new SymfonyStyle($input, $output);
-        $project_dir = $this->getContainer()->getParameter('project_dir');
-        $name = $this->getContainer()->getParameter('name');
+        $project_dir = $this->settings->get('project_dir');
+        $name = $this->settings->get('name');
         $composer_lock = $project_dir . '/composer.lock';
         if (!file_exists($composer_lock)) {
             $io->error("Could not find dependency information.");

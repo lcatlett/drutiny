@@ -15,7 +15,7 @@ trait DomainSourceCommandTrait
   /**
    * @inheritdoc
    */
-    protected function configureDomainSource()
+    protected function configureDomainSource(DomainSource $domainSource)
     {
         $this
         ->addOption(
@@ -40,10 +40,8 @@ trait DomainSourceCommandTrait
         );
 
         // Build a way for the command line to specify the options to derive
-        // domains from their sources. NOTE: we cannot acquire the container
-        // from the application object at this time as the application is
-        // yet to be associated with the command.
-        foreach (\drutiny()->get('domain.source')->getSources() as $driver => $properties) {
+        // domains from their sources.
+        foreach ($domainSource->getSources() as $driver => $properties) {
             foreach ($properties as $name => $description) {
                 $this->addOption(
                     'domain-source-' . $driver . '-' . $name,
@@ -81,6 +79,6 @@ trait DomainSourceCommandTrait
      */
       protected function getDomainSource():DomainSource
       {
-          return $this->getContainer()->get('domain.source');
+          throw new \Exception("Unsupported method. Please use dependency injection for class: " . DomainSource::class);
       }
 }

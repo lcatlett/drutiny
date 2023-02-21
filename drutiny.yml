@@ -40,6 +40,9 @@ services:
         autowire: true      # Automatically injects dependencies in your services.
         autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
         public: true
+        bind:
+          $name: '%name%'
+          $version: '%version%'
 
     _instanceof:
         
@@ -59,6 +62,13 @@ services:
       Drutiny\PolicySource\PolicySourceInterface:
         tags: [policy.source]
 
+      Drutiny\Target\Service\ServiceInterface:
+        tags: [service]
+
+      # See Drutiny\DependencyInjection\AddTargetPass
+      Drutiny\Target\TargetInterface:
+        tags: [target]
+
       # Auto register any plugins.
       Drutiny\Plugin:
         tags: [plugin]
@@ -69,16 +79,21 @@ services:
         tags: [format]
 
       Symfony\Component\EventDispatcher\EventSubscriberInterface:
-        tags: [drutiny.event_subscriber]
-
-      Drutiny\ExpressionLanguage\Func\ContainerDependentFunctionInterface:
-        tags: [drutiny.expression_language.function]
+        tags: [kernel.event_subscriber]
 
       Drutiny\Http\MiddlewareInterface:
         tags: [http.middleware]
 
     # Services
+    Psr\Container\ContainerInterface:
+      alias: service_container
     Symfony\Component\DependencyInjection\ContainerInterface:
+      alias: service_container
+
+    Symfony\Component\DependencyInjection\ContainerBuilder:
+      alias: service_container
+    
+    Symfony\Component\DependencyInjection\Container:
       alias: service_container
     
     Symfony\Component\DependencyInjection\TaggedContainerInterface:
@@ -93,9 +108,6 @@ services:
 
     Async\ForkManager:
       alias: 'async'
-
-    Async\Channel:
-      shared: false
 
     cache.array:
         class: Symfony\Component\Cache\Adapter\ArrayAdapter
@@ -151,6 +163,11 @@ services:
     event_dispatcher:
         class: Symfony\Component\EventDispatcher\EventDispatcher
 
+    Drutiny\Console\Application:
+      calls:
+        - [setDispatcher, ['@event_dispatcher']]
+
+    Drutiny\Audit\TwigEvaluator:
     Drutiny\Event\EventSubscriber:
 
     expression_language:
@@ -219,6 +236,9 @@ services:
         - '%log.filepath%'
         - '%log.max_files%'
 
+    Monolog\Handler\StreamHandler:
+      alias: logger.logfile
+
     Monolog\Processor\ProcessIdProcessor:
     Monolog\Processor\MemoryUsageProcessor:
     Monolog\Processor\PsrLogMessageProcessor:
@@ -228,11 +248,6 @@ services:
         - '%log.format%'
         - null
         - true
-
-    # Default output class echoes out to the console.
-    output:
-      class: Symfony\Component\Console\Output\OutputInterface
-      synthetic: true
 
     input:
       class: Symfony\Component\Console\Input\ArgvInput
@@ -245,31 +260,6 @@ services:
     profile.factory:
       class: 'Drutiny\ProfileFactory'
       arguments: ['@service_container', '@cache.filesystem']
-
-    target.factory:
-      class: Drutiny\Target\TargetFactory
-
-    target:
-      class: Drutiny\Target\DrushTarget
-      synthetic: true
-
-    target.git:
-      class: Drutiny\Target\VCS\GitTarget
-
-    target.drush:
-      class: Drutiny\Target\DrushTarget
-
-    target.ddev:
-      class: Drutiny\Target\DdevTarget
-
-    target.docksal:
-      class: Drutiny\Target\DocksalTarget
-
-    target.lando:
-      class: Drutiny\Target\LandoTarget
-
-    target.none:
-      class: Drutiny\Target\NullTarget
 
     twig.loader:
       class: Twig\Loader\ChainLoader
@@ -309,6 +299,9 @@ services:
         - [addGlobal, ['logger', '@logger']]
         - [addGlobal, ['ext', 'md']]
 
+    Twig\Environment:
+      alias: twig
+
     twig.functions.policy_result:
       class: Twig\TwigFunction
       arguments:
@@ -322,20 +315,6 @@ services:
       arguments:
         - parse_url
         - parse_url
-
-    twig.functions.semver_gt:
-      class: Twig\TwigFunction
-      arguments:
-        - semver_gt
-        - ['Composer\Semver\Comparator', 'greaterThan']
-        - is_safe: [html]
-
-    twig.functions.semver_gte:
-      class: Twig\TwigFunction
-      arguments:
-        - semver_gte
-        - ['Composer\Semver\Comparator', 'greaterThanOrEqualTo']
-        - is_safe: [html]
 
     twig.functions.semver_satisfies:
       class: Twig\TwigFunction
@@ -406,16 +385,19 @@ services:
         - ['Drutiny\Report\Twig\Helper', 'filterChart']
         - is_safe: ['html']
 
-    process.manager:
-      class: Drutiny\Process\ProcessManager
-
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
     Drutiny\:
         resource: 'src/*'
         exclude:
           - 'src/{ExpressionFunction,DependencyInjection,Entity,Migrations,Tests,Kernel.php}'
-          - src/Console/{Application.php}
+          
+          # Exclude audit classes from dependency injection. See Drutiny\AuditFactory.
+          - src/Audit/*
+          - src/Http/Audit/*
+          - src/Plugin/Drupal7/Audit/*
+          - src/Plugin/Drupal8/Audit/*
+
           - src/Config/Config.*
           - src/Report/Backport/*
           - src/Event/*
@@ -426,12 +408,6 @@ services:
           - src/Report/Format/Menu/*
           - src/{functions.php}
 
-    Drutiny\Target\Service\ExecutionInterface:
-      alias: 'Drutiny\Target\Service\ExecutionService'
-
-    Drutiny\Target\Service\ExecutionServiceException:
-      autowire: false
-
     Drutiny\Entity\DataBag:
       shared: false
 
@@ -440,9 +416,6 @@ services:
 
     Drutiny\Config\ConfigFile:
       alias: config
-
-    Drutiny\Target\TargetInterface:
-      alias: 'target'
 
     Drutiny\Assessment:
       shared: false
@@ -458,7 +431,7 @@ services:
       alias: 'cache.filesystem'
 
     Symfony\Component\Console\Output\OutputInterface:
-      alias: output
+      alias: Symfony\Component\Console\Output\ConsoleOutput
 
     Symfony\Component\Console\Input\InputInterface:
       alias: input
@@ -504,9 +477,6 @@ services:
 
     Psr\Log\LoggerInterface:
       alias: logger
-
-    Twig\Environment:
-      alias: 'twig'
 
     Twig\Extension\DebugExtension:
     Twig\Extension\StringLoaderExtension:

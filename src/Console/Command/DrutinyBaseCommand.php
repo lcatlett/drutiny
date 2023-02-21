@@ -5,31 +5,21 @@ namespace Drutiny\Console\Command;
 use Drutiny\PolicyFactory;
 use Drutiny\ProfileFactory;
 use Drutiny\Target\TargetFactory;
-use Drutiny\LanguageManager;
 use Async\ForkManager;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 
 /**
  * Run a profile and generate a report.
  */
 abstract class DrutinyBaseCommand extends Command
 {
-    /**
-     * Shortcut to the service container.
-     */
-    protected function getContainer(): ContainerInterface
-    {
-        return $this->getApplication()
-          ->getKernel()
-          ->getContainer();
-    }
-
     protected function getProgressBar(): ProgressBar
     {
-        return $this->getContainer()->get('progress_bar');
+        throw new RuntimeException("Please use dependency injection in the constructor method instead for :" . ProgressBar::class);
     }
 
     /**
@@ -37,7 +27,7 @@ abstract class DrutinyBaseCommand extends Command
      */
     protected function getLogger(): LoggerInterface
     {
-        return $this->getContainer()->get('logger');
+        throw new RuntimeException("Please use dependency injection in the constructor method instead for :" . LoggerInterface::class);
     }
 
     /**
@@ -45,7 +35,7 @@ abstract class DrutinyBaseCommand extends Command
      */
     protected function getPolicyFactory(): PolicyFactory
     {
-        return $this->getContainer()->get('policy.factory');
+        throw new RuntimeException("Please use dependency injection in the constructor method instead for :" . PolicyFactory::class);
     }
 
     /**
@@ -53,7 +43,7 @@ abstract class DrutinyBaseCommand extends Command
      */
     protected function getProfileFactory(): ProfileFactory
     {
-        return $this->getContainer()->get('profile.factory');
+        throw new RuntimeException("Please use dependency injection in the constructor method instead for :" . ProfileFactory::class);
     }
 
     /**
@@ -61,7 +51,7 @@ abstract class DrutinyBaseCommand extends Command
      */
     protected function getTargetFactory(): TargetFactory
     {
-        return $this->getContainer()->get('target.factory');
+        throw new RuntimeException("Please use dependency injection in the constructor method instead for :" . TargetFactory::class);
     }
 
     /**
@@ -69,13 +59,11 @@ abstract class DrutinyBaseCommand extends Command
      */
     protected function getForkManager(): ForkManager
     {
-        return $this->getContainer()->get('async');
+        throw new RuntimeException("Please use dependency injection in the constructor method instead for :" . ForkManager::class);
     }
 
     protected function dispatchEvent(string $event, array $args)
     {
-        return $this
-        ->getApplication()
-        ->getKernel()->dispatchEvent($event, $args);
+        throw new RuntimeException("Please use dependency injection in the constructor method instead for :" . EventDispatcher::class);
     }
 }

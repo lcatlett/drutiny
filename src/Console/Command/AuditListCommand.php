@@ -2,9 +2,9 @@
 
 namespace Drutiny\Console\Command;
 
-
+use Drutiny\AuditFactory;
 use Drutiny\PolicyFactory;
-use Symfony\Component\Console\Command\Command;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
@@ -16,11 +16,12 @@ use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
  */
 class AuditListCommand extends DrutinyBaseCommand
 {
-    protected $policyFactory;
-
-    public function __construct(PolicyFactory $policyFactory)
+    public function __construct(
+      protected PolicyFactory $policyFactory,
+      protected AuditFactory $auditFactory,
+      protected LoggerInterface $logger
+      )
     {
-        $this->policyFactory = $policyFactory;
         parent::__construct();
     }
 
@@ -40,8 +41,6 @@ class AuditListCommand extends DrutinyBaseCommand
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $this->getTargetFactory()->create('none:none');
-
         $finder = new Finder();
         $finder->directories()
         ->in(DRUTINY_LIB)
@@ -75,10 +74,10 @@ class AuditListCommand extends DrutinyBaseCommand
         $stats = [];
         foreach ($audits as $audit) {
           try {
-            $instance = $this->getContainer()->get($audit);
+            $instance = $this->auditFactory->mock($audit);
           }
           catch (ServiceNotFoundException $e) {
-            $this->getLogger()->error($e->getMessage());
+            $this->logger->error($e->getMessage());
             continue;
           }
 
@@ -90,7 +89,6 @@ class AuditListCommand extends DrutinyBaseCommand
 
         $io = new SymfonyStyle($input, $output);
         $io->title('Drutiny Audit Classes');
-        // $io->listing($audits);
         $io->table(['Audit', 'Policy utilisation'], $stats);
         return 0;
     }

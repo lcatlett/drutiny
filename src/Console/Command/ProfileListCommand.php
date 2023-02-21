@@ -2,6 +2,9 @@
 
 namespace Drutiny\Console\Command;
 
+use Drutiny\LanguageManager;
+use Drutiny\ProfileFactory;
+use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -12,8 +15,16 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  */
 class ProfileListCommand extends DrutinyBaseCommand
 {
-
   use LanguageCommandTrait;
+
+  public function __construct(
+    protected ProgressBar $progressBar,
+    protected ProfileFactory $profileFactory,
+    protected LanguageManager $languageManager
+  )
+  {
+    parent::__construct();
+  }
 
   /**
    * @inheritdoc
@@ -39,13 +50,12 @@ class ProfileListCommand extends DrutinyBaseCommand
     {
         $this->initLanguage($input);
         $render = new SymfonyStyle($input, $output);
-        $progress = $this->getProgressBar();
-        $progress->start(1);
-        $progress->setMessage("Pulling profiles from profile sources...");
-        $profiles = $this->getProfileFactory()->getProfileList();
+        $this->progressBar->start(1);
+        $this->progressBar->setMessage("Pulling profiles from profile sources...");
+        $profiles = $this->profileFactory->getProfileList();
 
         if ($source_filter = $input->getOption('source')) {
-            $progress->setMessage("Filtering profiles by source: $source_filter");
+            $this->progressBar->setMessage("Filtering profiles by source: $source_filter");
             $profiles = array_filter($profiles, function ($profile) use ($source_filter) {
                 if ($source_filter == $profile['source']) return true;
                 if ($source_filter == preg_replace('/\<.+\>/U', '', $profile['source'])) return true;
@@ -67,8 +77,8 @@ class ProfileListCommand extends DrutinyBaseCommand
             sort($sort);
             return $a[1] === $sort[0] ? -1 : 1;
         });
-        $progress->finish();
-        $progress->clear();
+        $this->progressBar->finish();
+        $this->progressBar->clear();
         $render->table(['Profile', 'Name', 'Source'], $rows);
         $render->note("Use drutiny profile:info to view more information about a profile.");
         return 0;

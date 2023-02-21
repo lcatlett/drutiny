@@ -2,29 +2,27 @@
 
 namespace Drutiny\Report;
 
+use Drutiny\Settings;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 
 class FormatFactory
 {
-    use ContainerAwareTrait;
 
-    public function __construct(ContainerInterface $container)
+    public function __construct(
+        protected ContainerInterface $container, 
+        protected Settings $settings)
     {
-        $this->setContainer($container);
     }
 
     public function create(string $format, array $options = [])
     {
-        foreach ($this->container->findTaggedServiceIds('format') as $id => $info) {
-            $formatter = $this->container->get($id);
-            if ($formatter->getName() != $format) {
-                continue;
-            }
-
-            $formatter->setOptions($options);
-            return $formatter;
+        // Registry built by compiler pass. See Drutiny\Kernel.
+        $registry = $this->settings->get('format.registry');
+        if (!isset($registry[$format])) {
+            throw new \InvalidArgumentException("Reporting format '$format' is not supported.");
         }
-        throw new \InvalidArgumentException("Reporting format '$format' is not supported.");
+        $formatter = $this->container->get($registry[$format]);
+        $formatter->setOptions($options);
+        return $formatter;
     }
 }

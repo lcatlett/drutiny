@@ -5,13 +5,16 @@ namespace Drutiny\Report\Format;
 use Drutiny\Profile;
 use Drutiny\AssessmentInterface;
 use Drutiny\Report\FormatInterface;
-use Twig\Extra\Markdown\twig_html_to_markdown;
 use Twig\TemplateWrapper;
+use Drutiny\Attribute\AsFormat;
 
+
+#[AsFormat(
+  name: 'markdown',
+  extension: 'md'
+)]
 class Markdown extends HTML
 {
-    protected string $name = 'markdown';
-    protected string $extension = 'md';
 
     public function render(Profile $profile, AssessmentInterface $assessment):FormatInterface
     {

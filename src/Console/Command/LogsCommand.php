@@ -2,17 +2,20 @@
 
 namespace Drutiny\Console\Command;
 
-use Symfony\Component\Console\Command\Command;
+use Monolog\Handler\StreamHandler;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Process\Process;
 
 /**
  *
  */
 class LogsCommand extends DrutinyBaseCommand
 {
+  public function __construct(protected StreamHandler $logFile)
+  {
+    parent::__construct();
+  }
 
   /**
    * @inheritdoc
@@ -34,12 +37,11 @@ class LogsCommand extends DrutinyBaseCommand
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $logfile = $this->getContainer()->get('logger.logfile');
         if ($input->getOption('tail')) {
-          passthru(sprintf('tail -f -n 20 %s', $logfile->getUrl()));
+          passthru(sprintf('tail -f -n 20 %s', $this->logFile->getUrl()));
         }
         else {
-          passthru(sprintf('cat %s', $logfile->getUrl()));
+          passthru(sprintf('cat %s', $this->logFile->getUrl()));
         }
         return 0;
     }

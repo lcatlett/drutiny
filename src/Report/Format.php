@@ -2,29 +2,22 @@
 
 namespace Drutiny\Report;
 
+use Exception;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\DependencyInjection\ContainerAwareTrait;
 use Psr\Log\LoggerInterface;
+use ReflectionClass;
+use Drutiny\Attribute\AsFormat;
 
 abstract class Format implements FormatInterface
 {
-    use ContainerAwareTrait;
-
     protected string $namespace;
-    protected string $name = 'unknown';
     protected array $options = [];
-    protected LoggerInterface $logger;
-    protected OutputInterface $buffer;
+    protected BufferedOutput $buffer;
 
-
-    public function __construct(ContainerInterface $container, LoggerInterface $logger)
+    public function __construct(protected OutputInterface $output, protected LoggerInterface $logger)
     {
-        $this->setContainer($container);
-        $verbosity = $container->get('output')->getVerbosity();
-        $this->buffer = new BufferedOutput($verbosity, true);
-        $this->logger = $logger;
+        $this->buffer = new BufferedOutput($output->getVerbosity(), true);
         $this->configure();
     }
 
@@ -50,17 +43,16 @@ abstract class Format implements FormatInterface
     /**
      * {@inheritdoc}
      */
-    public function setName(string $name):FormatInterface
-    {
-      $this->name = $name;
-      return $this;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function getName():string
     {
-        return $this->name;
+      $reflect = new ReflectionClass($this);
+      $attributes = $reflect->getAttributes(AsFormat::class);
+
+      if (empty($attributes)) {
+          throw new Exception(get_class($this) . " has no format attribute.");
+      }
+
+      $format = $attributes[0]->newInstance();
+      return $format->name;
     }
 }

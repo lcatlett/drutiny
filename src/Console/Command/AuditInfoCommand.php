@@ -2,7 +2,9 @@
 
 namespace Drutiny\Console\Command;
 
+use Drutiny\AuditFactory;
 use Drutiny\PolicyFactory;
+use Drutiny\Target\TargetFactory;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -19,12 +21,11 @@ use Symfony\Component\Yaml\Yaml;
  */
 class AuditInfoCommand extends Command
 {
-
-    protected $policyFactory;
-
-    public function __construct(PolicyFactory $policyFactory)
+    public function __construct(
+      protected PolicyFactory $policyFactory,
+      protected AuditFactory $auditFactory,
+      )
     {
-        $this->policyFactory = $policyFactory;
         parent::__construct();
     }
 
@@ -50,11 +51,7 @@ class AuditInfoCommand extends Command
     {
         $audit = $input->getArgument('audit');
         $reflection = new \ReflectionClass($audit);
-        $container = $this->getApplication()
-          ->getKernel()
-          ->getContainer();
-        $container->get('target.factory')->create('none:');
-        $audit_instance = $container->get($audit);
+        $audit_instance = $this->auditFactory->mock($audit);
 
         $info = [];
 

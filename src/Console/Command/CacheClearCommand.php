@@ -17,13 +17,10 @@ use Symfony\Contracts\Cache\CacheInterface;
  */
 class CacheClearCommand extends Command
 {
-    protected $container;
-    protected $cache;
-
-    public function __construct(ContainerInterface $container, CacheInterface $cache)
+    public function __construct(
+      protected ContainerInterface $container, 
+      protected CacheInterface $cache)
     {
-      $this->cache = $cache;
-      $this->container = $container;
       parent::__construct();
     }
 

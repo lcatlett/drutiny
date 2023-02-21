@@ -2,9 +2,9 @@
 
 namespace Drutiny\Console\Command;
 
-use Drutiny\Report\FormatInterface;
 use Drutiny\Report\FilesystemFormatInterface;
 use Drutiny\Profile;
+use Drutiny\Report\FormatFactory;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputInterface;
 
@@ -85,16 +85,14 @@ trait ReportingCommandTrait
             'target' => preg_replace('/[^a-z0-9]/', '', strtolower($input->getArgument('target'))),
             'profile' => $input->hasArgument('profile') ? $input->getArgument('profile') : '',
             'date' => $this->getReportingPeriodStart($input)->format('Ymd-His'),
-            'language' => $this->getLanguageManager()->getCurrentLanguage(),
+            'language' => $this->languageManager->getCurrentLanguage(),
           ]);
       }
 
-      protected function getFormats(InputInterface $input, Profile $profile = null):array
+      protected function getFormats(InputInterface $input, Profile $profile = null, FormatFactory $formatFactory):array
       {
         foreach ($input->getOption('format') as $format_option) {
-          $formats[$format_option] = $this->getContainer()
-            ->get('format.factory')
-            ->create($format_option, $profile->format[$format_option] ?? []);
+          $formats[$format_option] = $formatFactory->create($format_option, $profile->format[$format_option] ?? []);
 
           if ($formats[$format_option] instanceof FilesystemFormatInterface) {
             $formats[$format_option]->setWriteableDirectory($input->getOption('report-dir'));
