@@ -42,7 +42,7 @@ class FilesContentsAnalysis extends FilesExistenceAnalysis {
     if ($results['found'] == 0 || !isset($results['findings'][$index])) {
       throw new AuditValidationException("File contents do not exist.");
     }
-    $this->set('contents', $this->target->getService('exec')->run('cat ' . $results['findings'][$index], function ($output) {
+    $this->set('contents', $this->target->run('cat ' . $results['findings'][$index], function ($output) {
       return trim($output);
     }));
   }

@@ -105,7 +105,7 @@ class CodeScan extends Audit
 
         $command = implode(' ', $command);
         $sandbox->logger()->info('[' . __CLASS__ . '] ' . $command);
-        $output = $this->target->getService('exec')->run($command);
+        $output = $this->target->run($command);
 
         if (empty($output)) {
             return true;

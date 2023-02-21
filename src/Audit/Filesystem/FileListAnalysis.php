@@ -83,7 +83,7 @@ class FileListAnalysis extends AbstractAnalysis {
     $command = implode(' ', $command);
     $this->logger->info('[' . __CLASS__ . '] ' . $command);
     
-    $files = $this->target->getService('exec')->run($command, function ($output) {
+    $files = $this->target->run($command, function ($output) {
       return array_filter(explode(PHP_EOL, $output));
     });
 

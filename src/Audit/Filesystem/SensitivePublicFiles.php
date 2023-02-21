@@ -39,11 +39,6 @@ class SensitivePublicFiles extends Audit
    */
     public function audit(Sandbox $sandbox)
     {
-        $stat = $sandbox->drush(['format' => 'json'])->status();
-
-        $root = $stat['root'];
-        $files = $stat['files'];
-
         $extensions = $this->getParameter('extensions');
         $extensions = array_map('trim', explode(',', $extensions));
 
@@ -58,12 +53,12 @@ class SensitivePublicFiles extends Audit
         $command = "cd @location ; find . -type f \( @name-lookups \) -printf '@print-format'";
         $command .= " | grep -v -E '/js/js_|/css/css_|/php/twig/|/php/html_purifier_serializer/' | sort -nr";
         $command = strtr($command, [
-        '@location' => "{$root}/{$files}/",
+        '@location' => "\$DRUSH_ROOT/\$DRUSH_FILES/",
         '@name-lookups' => "-name '*." . implode("' -o -name '*.", $extensions) . "'",
         '@print-format' => '%k\t%p\n',
         ]);
 
-        $output = $this->target->getService('exec')->run($command);
+        $output = $this->target->run($command);
 
         if (empty($output)) {
             return Audit::SUCCESS;

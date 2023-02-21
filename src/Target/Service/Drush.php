@@ -2,16 +2,20 @@
 
 namespace Drutiny\Target\Service;
 
-use Drutiny\Target\Service\ExecutionInterface;
-use Drutiny\Target\Service\RemoteService;
 use JsonException;
+use Drutiny\Attribute\AsService;
+use Drutiny\Target\Transport\TransportInterface;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
+use Symfony\Component\Process\Process;
 
-class DrushService
+#[AsService(name: 'drush')]
+#[Autoconfigure(autowire: false)]
+class Drush implements ServiceInterface
 {
     protected string $alias;
     protected string $url;
     protected string $bin;
-    protected ExecutionInterface $execService;
 
     protected const LAUNCHERS = ['../vendor/drush/drush/drush', 'drush-launcher', 'drush.launcher', 'drush'];
     protected $supportedCommandMap = [
@@ -26,45 +30,24 @@ class DrushService
       'updatedbStatus' => 'updatedb:status',
       'variableGet' => 'vget',
     ];
-    public function __construct(ExecutionInterface $service)
+    public function __construct(protected TransportInterface $transport, protected LoggerInterface $logger)
     {
-        $this->execService = $service;
         // Load and cache the remote bin path for Drush.
-        $cmd = 'which ' . implode(' || which ', static::LAUNCHERS);
-        $this->bin = $this->execService->run($cmd, function ($output) {
+        $cmd = Process::fromShellCommandline('which ' . implode(' || which ', static::LAUNCHERS));
+        $this->bin = $this->transport->send($cmd, function ($output) {
             return trim($output);
         });
     }
 
-    public function setUrl(string $url): DrushService
+    public function setUrl(string $url): self
     {
         $this->url = $url;
         return $this;
     }
 
-    public function isRemote()
-    {
-        return $this->execService instanceof RemoteService;
-    }
-
-    public static function decodeDirtyJson(string $output)
-    {
-        while (true) {
-            $result = json_decode($output, true, JSON_THROW_ON_ERROR);
-
-            if ($result === null) {
-                $cleaned = substr($output, strpos($output, '{'));
-
-                // Remove garbage from beginning of line and try again.
-                if ($cleaned != $output) {
-                    $output = $cleaned;
-                    continue;
-                }
-            }
-            return $result;
-        }
-    }
-
+    /**
+     * Execute a Closure defined in Drutiny inside the Drupal runtime.
+     */
     public function runtime(\Closure $func, ...$args)
     {
         $reflection = new \ReflectionFunction($func);
@@ -81,7 +64,7 @@ class DrushService
 
         $body = array_map('trim', $body);
 
-        // // Compress code.
+        // Reduce code down to minimize transfer size.
         $code = implode('', array_filter($body, function ($line) {
             // Ignore empty lines.
             if (empty($line)) {
@@ -98,15 +81,15 @@ class DrushService
         $initCode = '';
         foreach ($reflection->getParameters() as $idx => $param) {
             $initCode .= strtr('$var = value;', [
-          'var' => $param->name,
-          'value' => var_export($args[$idx], true)
-        ]);
+                'var' => $param->name,
+                'value' => var_export($args[$idx], true)
+            ]);
         }
         // Compress.
         $initCode = str_replace(PHP_EOL, '', $initCode);
         $wrapper = strtr('function __d__(){@code}; echo "__DSTART".json_encode(__d__(), JSON_PARTIAL_OUTPUT_ON_ERROR)."__DEND";', [
-        '@code' => $initCode.$code
-      ]);
+            '@code' => $initCode.$code
+        ]);
         $wrapper = base64_encode($wrapper);
 
         $options = ['--root=$DRUSH_ROOT'];
@@ -114,12 +97,13 @@ class DrushService
             $options[] = '--uri='.escapeshellarg($this->url);
         }
 
-        $command = strtr('echo @code | base64 --decode | @launcher @options php-script -', [
-        '@code' => $wrapper,
-        '@launcher' => $this->bin,
-        '@options' => implode(' ', $options),
-      ]);
-        return $this->execService->run($command, function ($output) {
+        $command = Process::fromShellCommandline(strtr('echo @code | base64 --decode | @launcher @options php-script -', [
+            '@code' => $wrapper,
+            '@launcher' => $this->bin,
+            '@options' => implode(' ', $options),
+        ]));
+
+        return $this->transport->send($command, function ($output) {
             // Drush may spit out garbage around the json output, so we put markers`
             // in the output so we can clearly see where the json response should be.
             $start = strpos($output, "__DSTART") + strlen("__DSTART");
@@ -132,14 +116,16 @@ class DrushService
             try {
                 return json_decode($json, true, 512, JSON_THROW_ON_ERROR);
             } catch (JsonException $e) {
-                drutiny()->get('logger')->error("Failed to parse json output starting with: ".reset($lines).".");
-                drutiny()->get('logger')->info($json);
+                $this->logger->error("Failed to parse json output starting with: ".reset($lines).".");
+                $this->logger->info($json);
                 throw $e;
             }
         });
     }
 
     /**
+     * Dynamically support drush calls listed in $supportedCommandMap.
+     * 
      * Usage: ->configGet('system.settings', ['format' => 'json'])
      * Executes: drush config:get 'system.settings' --format=json
      */
@@ -152,7 +138,7 @@ class DrushService
         $options = is_array(end($args)) ? array_pop($args) : [];
 
         // Ensure the root argument is set unless drush.root is not available.
-        if (!isset($options['root']) && !isset($options['r']) && $this->execService->hasEnvVar('DRUSH_ROOT')) {
+        if (!isset($options['root']) && !isset($options['r'])) {
             $options['root'] = '$DRUSH_ROOT';
         }
 
@@ -170,7 +156,7 @@ class DrushService
             $is_short = strlen($key) == 1;
             $opt = $is_short ? '-'.$key : '--'.$key;
             // Consider as flag. e.g. --debug.
-            if (is_bool($value) && $value) {
+            if ((is_bool($value) && $value) || is_null($value)) {
                 $args[] = $opt;
                 continue;
             }
@@ -181,21 +167,15 @@ class DrushService
 
         array_unshift($args, $this->bin, $this->supportedCommandMap[$cmd]);
 
-        $command = implode(' ', $args);
+        $command = Process::fromShellCommandline(implode(' ', $args));
 
         // Return an object ready to run the command. This allows the caller
         // of this command to be able to specify the preprocess function easily.
-        return (new class ($command, $this->execService) {
-            protected $cmd;
-            protected $service;
-            public function __construct($cmd, ExecutionInterface $service)
-            {
-                $this->cmd = $cmd;
-                $this->service = $service;
-            }
+        return (new class ($command, $this->transport) {
+            public function __construct(protected Process $cmd, protected TransportInterface $transport) {}
             public function run(callable $outputProcessor = null)
             {
-                return $this->service->run($this->cmd, $outputProcessor);
+                return $this->transport->send($this->cmd, $outputProcessor);
             }
         });
     }

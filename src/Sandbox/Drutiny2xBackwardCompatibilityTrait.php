@@ -46,7 +46,7 @@ trait Drutiny2xBackwardCompatibilityTrait {
     }
     $this->logger()->warning(__METHOD__.' is a deprecated method. Please use $this->target->getService("exec"). In ' . $audit);
 
-    return $this->getTarget()->getService('exec')->run($command);
+    return $this->getTarget()->run($command);
   }
 
   public function drush($opts = [])

@@ -64,7 +64,7 @@ class LocalCommandOutputAnalysis extends AbstractAnalysis
         // Transfer the files from target to local working dir.
         foreach ($this->getParameter('transfer', []) as $filename => $remote_filepath) {
           $this->getLogger()->debug("Downloading $remote_filepath to $working_dir/$filename");
-          $this->getTarget()->getService('exec')->downloadFile(
+          $this->getTarget()->downloadFile(
             // Remote location
             $this->interpolate($remote_filepath),
             // Local location

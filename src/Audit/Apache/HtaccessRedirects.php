@@ -4,7 +4,7 @@ namespace Drutiny\Audit\Apache;
 
 use Drutiny\Audit;
 use Drutiny\Sandbox\Sandbox;
-use Symfony\Component\Yaml\Yaml;
+use Symfony\Component\Process\Process;
 
 /**
  * .htaccess redirects
@@ -36,14 +36,14 @@ class HtaccessRedirects extends Audit
     {
 
         $patterns = array(
-        'RedirectPermanent',
-        'Redirect(Match)?.*?(301|permanent) *$',
-        'RewriteRule.*\[.*R=(301|permanent).*\] *$',
+            'RedirectPermanent',
+            'Redirect(Match)?.*?(301|permanent) *$',
+            'RewriteRule.*\[.*R=(301|permanent).*\] *$',
         );
         $regex = '^ *(' . implode('|', $patterns) . ')';
         $command = "grep -Ei '$regex' %docroot%/.htaccess | wc -l";
 
-        $total_redirects = (int) $sandbox->exec($command);
+        $total_redirects = (int) $this->target->execute(Process::fromShellCommandline($command));
 
         $this->set('total_redirects', $total_redirects);
 

@@ -39,7 +39,7 @@ class CheckIgnoreAnalysis extends AbstractAnalysis {
         $paths = base64_encode($paths);
         $repo = $this->get('repository');
         $cmd = sprintf("echo %s | base64 --decode | git -C %s check-ignore --verbose -n --no-index --stdin", $paths, $repo);
-        $results = $this->target->getService('exec')->run($cmd, function (Process $process) {
+        $results = $this->target->run($cmd, function (Process $process) {
           $output = $process->getOutput();
           $results = [];
           foreach (array_filter(explode(PHP_EOL, $output)) as $line) {

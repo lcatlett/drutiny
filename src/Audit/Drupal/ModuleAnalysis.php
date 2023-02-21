@@ -3,6 +3,8 @@
 namespace Drutiny\Audit\Drupal;
 
 use Drutiny\Audit\AbstractAnalysis;
+use Drutiny\Helper\ProcessUtility;
+use Drutiny\Helper\TextCleaner;
 use Drutiny\Sandbox\Sandbox;
 
 /**
@@ -22,7 +24,7 @@ class ModuleAnalysis extends AbstractAnalysis
             'type' => 'module'
           ])
           ->run(function ($output) {
-              return $this->target->getService('drush')->decodeDirtyJson($output);
+              return TextCleaner::decodeDirtyJson($output);
           });
         $this->set('modules', $list);
     }

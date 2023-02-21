@@ -3,6 +3,7 @@
 namespace Drutiny\Plugin\Drupal8\Audit;
 
 use Drutiny\Audit;
+use Drutiny\Helper\TextCleaner;
 use Drutiny\Sandbox\Sandbox;
 
 /**
@@ -28,10 +29,12 @@ class PurgePluginExists extends Audit
         $plugin_name = $this->getParameter('plugin');
 
         try {
-            $config = $sandbox->drush([
-              'format' => 'json',
-              'include-overridden' => null,
-            ])->configGet('purge.plugins');
+            $config = $this->target->getService('drush')->configGet('purge.plugins', [
+                'format' => 'json',
+                'include-overridden' => true,
+              ])->run(function ($output) {
+                return TextCleaner::decodeDirtyJson($output);
+              });
             $plugins = $config['purgers'];
 
             foreach ($plugins as $plugin) {

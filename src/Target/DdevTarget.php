@@ -2,13 +2,14 @@
 
 namespace Drutiny\Target;
 
-use Drutiny\Target\Service\DrushService;
-use Drutiny\Target\Service\DockerService;
-use Symfony\Component\Process\Exception\ProcessFailedException;
+use Drutiny\Attribute\AsTarget;
+use Drutiny\Target\Transport\DockerTransport;
+use Psr\Cache\CacheItemInterface;
 
 /**
  * Target for parsing Drush aliases.
  */
+#[AsTarget(name: 'ddev')]
 class DdevTarget extends DrushTarget implements TargetInterface, TargetSourceInterface
 {
     /**
@@ -26,7 +27,7 @@ class DdevTarget extends DrushTarget implements TargetInterface, TargetSourceInt
     public function parse(string $alias, ?string $uri = null): TargetInterface
     {
         $status_cmd = sprintf('ddev describe %s -j', $alias);
-        $ddev = $this['service.exec']->get('local')->run($status_cmd, function ($output) {
+        $ddev = $this->localCommand->run($status_cmd, function ($output) {
             $json = json_decode(trim($output), true);
             return $json['raw'];
         });
@@ -42,14 +43,14 @@ class DdevTarget extends DrushTarget implements TargetInterface, TargetSourceInt
         foreach ($ddev as $k => $v) {
             $this['ddev.'.$k] = $v;
         }
-        $this['service.docker'] = new DockerService($this['service.local']);
-        $this['service.docker']->setContainer($ddev['services']['web']['full_name']);
-        $this['service.exec']->addHandler($this['service.docker'], 'docker');
+        $this->transport = new DockerTransport($this->localCommand);
+        $this->transport->setContainer($ddev['services']['web']['full_name']);
 
         $this['drush.root'] = '/var/www/html/'.$ddev['docroot'];
 
         // Provide a default URI if none already provided.
         $this->setUri($uri ?? $ddev['primary_url']);
+        $this->buildAttributes();
         return $this;
     }
 
@@ -58,7 +59,8 @@ class DdevTarget extends DrushTarget implements TargetInterface, TargetSourceInt
      */
     public function getAvailableTargets(): array
     {
-        $aliases = $this['service.exec']->get('local')->run('ddev list -A -j', function ($output) {
+        $aliases = $this->localCommand->run('ddev list -A -j', function ($output, CacheItemInterface $cache) {
+            $cache->expiresAfter(1);
             $json = json_decode($output, true);
             return array_combine(array_column($json['raw'], 'name'), $json['raw']);
         });

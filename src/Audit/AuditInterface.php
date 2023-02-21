@@ -5,6 +5,7 @@ namespace Drutiny\Audit;
 use Drutiny\AuditResponse\AuditResponse;
 use Drutiny\Sandbox\Sandbox;
 use Drutiny\Policy;
+use Symfony\Component\Console\Input\InputDefinition;
 
 /**
  * Audit interface.
@@ -86,4 +87,13 @@ interface AuditInterface
      * @throws \Drutiny\Audit\AuditValidationException
      */
     public function execute(Policy $policy, $remediate = false): AuditResponse;
+
+    /**
+     * Report if the audit class is deprecated from use.
+     */
+    public function isDeprecated(): bool;
+
+    public function getDefinition():InputDefinition;
+
+    public function hasArgument(string $name): bool;
 }

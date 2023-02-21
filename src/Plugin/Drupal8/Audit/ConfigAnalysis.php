@@ -4,6 +4,7 @@ namespace Drutiny\Plugin\Drupal8\Audit;
 
 use Drutiny\Sandbox\Sandbox;
 use Drutiny\Audit\AbstractAnalysis;
+use Drutiny\Helper\TextCleaner;
 
 /**
  * Check a configuration is set correctly.
@@ -29,13 +30,13 @@ class ConfigAnalysis extends AbstractAnalysis
     {
         $collection = $this->getParameter('collection');
 
-        $drush = $this->getTarget()->getService('drush');
+        $drush = $this->target->getService('drush');
         $command = $drush->configGet($collection, [
           'format' => 'json',
           'include-overridden' => true,
         ]);
         $config = $command->run(function ($output) {
-          return json_decode($output, true);
+          return TextCleaner::decodeDirtyJson($output);
         });
 
         $this->set('config', $config);

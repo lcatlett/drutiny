@@ -2,14 +2,15 @@
 
 namespace Drutiny\Target;
 
-use Drutiny\Target\Service\DrushService;
-use Drutiny\Target\Service\DockerService;
-use Symfony\Component\Process\Exception\ProcessFailedException;
+use Drutiny\Attribute\AsTarget;
+use Drutiny\Target\Transport\DockerTransport;
+use Psr\Cache\CacheItemInterface;
 use Symfony\Component\Yaml\Yaml;
 
 /**
  * Target for parsing Drush aliases.
  */
+#[AsTarget(name: 'docksal')]
 class DocksalTarget extends DrushTarget implements TargetInterface, TargetSourceInterface
 {
     /**
@@ -37,11 +38,11 @@ class DocksalTarget extends DrushTarget implements TargetInterface, TargetSource
 
         $config_command = sprintf('cd %s && fin config yml', $targets[$alias]);
 
-        $this['docksal.config'] = $this['service.exec']->get('local')->run($config_command, function ($output) {
+        $this['docksal.config'] = $this->localCommand->run($config_command, function ($output) {
             return Yaml::parse($output);
         });
 
-        $containers = $this['service.exec']->get('local')->run("docker container ls --format '{{json .}}' | grep _cli", function ($output) {
+        $containers = $this->localCommand->run("docker container ls --format '{{json .}}' | grep _cli", function ($output) {
             $containers = [];
             foreach (array_filter(explode(PHP_EOL, $output), 'trim') as $line) {
                 $container = json_decode($line, true);
@@ -59,14 +60,14 @@ class DocksalTarget extends DrushTarget implements TargetInterface, TargetSource
 
         $container = array_shift($containers);
 
-        $this['service.docker'] = new DockerService($this['service.local']);
-        $this['service.docker']->setContainer($container['Names']);
-        $this['service.exec']->addHandler($this['service.docker'], 'docker');
+        $this->transport = new DockerTransport($this->localCommand);
+        $this->transport->setContainer($container['Names']);
 
         $this['drush.root'] = '/var/www';
 
         // Provide a default URI if none already provided.
         $this->setUri($this['docksal.config']['services']['cli']['environment']['DRUSH_OPTIONS_URI']);
+        $this->buildAttributes();
         return $this;
     }
 
@@ -89,7 +90,8 @@ class DocksalTarget extends DrushTarget implements TargetInterface, TargetSource
 
     protected function findTargets()
     {
-        return $this['service.exec']->get('local')->run('fin alias list', function ($output) {
+        return $this->localCommand->run('fin alias list', function ($output, CacheItemInterface $cache) {
+            $cache->expiresAfter(1);
             $lines = array_filter(array_map('trim', explode(PHP_EOL, $output)));
             // Remove headers
             array_shift($lines);

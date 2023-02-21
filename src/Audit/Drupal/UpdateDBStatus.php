@@ -11,18 +11,17 @@ use Drutiny\Sandbox\Sandbox;
 class UpdateDBStatus extends Audit
 {
 
-  /**
-   * A string which presence indicates updates are pending.
-   */
+    /**
+     * A string which presence indicates updates are pending.
+     */
     const AFFIRMATIVE_UPDATES_STRING = "Do you wish to run all pending updates";
 
-  /**
-   * @inheritdoc
-   */
+    /**
+     * @inheritdoc
+     */
     public function audit(Sandbox $sandbox)
     {
-        $output = $sandbox->drush()->updb('-n');
-        $output = implode(PHP_EOL, $output);
+        $output = $this->target->getService('drush')->updb('-n')->run();
 
         if (strpos($output, self::AFFIRMATIVE_UPDATES_STRING) !== false) {
             $lines = array_filter(explode(PHP_EOL, $output));

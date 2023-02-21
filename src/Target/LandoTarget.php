@@ -2,13 +2,14 @@
 
 namespace Drutiny\Target;
 
-use Drutiny\Target\Service\DrushService;
-use Drutiny\Target\Service\DockerService;
-use Symfony\Component\Process\Exception\ProcessFailedException;
+use Drutiny\Attribute\AsTarget;
+use Drutiny\Target\Transport\DockerTransport;
+use Psr\Cache\CacheItemInterface;
 
 /**
  * Target for parsing Drush aliases.
  */
+#[AsTarget(name: 'lando')]
 class LandoTarget extends DrushTarget implements TargetInterface, TargetSourceInterface
 {
   /**
@@ -28,7 +29,7 @@ class LandoTarget extends DrushTarget implements TargetInterface, TargetSourceIn
 
         $this['lando.name'] = $alias;
 
-        $lando = $this['service.exec']->get('local')->run('lando list --format=json', function ($output) {
+        $lando = $this->localCommand->run('lando list --format=json', function ($output) {
           return json_decode($output, true);
         });
 
@@ -41,14 +42,13 @@ class LandoTarget extends DrushTarget implements TargetInterface, TargetSourceIn
         }
 
         $this['lando.app'] = array_shift($apps);
-        $this['service.docker'] = new DockerService($this['service.local']);
-        $this['service.docker']->setContainer($this['lando.app']['name']);
-        $this['service.exec']->addHandler($this['service.docker'], 'docker');
+        $this->transport = new DockerTransport($this->localCommand);
+        $this->transport->setContainer($this['lando.app']['name']);
 
         $this['drush.root'] = '/app';
 
         $dir = dirname($this['lando.app']['src'][0]);
-        $info = $this['service.exec']->get('local')->run(sprintf('cd %s && lando info --format=json', $dir), function ($output) {
+        $info = $this->localCommand->run(sprintf('cd %s && lando info --format=json', $dir), function ($output) {
           return json_decode($output, true);
         });
 
@@ -62,6 +62,7 @@ class LandoTarget extends DrushTarget implements TargetInterface, TargetSourceIn
         $urls = array_filter($urls);
         // Provide a default URI if none already provided.
         $this->setUri(array_pop($urls));
+        $this->buildAttributes();
         return $this;
     }
 
@@ -70,7 +71,8 @@ class LandoTarget extends DrushTarget implements TargetInterface, TargetSourceIn
      */
     public function getAvailableTargets():array
     {
-      $lando = $this['service.exec']->get('local')->run('lando list --format=json', function ($output) {
+      $lando = $this->localCommand->run('lando list --format=json', function ($output, CacheItemInterface $cache) {
+        $cache->expiresAfter(1);
         return json_decode($output, true);
       });
 
@@ -81,7 +83,7 @@ class LandoTarget extends DrushTarget implements TargetInterface, TargetSourceIn
       $targets = [];
       foreach ($apps as $app) {
         $dir = dirname($app['src'][0]);
-        $edge = $this['service.exec']->get('local')->run(sprintf('cd %s && lando info --format=json', $dir), function ($output) {
+        $edge = $this->localCommand->run(sprintf('cd %s && lando info --format=json', $dir), function ($output) {
           return array_filter(json_decode($output, true), fn ($d) => isset($d['urls']));
         });
 

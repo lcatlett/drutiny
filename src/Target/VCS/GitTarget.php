@@ -2,10 +2,12 @@
 
 namespace Drutiny\Target\VCS;
 
+use Drutiny\Attribute\AsTarget;
 use Drutiny\Target\Target;
 use Drutiny\Target\TargetInterface;
 use Drutiny\Target\FilesystemInterface;
 
+#[AsTarget(name: 'git')]
 class GitTarget extends Target implements FilesystemInterface, GitInterface {
     use GitTrait;
     protected string $id;

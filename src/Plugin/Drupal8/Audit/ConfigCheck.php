@@ -49,7 +49,7 @@ class ConfigCheck extends AbstractComparison
 
         $config = $sandbox->drush([
         'format' => 'json',
-        'include-overridden' => null,
+        'include-overridden' => true,
         ])->configGet($collection, $key);
         $reading = $config[$collection . ':' . $key];
 

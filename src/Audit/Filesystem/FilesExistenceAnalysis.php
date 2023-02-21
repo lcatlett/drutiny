@@ -168,7 +168,7 @@ class FilesExistenceAnalysis extends AbstractAnalysis {
     $command = implode(' ', $command) . ' || exit 0';
     $this->logger->info('[' . __CLASS__ . '] ' . $command);
 
-    $matches = $this->target->getService('exec')->run($command, function ($output) {
+    $matches = $this->target->run($command, function ($output) {
       return array_filter(explode(PHP_EOL, $output));
     });
     $this->set('has_results', !empty($matches));

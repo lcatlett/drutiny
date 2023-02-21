@@ -47,7 +47,7 @@ class LargeFiles extends Audit
           '@print-format' => '%k\t%p\n',
         ]);
 
-        $files = $this->target->getService('exec')->run($command, function ($output) {
+        $files = $this->target->run($command, function ($output) {
             $lines = array_filter(explode("\n", $output));
             return array_map(function ($line) {
                 $parts = array_map('trim', explode("\t", $line));

@@ -4,7 +4,6 @@ namespace Drutiny\Audit;
 
 use Drutiny\Audit;
 use Drutiny\Sandbox\Sandbox;
-use Symfony\Component\Yaml\Yaml;
 use Twig\Error\RuntimeError;
 
 /**

@@ -38,7 +38,7 @@ class ModuleUpdateAnalysis extends ModuleAnalysis
     protected function getModuleFilepathData(array $modules):array
     {
       // Get the locations of all the modules in the codebase.
-      $filepaths = $this->target->getService('exec')->run('find $DRUSH_ROOT \( -name \*.info.yml -or -name \*.info \) -type f', function ($output) {
+      $filepaths = $this->target->run('find $DRUSH_ROOT \( -name \*.info.yml -or -name \*.info \) -type f', function ($output) {
         return array_map(function ($line) {
           return trim($line);
         }, explode(PHP_EOL, $output));

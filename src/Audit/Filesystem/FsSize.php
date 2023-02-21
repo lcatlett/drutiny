@@ -33,17 +33,16 @@ class FsSize extends Audit
     public function audit(Sandbox $sandbox)
     {
         $path = $this->getParameter('path', '%files');
-        $stat = $sandbox->drush(['format' => 'json'])->status();
-
-        if (!isset($stat['%paths'])) {
-            foreach ($stat as $key => $value) {
-                $stat['%paths']['%'.$key] = $value;
+        $path_tokens = $this->target->hasProperty('drush.%paths') ? $this->target['drush.%paths'] : [];
+        if (!empty($path_tokens)) {
+            foreach ($this->target['drush'] as $key => $value) {
+                $path_tokens['%'.$key] = $value;
             }
         }
 
-        $path = strtr($path, $stat['%paths']);
+        $path = strtr($path, $path_tokens);
 
-        $size = trim($this->target->getService('exec')->run("du -d 0 -m $path | awk '{print $1}'"));
+        $size = trim($this->target->run("du -d 0 -m $path | awk '{print $1}'"));
 
         $max_size = (int) $this->getParameter('max_size', 20);
 

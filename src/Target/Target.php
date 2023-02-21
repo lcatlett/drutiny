@@ -5,57 +5,101 @@ namespace Drutiny\Target;
 use Drutiny\Entity\DataBag;
 use Drutiny\Entity\EventDispatchedDataBag;
 use Drutiny\Entity\Exception\DataNotFoundException;
-use Drutiny\Target\Service\ExecutionInterface;
-use Drutiny\Event\DataBagEvent;
+use Drutiny\LocalCommand;
+use Drutiny\Target\Service\ServiceFactory;
+use Drutiny\Target\Service\ServiceInterface;
+use Drutiny\Target\Transport\LocalTransport;
+use Drutiny\Target\Transport\TransportInterface;
+use Monolog\Logger;
 use Symfony\Component\PropertyAccess\PropertyAccess;
 use Symfony\Component\PropertyAccess\Exception\NoSuchIndexException;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\EventDispatcher\GenericEvent;
+use Symfony\Component\Process\Process;
 
 /**
  * Basic function of a Target.
  */
-abstract class Target implements \ArrayAccess, ExecutionInterface
+abstract class Target implements \ArrayAccess, TargetInterface
 {
     /* @var PropertyAccess */
     protected $propertyAccessor;
     protected $properties;
-    protected LoggerInterface $logger;
     protected $dispatcher;
     private string $targetName;
+    protected TransportInterface $transport;
 
-    public function __construct(ExecutionInterface $service, LoggerInterface $logger, EventDispatchedDataBag $databag)
+    public function __construct(
+        protected LoggerInterface $logger, 
+        EventDispatchedDataBag $databag,
+        protected LocalCommand $localCommand,
+        protected ServiceFactory $serviceFactory,
+        protected EventDispatcher $eventDispatcher
+        )
     {
-        if (method_exists($logger, 'withName')) {
-            $logger = $logger->withName('target');
+        if ($logger instanceof Logger) {
+            $this->logger = $logger->withName('target');
         }
-        $this->logger = $logger;
         $this->propertyAccessor = PropertyAccess::createPropertyAccessorBuilder()
-      ->enableExceptionOnInvalidIndex()
-      ->getPropertyAccessor();
+            ->enableExceptionOnInvalidIndex()
+            ->getPropertyAccessor();
 
         $this->properties = $databag->setObject($this);
-
-        $service->setTarget($this);
-
-        $this['service.local'] = $service->get('local');
-        $this['service.exec'] = $service;
+        $this->transport = new LocalTransport($this->localCommand);
     }
 
+    /**
+     * Load a target from a given ID and optional URI.
+     */
+    final public function load(string $id, ?string $uri = null):void
+    {
+        $this->parse($id, $uri);
+        $event = new GenericEvent('target.load', [
+            'target' => $this
+        ]);
+        $this->eventDispatcher->dispatch($event, $event->getSubject());
+        $this->rebuildEnvVars();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     final public function setTargetName(string $name): TargetInterface
     {
         $this->targetName = $name;
         return $this;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     final public function getTargetName(): string
     {
         return $this->targetName;
     }
 
     /**
+     * Set the transport for sending commands to the target.
+     */
+    final public function setTransport(TransportInterface $transport):self
+    {
+        $this->transport = $transport;
+        return $this;
+    }
+
+    /**
+     * Get a target service (e.g. drush).
+     */
+    final public function getService(string $id):ServiceInterface
+    {
+        return $this->serviceFactory->get($id, $this->transport);
+    }
+
+    /**
      * {@inheritdoc}
      */
-    public function setUri(string $uri)
+    public function setUri(string $uri):TargetInterface
     {
         $this->setProperty('domain', parse_url($uri, PHP_URL_HOST) ?? $uri);
         return $this->setProperty('uri', $uri);
@@ -70,35 +114,21 @@ abstract class Target implements \ArrayAccess, ExecutionInterface
     }
 
     /**
-     * {@inheritdoc}
+     * Backwards compatible support for run() method. Use send() instead.
+     * 
+     * @deprecated
      */
-    public function hasEnvVar($name): bool
+    public function run(string $cmd, ?callable $preProcess = null, int $ttl = 3600)
     {
-        return $this['service.exec']->hasEnvVar($name);
+        return $this->transport->send(Process::fromShellCommandline($cmd), $preProcess);
     }
 
     /**
-     * {@inheritdoc}
+     * Wrapper function around transport send method.
      */
-    public function getService($key)
+    public function execute(Process $command, ?callable $preProcess = null)
     {
-        return $this->getProperty('service.'.$key);
-    }
-
-    /**
-     * Allow the execution service to change depending on the target environment.
-     */
-    public function setExecService(ExecutionInterface $service):TargetInterface
-    {
-        return $this->setProperty('service.exec', $service);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function run(string $cmd, callable $preProcess, int $ttl)
-    {
-        return $this->getService('exec')->run($cmd, $preProcess, $ttl);
+        return $this->transport->send($command, $preProcess);
     }
 
     /**
@@ -118,6 +148,27 @@ abstract class Target implements \ArrayAccess, ExecutionInterface
         }
         $this->propertyAccessor->setValue($this->properties, $key, $value);
         return $this;
+    }
+
+    /**
+     * Rebuild the environment variables from the target properties.
+     */
+    protected function rebuildEnvVars():void
+    {
+        foreach ($this->getPropertyList() as $key) {
+            try {
+                $value = $this->getProperty($key);
+            }
+            // TODO: Fix bug that generates a DataNotFoundException from a listed property.
+            catch (DataNotFoundException $e) {
+                $this->logger->warning("$key wasn't a valid property: ".$e->getMessage());
+            }
+
+            if ((is_object($value) && !method_exists($key, '__toString'))) {
+                continue;
+            }
+            $this->localCommand->setEnvVar($key, $value);
+        }
     }
 
     /**

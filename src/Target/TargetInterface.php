@@ -3,6 +3,8 @@
 namespace Drutiny\Target;
 
 use Drutiny\Target\Service\ExecutionInterface;
+use Drutiny\Target\Service\ServiceInterface;
+use Symfony\Component\Process\Process;
 
 /**
  * Definition of a Target.
@@ -17,19 +19,16 @@ interface TargetInterface
     public function parse(string $data, ?string $uri = null):TargetInterface;
 
     /**
-     * Get a serviced object.
-     */
-    public function getService($key);
-
-    /**
-     * Allow the execution service to change depending on the target environment.
-     */
-    public function setExecService(ExecutionInterface $service):TargetInterface;
-
-    /**
      * Run a command through the ExecutionService.
+     * 
+     * @deprecated
      */
     public function run(string $cmd, callable $preProcess, int $ttl);
+
+    /**
+     * Send a process to be executed on the target.
+     */
+    public function execute(Process $process, ?callable $processor = null);
 
     /**
      * Return the target identifier.
@@ -52,6 +51,11 @@ interface TargetInterface
     public function getUri(): string;
 
     /**
+     * Get the URI for the Target.
+     */
+    public function setUri(string $uri): TargetInterface;
+
+    /**
      * Get a list of properties available.
      */
     public function getPropertyList(): array;
@@ -72,4 +76,9 @@ interface TargetInterface
      * Set a property.
      */
     public function setProperty($key, $value):self;
+
+    /**
+     * Get a Service.
+     */
+    public function getService(string $id):ServiceInterface;
 }

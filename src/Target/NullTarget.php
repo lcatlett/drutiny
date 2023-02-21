@@ -2,9 +2,12 @@
 
 namespace Drutiny\Target;
 
+use Drutiny\Attribute\AsTarget;
+
 /**
  * Target for parsing Drush aliases.
  */
+#[AsTarget(name: 'none')]
 class NullTarget extends Target implements TargetInterface
 {
     /**

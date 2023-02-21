@@ -4,6 +4,7 @@ namespace Drutiny\Plugin\Drupal8\Audit;
 
 use Drutiny\Audit;
 use Drutiny\Sandbox\Sandbox;
+use Symfony\Component\Process\Process;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -17,19 +18,15 @@ class DuplicateModules extends Audit
    */
     public function audit(Sandbox $sandbox)
     {
-        $config = $sandbox->drush(['format' => 'json'])
-        ->status();
-
-        $docroot = $config['root'];
 
         $command = <<<CMD
-find $docroot -name '*.info.yml' -type f |\
+find \$DRUSH_ROOT -name '*.info.yml' -type f |\
 grep -Ev '/themes/|/test' |\
 grep -oe '[^/]*\.info.yml' | cut -d'.' -f1 | sort |\
 uniq -c | sort -nr | awk '{print $2": "$1}'
 CMD;
 
-        $output = $this->target->getService('exec')->run($command);
+        $output = $this->target->execute(Process::fromShellCommandline($command));
 
         if (empty($output)) {
             return true;

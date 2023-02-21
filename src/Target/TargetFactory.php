@@ -2,18 +2,24 @@
 
 namespace Drutiny\Target;
 
-use Symfony\Component\DependencyInjection\ContainerAwareInterface;
+use Drutiny\Settings;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
-class TargetFactory implements ContainerAwareInterface
+class TargetFactory
 {
-    use \Symfony\Component\DependencyInjection\ContainerAwareTrait;
+    protected array $targetMap;
 
-    public function __construct(ContainerInterface $container)
+    public function __construct(
+      protected ContainerInterface $container,
+      Settings $settings
+    )
     {
-        $this->setContainer($container);
+      $this->targetMap = $settings->get('target.registry');
     }
 
+    /**
+     * Create a new TargetInterface instance from a target reference.
+     */
     public function create(string $target_reference, ?string $uri = null):TargetInterface
     {
       // By default, assume a target is using drush.
@@ -25,12 +31,24 @@ class TargetFactory implements ContainerAwareInterface
             list($target_name, $target_data) = explode(':', $target_reference, 2);
         }
 
-        $target = $this->container->get("target.$target_name");
-        $target->parse($target_data, $uri);
+        $target = $this->container->get($this->targetMap[$target_name]);
         $target->setTargetName($target_reference);
-
-        $this->container->set('target', $target);
-
+        $target->load($target_data, $uri);
+        
         return $target;
+    }
+
+    public function mock($type):TargetInterface
+    {
+      $this->targetMap[$type] ?? throw new InvalidTargetException("No such target type '$type'.");
+      return $this->container->get($this->targetMap[$type]);
+    }
+
+    /**
+     * Display a list of target types and classes.
+     */
+    public function getTypes():array
+    {
+      return $this->targetMap;
     }
 }

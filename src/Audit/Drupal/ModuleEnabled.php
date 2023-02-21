@@ -3,6 +3,7 @@
 namespace Drutiny\Audit\Drupal;
 
 use Drutiny\Audit;
+use Drutiny\Helper\TextCleaner;
 use Drutiny\Sandbox\Sandbox;
 
 /**
@@ -24,19 +25,25 @@ class ModuleEnabled extends Audit
 
 
   /**
-   *
+   * {@inheritdoc}
    */
     public function audit(Sandbox $sandbox)
     {
-
         $module = $this->getParameter('module');
-        $info = $sandbox->drush(['format' => 'json'])->pmList();
+        $list = $this->target->getService('drush')
+          ->pmList([
+            'format' => 'json',
+            'type' => 'module'
+          ])
+          ->run(function ($output) {
+              return TextCleaner::decodeDirtyJson($output);
+          });
 
-        if (!isset($info[$module])) {
+        if (!isset($list[$module])) {
             return false;
         }
 
-        $status = strtolower($info[$module]['status']);
+        $status = strtolower($list[$module]['status']);
 
         return ($status == 'enabled');
     }

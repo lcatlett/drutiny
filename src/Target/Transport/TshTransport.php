@@ -1,13 +1,15 @@
 <?php
 
-namespace Drutiny\Target\Service;
+namespace Drutiny\Target\Transport;
 
 use Drutiny\Target\InvalidTargetException;
+use Psr\Cache\CacheItemInterface;
+use Symfony\Component\Process\Process;
 
 /**
  * RemoteService over Teleport (TSH).
  */
-class TshRemoteService extends RemoteService {
+class TshTransport extends SshTransport {
 
   protected string $telesyncRegion = '';
 
@@ -57,7 +59,8 @@ class TshRemoteService extends RemoteService {
 
   protected function getActiveTelesyncRegions():array
   {
-    return $this->local->run('telesync status | grep Cluster | awk \'{print $2}\'', function (string $output):array {
+    return $this->localCommand->run(Process::fromShellCommandline('telesync status | grep Cluster | awk \'{print $2}\''), function (string $output, CacheItemInterface $cache):array {
+      $cache->expiresAfter(300);
       $clusters = explode("\n", $output);
       return array_filter(array_map('trim', $clusters));
     }, 60);
