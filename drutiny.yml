@@ -170,42 +170,6 @@ services:
     Drutiny\Audit\TwigEvaluator:
     Drutiny\Event\EventSubscriber:
 
-    expression_language:
-      deprecated: 
-        package: drutiny/core
-        version: 3.5.0
-      class: Symfony\Component\ExpressionLanguage\ExpressionLanguage
-      arguments: [null, ['@Drutiny\ExpressionLanguage\ExpressionFunctionProvider']]
-      calls:
-        - [addFunction, ['@Drutiny\ExpressionLanguage\Func\ArraySelect']]
-        - [addFunction, ['@Drutiny\ExpressionLanguage\Func\Filter']]
-        - [addFunction, ['@Drutiny\ExpressionLanguage\Func\SemverGt']]
-        - [addFunction, ['@Drutiny\ExpressionLanguage\Func\SemverGte']]
-        - [addFunction, ['@expression_language.array_filter']]
-        - [addFunction, ['@expression_language.array_key_exists']]
-        - [addFunction, ['@expression_language.count']]
-        - [addFunction, ['@expression_language.in_array']]
-
-    expression_language.in_array:
-      class: Symfony\Component\ExpressionLanguage\ExpressionFunction
-      factory: [Symfony\Component\ExpressionLanguage\ExpressionFunction, fromPhp]
-      arguments: [in_array]
-
-    expression_language.array_key_exists:
-      class: Symfony\Component\ExpressionLanguage\ExpressionFunction
-      factory: [Symfony\Component\ExpressionLanguage\ExpressionFunction, fromPhp]
-      arguments: [array_key_exists]
-
-    expression_language.count:
-      class: Symfony\Component\ExpressionLanguage\ExpressionFunction
-      factory: [Symfony\Component\ExpressionLanguage\ExpressionFunction, fromPhp]
-      arguments: [count]
-
-    expression_language.array_filter:
-      class: Symfony\Component\ExpressionLanguage\ExpressionFunction
-      factory: [Symfony\Component\ExpressionLanguage\ExpressionFunction, fromPhp]
-      arguments: [array_filter]
-
     # A factory class for producing a reporting format instance.
     format.factory:
       class: Drutiny\Report\FormatFactory
@@ -404,7 +368,6 @@ services:
           - src/Upgrade/*
           - src/*/*{Exception.php}
           - src/Sandbox/{Sandbox.php}
-          - src/{ExpressionLanguage.php}
           - src/Report/Format/Menu/*
           - src/{functions.php}
 
@@ -469,9 +432,6 @@ services:
 
     Symfony\Component\EventDispatcher\EventDispatcher:
       alias: event_dispatcher
-
-    Symfony\Component\ExpressionLanguage\ExpressionLanguage:
-      alias: expression_language
 
     Symfony\Component\Filesystem\Filesystem:
 

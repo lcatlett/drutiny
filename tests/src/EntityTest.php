@@ -4,13 +4,9 @@ namespace DrutinyTests;
 
 use Drutiny\AuditResponse\AuditResponse;
 use Drutiny\Audit;
-use Drutiny\Console\Application;
-use Drutiny\Kernel;
 use Drutiny\Policy;
 use Drutiny\PolicyFactory;
-use Drutiny\Sandbox\Sandbox;
 use Drutiny\Target\TargetFactory;
-use PHPUnit\Framework\TestCase;
 
 class EntityTest extends KernelTestCase {
 
@@ -21,8 +17,10 @@ class EntityTest extends KernelTestCase {
     $policy = $this->container->get(PolicyFactory::class)->loadPolicyByName('Test:Pass');
     $this->assertEquals($policy->name, 'Test:Pass');
 
+    $this->assertInstanceOf(Policy::class, $policy);
+
     // Testing dynamic assignment to policy properties.
-    $policy->name = 'Test:Test';
+    $policy->setProperty('name', 'Test:Test');
     $this->assertEquals($policy->name, 'Test:Test');
 
     // Testing dynamic assignment of parameters.

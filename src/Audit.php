@@ -25,7 +25,6 @@ use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\ExpressionLanguage\ExpressionLanguage;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\EventDispatcher\GenericEvent;
 use Symfony\Component\Yaml\Yaml;
@@ -47,11 +46,6 @@ abstract class Audit implements AuditInterface
         protected ContainerInterface $container,
         protected TargetInterface $target,
         protected LoggerInterface $logger,
-
-        /**
-         * @deprecated
-         */
-        protected ExpressionLanguage $expressionLanguage,
         protected TwigEvaluator $twigEvaluator,
         protected ProgressBar $progressBar,
         protected CacheInterface $cache,
