@@ -5,6 +5,7 @@ namespace Drutiny;
 use Drutiny\Console\Application;
 use Drutiny\DependencyInjection\AddConsoleCommandPass;
 use Drutiny\DependencyInjection\AddTargetPass;
+use Drutiny\DependencyInjection\InstalledPluginPass;
 use Drutiny\DependencyInjection\TagCollectionPass;
 use Drutiny\DependencyInjection\TwigEvaluatorPass;
 use Symfony\Component\Config\FileLocator;
@@ -143,6 +144,7 @@ class Kernel
         $container->addCompilerPass(new TagCollectionPass('service', 'service.registry'));
         $container->addCompilerPass(new TagCollectionPass('target', 'target.registry'));
         $container->addCompilerPass(new TwigEvaluatorPass());
+        $container->addCompilerPass(new InstalledPluginPass(), PassConfig::TYPE_OPTIMIZE);
 
         foreach ($this->compilers as [$pass, $type, $priority]) {
             $container->addCompilerPass($pass, $type, $priority);

@@ -62,6 +62,17 @@ abstract class Plugin {
       return $this->getStorage($name)->{$name} ?? null;
     }
 
+    final public function isInstalled():bool
+    {
+      try {
+        $this->load();
+        return true;
+      }
+      catch (PluginRequiredException $e) {
+        return false;
+      }
+    }
+
     final public function load()
     {
         $configuration = [];
