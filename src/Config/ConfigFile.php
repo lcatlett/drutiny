@@ -2,45 +2,33 @@
 
 namespace Drutiny\Config;
 
-use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Yaml\Yaml;
 
-class ConfigFile
+class ConfigFile implements ConfigInterface
 {
-    protected $config;
-    protected $filepath;
-    protected $namespace;
+    protected array $config;
 
-    public function __construct($filepath)
+    public function __construct(protected string $filepath)
     {
         $this->config = file_exists($filepath) ? Yaml::parseFile($filepath) : [];
-        $this->filepath = $filepath;
     }
 
-    public function getNamespaces()
+    public function getFilepath():string
     {
-      return array_keys($this->config);
+        return $this->filepath;
     }
 
-    public function load($namespace)
+    public function load(string $namespace):Config
     {
-        return new Config($this, $namespace, $this->config[$namespace] ?? []);
+        if (!isset($this->config[$namespace])) {
+            $this->config[$namespace] = [];
+        }
+
+        return new Config($this, $this->config[$namespace], $namespace);
     }
 
-    public function doWrite()
+    public function save():int|false
     {
         return file_put_contents($this->filepath, Yaml::dump($this->config, 4, 4));
-    }
-
-    public function save(string $namespace, array $data)
-    {
-        $this->config[$namespace] = $data;
-        return $this->doWrite();
-    }
-
-    public function delete(string $namespace)
-    {
-      unset($this->config[$namespace]);
-      return $this->doWrite();
     }
 }

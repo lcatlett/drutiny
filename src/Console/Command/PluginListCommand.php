@@ -42,17 +42,15 @@ class PluginListCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         $rows = [];
-        foreach ($this->settings->get('plugin.registry') as $id) {
+        foreach ($this->settings->get('plugin.registry') as $name => $id) {
             $plugin = $this->container->get($id);
-            $state = 'Installed';
-            try {
-              $plugin->load();
-            }
-            catch (PluginRequiredException $e) {
-              $state = 'Not Installed';
+            if ($plugin->isHidden()) {
+              continue;
             }
 
-            $rows[$plugin->getName()] = [$plugin->getName(), $state];
+
+            $state = $plugin->isInstalled() ? 'Installed' : 'Not Installed';
+            $rows[$name] = [$name, $state];
         }
         ksort($rows);
 

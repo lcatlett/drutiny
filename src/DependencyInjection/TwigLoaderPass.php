@@ -5,9 +5,6 @@ namespace Drutiny\DependencyInjection;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 
-/**
- * @author Nicolas Grekas <p@tchwork.com>
- */
 class TwigLoaderPass implements CompilerPassInterface
 {
     /**

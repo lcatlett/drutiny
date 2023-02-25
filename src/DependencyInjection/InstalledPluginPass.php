@@ -5,9 +5,13 @@ namespace Drutiny\DependencyInjection;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
+/**
+ * Lazy load services using uninstalled plugins.
+ * 
+ * This allows plugins to be left uninstalled if unused.
+ */
 class InstalledPluginPass implements CompilerPassInterface
 {
-
     public function process(ContainerBuilder $container)
     {
         $graph = $container->getCompiler()->getServiceReferenceGraph();

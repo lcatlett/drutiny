@@ -2,17 +2,32 @@
 
 namespace Drutiny\Config;
 
-class Config
-{
-    protected ConfigFile $parent;
-    protected string $name;
-    protected array $data = [];
+use ArrayAccess;
 
-    public function __construct(ConfigFile $parent, string $name, array $config)
+class Config implements ArrayAccess, ConfigInterface
+{
+    public function __construct(
+      protected ConfigFile|Config $parent, 
+      protected array &$data,
+      protected string $namespace)
     {
-        $this->parent = $parent;
-        $this->name = $name;
-        $this->data = $config;
+    }
+
+    public function load(string $namespace):Config
+    { 
+        if (!isset($this->data[$namespace])) {
+            $this->data[$namespace] = [];
+        }
+
+        return new static($this, $this->data[$namespace], $namespace);
+    }
+
+    public function save(?string $namespace = null):int|false
+    {
+      if (isset($namespace) && isset($this->data[$namespace]) && empty($this->data[$namespace])) {
+        unset($this->data[$namespace]);
+      }
+      return $this->parent->save($this->namespace);
     }
 
     public function __get($name)
@@ -28,7 +43,26 @@ class Config
     public function __set($name, $value):void
     {
       $this->data[$name] = $value;
-      $this->parent->save($this->name, $this->data);
+    }
+
+    public function offsetExists(mixed $offset): bool
+    {
+      return $this->__isset($offset);
+    }
+
+    public function offsetGet(mixed $offset): mixed
+    {
+      return $this->__get($offset);
+    }
+
+    public function offsetSet(mixed $offset, mixed $value): void
+    {
+      $this->__set($offset, $value);
+    }
+
+    public function offsetUnset(mixed $offset): void
+    {
+      unset($this->data[$offset]);
     }
 
     public function keys()
@@ -38,6 +72,7 @@ class Config
 
     public function delete()
     {
-      return $this->parent->delete($this->name);
+      $this->data = [];
+      return $this->parent->save($this->namespace);
     }
 }

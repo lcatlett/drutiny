@@ -9,9 +9,6 @@ use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\DependencyInjection\Reference;
 
-/**
- * @author Nicolas Grekas <p@tchwork.com>
- */
 class AddConsoleCommandPass implements CompilerPassInterface
 {
     /**

@@ -4,8 +4,10 @@ namespace Drutiny;
 
 use Drutiny\Console\Application;
 use Drutiny\DependencyInjection\AddConsoleCommandPass;
+use Drutiny\DependencyInjection\AddPluginCommandsPass;
 use Drutiny\DependencyInjection\AddTargetPass;
 use Drutiny\DependencyInjection\InstalledPluginPass;
+use Drutiny\DependencyInjection\PluginArgumentsPass;
 use Drutiny\DependencyInjection\TagCollectionPass;
 use Drutiny\DependencyInjection\TwigEvaluatorPass;
 use Symfony\Component\Config\FileLocator;
@@ -139,12 +141,13 @@ class Kernel
         $container->addCompilerPass(new RegisterListenersPass('event_dispatcher', 'kernel.event_listener', 'drutiny.event_subscriber'));
         $container->addCompilerPass(new TwigLoaderPass);
         $container->addCompilerPass(new AddConsoleCommandPass);
-        $container->addCompilerPass(new TagCollectionPass('plugin', 'plugin.registry'));
         $container->addCompilerPass(new TagCollectionPass('format', 'format.registry'));
         $container->addCompilerPass(new TagCollectionPass('service', 'service.registry'));
         $container->addCompilerPass(new TagCollectionPass('target', 'target.registry'));
+        $container->addCompilerPass(new PluginArgumentsPass());
         $container->addCompilerPass(new TwigEvaluatorPass());
         $container->addCompilerPass(new InstalledPluginPass(), PassConfig::TYPE_OPTIMIZE);
+        $container->addCompilerPass(new AddPluginCommandsPass(), PassConfig::TYPE_OPTIMIZE);
 
         foreach ($this->compilers as [$pass, $type, $priority]) {
             $container->addCompilerPass($pass, $type, $priority);

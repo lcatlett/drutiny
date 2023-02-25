@@ -120,47 +120,6 @@ class Application extends BaseApplication
 
     private function checkForUpdates(OutputInterface $output = null)
     {
-      $container = $this->container;
-
-      // Check for 2.x drutiny credentials and migrate them if 3.x credentials are
-      // not yet setup.
-      $old_path = $container->getParameter('config.old_path');
-      $config = $container->get('config');
-      $creds = $container->get('credentials');
-
-      // If 3.x creds are set or 2.x creds dont' exist, don't continue.
-      if (!file_exists($old_path) || count($config->getNamespaces()) || count($creds->getNamespaces())) {
-        return;
-      }
-
-      $map = [
-        'sumologic' => 'sumologic',
-        'github' => 'github',
-        'cloudflare' => 'cloudflare',
-        'acquia:cloud' => 'acquia_api_v2',
-        'acquia:lift' => 'acquia_lift',
-        'http' => 'http',
-      ];
-
-      $old_creds = Yaml::parseFile($old_path);
-
-      foreach ($container->findTaggedServiceIds('plugin') as $id => $info) {
-          $plugin = $container->get($id);
-
-          if (!isset($map[$plugin->getName()])) {
-            continue;
-          }
-
-          if (!isset($old_creds[$map[$plugin->getName()]])) {
-            continue;
-          }
-
-          foreach ($old_creds[$map[$plugin->getName()]] as $field => $value) {
-            $plugin->setField($field, $value);
-          }
-
-          $output->writeln("Migrated plugin credentials for " . $plugin->getName() . ".");
-      }
-
+      
     }
 }

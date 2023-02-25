@@ -43,17 +43,22 @@ class PluginDeleteCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
         $namespace = $input->getArgument('namespace');
-
-        foreach ($this->settings->get('plugin.registry') as $id) {
-            $plugin = $this->container->get($id);
-            if ($plugin->getName() == $namespace) {
-              break;
-            }
-        }
-
-        if ($plugin->getName() != $namespace) {
+        $registry = $this->settings->get('plugin.registry');
+        
+        if (!isset($registry[$namespace])) {
             $io->error("No such plugin found: $namespace.");
             return 1;
+        }
+
+        $plugin = $this->container->get($registry[$namespace]);
+
+        if (!$plugin->isInstalled()) {
+            $io->error('Plugin is not installed. Run `plugin:setup '.$namespace.'` to install it.');
+            return 1;
+        }
+
+        if (!$io->confirm("Are you sure you want to uninstall the '$namespace' plugin?")) {
+            return 0;
         }
 
         $plugin->delete();

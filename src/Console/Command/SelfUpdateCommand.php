@@ -3,8 +3,11 @@
 namespace Drutiny\Console\Command;
 
 use Composer\Semver\Comparator;
+use Drutiny\Attribute\Plugin;
+use Drutiny\Attribute\PluginField;
 use Drutiny\Http\Client;
-use Drutiny\Plugin\GithubPlugin;
+use Drutiny\Plugin as DrutinyPlugin;
+use Drutiny\Plugin\FieldType;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -14,11 +17,17 @@ use Symfony\Component\Process\Process;
 /**
  * Self update command.
  */
+#[Plugin(name: 'github')]
+#[PluginField(
+    name: 'personal_access_token',
+    description: "github personal oauth token",
+    type: FieldType::CREDENTIAL
+  )]
 class SelfUpdateCommand extends DrutinyBaseCommand
 {
     public function __construct(
       protected LoggerInterface $logger,
-      protected GithubPlugin $githubPlugin,
+      protected DrutinyPlugin $plugin,
       protected Client $drutinyHttpClient
     )
     {
@@ -55,8 +64,7 @@ class SelfUpdateCommand extends DrutinyBaseCommand
         ];
 
         try {
-            $creds = $this->githubPlugin->load();
-            $headers['Authorization'] = 'token ' . $creds['personal_access_token'];
+            $headers['Authorization'] = 'token ' . $this->plugin->personal_access_token;
         } catch (\Exception $e) {
             $io->warning($e->getMessage());
         }

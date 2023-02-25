@@ -302,9 +302,7 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
         }
         unset($export['results']);
         $this->importUnserialized($export);
-        $this->container = drutiny();
-        $this->logger = drutiny()->get('logger');
-        $this->async = drutiny()->get('async');
+
         $this->target = drutiny()
              ->get('target.factory')
              ->create($export['targetReference'], $export['uri']);

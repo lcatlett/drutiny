@@ -43,7 +43,6 @@ services:
         bind:
           $name: '%name%'
           $version: '%version%'
-
     _instanceof:
         
       # Any symfony commands found can be loaded in as drutiny commands.
@@ -143,12 +142,13 @@ services:
     config:
       class: Drutiny\Config\ConfigFile
       arguments: ['%config.local%']
-      # autowire: false
 
     credentials:
       class: Drutiny\Config\ConfigFile
       arguments: ['%config.credentials%']
-      # autowire: false
+
+    Drutiny\Config\ConfigInterface:
+      alias: 'config'
 
     # DomainList provider using YAML files.
     # This is manually mentioned to associate the name "yaml" with the
@@ -369,7 +369,7 @@ services:
           - src/*/*{Exception.php}
           - src/Sandbox/{Sandbox.php}
           - src/Report/Format/Menu/*
-          - src/{functions.php}
+          - src/functions.php
 
     Drutiny\Entity\DataBag:
       shared: false

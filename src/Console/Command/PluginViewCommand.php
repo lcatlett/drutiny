@@ -2,13 +2,16 @@
 
 namespace Drutiny\Console\Command;
 
+use Drutiny\Plugin\FieldType;
 use Drutiny\Settings;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  *
@@ -32,7 +35,14 @@ class PluginViewCommand extends Command
             'namespace',
             InputArgument::REQUIRED,
             'The plugin name.',
-        );
+        )
+        ->addOption(
+            'show',
+            null,
+            InputOption::VALUE_NONE,
+            'Print credential values to the terminal.'
+        )
+        ;
     }
 
   /**
@@ -42,25 +52,28 @@ class PluginViewCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
         $namespace = $input->getArgument('namespace');
+        $registry = $this->settings->get('plugin.registry');
 
-        foreach ($this->settings->get('plugin.registry') as $id) {
-            $plugin = $this->container->get($id);
-            if ($plugin->getName() == $namespace) {
-              break;
-            }
-        }
-
-        if ($plugin->getName() != $namespace) {
+        if (!$registry[$namespace]) {
             $io->error("No such plugin found: $namespace.");
             return 1;
         }
 
-        $config = $plugin->load();
-        foreach (array_keys($config) as $key) {
-          $rows[] = [$key, $config[$key]];
-        }
-        $io->table(['Name', 'Value'], $rows);
+        $plugin = $this->container->get($registry[$namespace]);
 
+        if (!$plugin->isInstalled()) {
+            $io->error('Plugin is not installed. Run `plugin:setup '.$namespace.'` to install it.');
+            return 1;
+        }
+
+        foreach ($plugin->getFieldAttributes() as $name => $field) {
+            $value = Yaml::dump($plugin->{$name});
+            if ($field->type == FieldType::CREDENTIAL && !$input->getOption('show')) {
+                $value = str_pad('', strlen($value), '*');
+            }
+            $rows[] = [$name, $field->type->key(), $value];
+        }
+        $io->table(['Name', 'Type', 'Value'], $rows);
         return 0;
     }
 }
