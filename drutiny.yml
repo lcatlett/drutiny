@@ -15,6 +15,7 @@ parameters:
   cache.namespace: 'drutiny-%instance_id%'
   config.local: '%drutiny_config_dir%/config.yml'
   config.credentials: '%drutiny_config_dir%/.credentials.yml'
+  state.filepath: '%drutiny_config_dir%/state.yml'
   config.old_path: '%drutiny_config_dir%/.drutiny_creds.yml'
   log.directory: '%drutiny_config_dir%/logs'
   log.name: drutiny
@@ -146,6 +147,10 @@ services:
     credentials:
       class: Drutiny\Config\ConfigFile
       arguments: ['%config.credentials%']
+
+    state:
+      class: Drutiny\Config\ConfigFile
+      arguments: ['%state.filepath%']
 
     Drutiny\Config\ConfigInterface:
       alias: 'config'

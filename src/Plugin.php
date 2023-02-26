@@ -6,23 +6,28 @@ use Drutiny\Attribute\Plugin as PluginAttribute;
 use Drutiny\Config\ConfigInterface;
 use Drutiny\Plugin\FieldType;
 use Drutiny\Plugin\PluginInterface;
+use Drutiny\Plugin\PluginRequiredException;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class Plugin implements PluginInterface {
     private array $stores;
+    private bool $isInstalled;
 
     public function __construct(
       ConfigInterface $pluginConfig, 
-      ConfigInterface $pluginCredentials, 
+      ConfigInterface $pluginCredentials,
+      ConfigInterface $pluginState,
       protected InputInterface $input, 
       protected OutputInterface $output,
-      private PluginAttribute $attribute
+      private PluginAttribute $attribute,
+      protected Settings $settings
     )
     {
         // Set the name from the AsPlugin attribute.
         $this->stores[FieldType::CONFIG->key()] = $pluginConfig;
         $this->stores[FieldType::CREDENTIAL->key()] = $pluginCredentials;
+        $this->stores[FieldType::STATE->key()] = $pluginState;
         $this->input = $input;
         $this->output = $output;
         $this->configure();
@@ -46,6 +51,9 @@ class Plugin implements PluginInterface {
      */
     final public function __get($name):mixed
     {
+      if (!$this->isInstalled()) {
+        throw new PluginRequiredException("{$this->attribute->name} is not installed. Please run 'plugin:setup {$this->attribute->name}' to configure.");
+      }
       $field_type = $this->attribute->getField($name)->type;
       $store = $this->stores[$field_type->key()];
       if (!isset($store[$name])) {
@@ -62,7 +70,7 @@ class Plugin implements PluginInterface {
     }
 
     /**
-     * Callback to add fields to the plugin.
+     * Callback for extending classes to action something on construction.
      */
     protected function configure() {}
 
@@ -71,11 +79,14 @@ class Plugin implements PluginInterface {
      */
     final public function isInstalled():bool
     {
-      $has_stored_values = false;
-      foreach ($this->getFieldAttributes() as $name => $field_info) {
-        $has_stored_values = $has_stored_values || $this->__isset($name);
+      if (isset($this->isInstalled)) {
+        return $this->isInstalled;
       }
-      return $has_stored_values;
+      $this->isInstalled = false;
+      foreach ($this->getFieldAttributes() as $name => $field_info) {
+        $this->isInstalled = $this->isInstalled || $this->__isset($name);
+      }
+      return $this->isInstalled;
     }
 
     final public function isHidden():bool
@@ -91,8 +102,9 @@ class Plugin implements PluginInterface {
         }
         $this->stores[$field->type->key()][$field->name] = $values[$field->name];
       }
-      $this->stores[FieldType::CONFIG->key()]->save();
-      $this->stores[FieldType::CREDENTIAL->key()]->save();
+      foreach ($this->stores as $store) {
+        $store->save();
+      }
     }
 
     /**
@@ -101,7 +113,8 @@ class Plugin implements PluginInterface {
      */
     public function delete():void
     {
-      $this->stores[FieldType::CONFIG->key()]->delete();
-      $this->stores[FieldType::CREDENTIAL->key()]->delete();
+      foreach ($this->stores as $store) {
+        $store->delete();
+      }
     }
 }

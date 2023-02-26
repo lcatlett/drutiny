@@ -29,6 +29,6 @@ class ConfigFile implements ConfigInterface
 
     public function save():int|false
     {
-        return file_put_contents($this->filepath, Yaml::dump($this->config, 4, 4));
+        return file_put_contents($this->filepath, Yaml::dump(array_filter($this->config), 4, 4));
     }
 }

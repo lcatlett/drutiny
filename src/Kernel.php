@@ -27,12 +27,13 @@ use Psr\EventDispatcher\StoppableEventInterface;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
+use Symfony\Component\DependencyInjection\Dumper\PhpDumper;
 use Symfony\Component\Finder\Finder;
 
 class Kernel
 {
     private const CONFIG_EXTS = '.{php,yaml,yml}';
-    // private const CACHED_CONTAINER = 'local.container.php';
+    private const CACHED_CONTAINER = 'local.container.php';
     private ContainerInterface $container;
     private array $loadingPaths = [];
     private bool $initialized = false;
@@ -100,11 +101,11 @@ class Kernel
      */
     protected function initializeContainer():ContainerInterface
     {
-        // $file = DRUTINY_LIB . '/' . self::CACHED_CONTAINER;
-        // if (file_exists($file)) {
-        //     require_once $file;
-        //     $this->container = new ProjectServiceContainer();
-        // } else {
+        $file = DRUTINY_LIB . '/' . self::CACHED_CONTAINER;
+        if (file_exists($file)) {
+            require_once $file;
+            $this->container = new ProjectServiceContainer();
+        } else {
             $this->container = $this->buildContainer();
             $this->container->setParameter('environment', $this->environment);
             $this->container->setParameter('version', $this->version);
@@ -115,11 +116,11 @@ class Kernel
           mkdir($this->container->getParameter('drutiny_config_dir'), 0744, true);
 
         // TODO: cache container. Need workaround for Twig.
-          // if (is_writeable(dirname($file))) {
-          //     $dumper = new PhpDumper($this->container);
-          //     file_put_contents($file, $dumper->dump());
-          // }
-        //}
+        //   if (is_writeable(dirname($file))) {
+        //       $dumper = new PhpDumper($this->container);
+        //       file_put_contents($file, $dumper->dump());
+        //   }
+        }
         $this->initialized = true;
         return $this->container;
     }

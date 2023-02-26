@@ -4,7 +4,6 @@ namespace Drutiny\Plugin;
 
 use Drutiny\Attribute\Plugin as PluginAttribute;
 use Drutiny\Attribute\PluginField;
-use Drutiny\Config\ConfigFile;
 use Drutiny\Config\ConfigInterface;
 use Drutiny\Plugin;
 use Exception;
@@ -20,13 +19,15 @@ class PluginCollection implements PluginInterface {
         protected PluginAttribute $attribute,
         ConfigInterface $pluginCredentials,
         ConfigInterface $pluginConfig,
+        ConfigInterface $pluginState,
         protected InputInterface $input,
         protected OutputInterface $output,
     )
     {
         $this->stores = [
             FieldType::CONFIG->key() => $pluginConfig,
-            FieldType::CREDENTIAL->key() => $pluginCredentials
+            FieldType::CREDENTIAL->key() => $pluginCredentials,
+            FieldType::STATE->key() => $pluginState
         ];
         $config_keys = $this->stores[FieldType::CONFIG->key()]->keys();
         $cred_keys = $this->stores[FieldType::CREDENTIAL->key()]->keys();
@@ -71,6 +72,7 @@ class PluginCollection implements PluginInterface {
             attribute: $this->attribute,
             pluginCredentials: $this->stores[FieldType::CREDENTIAL->key()]->load($key),
             pluginConfig: $this->stores[FieldType::CONFIG->key()]->load($key),
+            pluginState: $this->stores[FieldType::STATE->key()]->load($key),
             input: $this->input,
             output: $this->output
         );

@@ -5,12 +5,14 @@ namespace Drutiny\Plugin;
 enum FieldType {
     case CONFIG;
     case CREDENTIAL;
+    case STATE;
     
     public function key():string
     {
         return match ($this) {
             self::CONFIG => 'config',
-            self::CREDENTIAL => 'credential'
+            self::CREDENTIAL => 'credential',
+            self::STATE => 'state',
         };
     }
 
@@ -18,7 +20,8 @@ enum FieldType {
     {
         return match ($type) {
             'config' => self::CONFIG,
-            'credential' => self::CREDENTIAL
+            'credential' => self::CREDENTIAL,
+            'state' => self::STATE,
         };
     }
 }

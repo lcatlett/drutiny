@@ -4,7 +4,6 @@ namespace Drutiny\Attribute;
 
 use Attribute;
 use Drutiny\Plugin as DrutinyPlugin;
-use Exception;
 use ReflectionClass;
 
 #[Attribute]
@@ -28,12 +27,13 @@ class Plugin implements KeyableAttributeInterface {
     /**
      * Get an array of field attributes keyed by field name.
      */
-    public function buildFieldAttributes(ReflectionClass $reflection):PluginFieldCollection
+    public function buildFieldAttributes(string $class_name):self
     {
+      $reflection = new ReflectionClass($class_name);
       foreach ($reflection->getAttributes(PluginField::class) as $attribute) {
         $this->fields->add($attribute->newInstance());
       }
-      return $this->fields;
+      return $this;
     }
 
     public function getFieldAttributes():array
