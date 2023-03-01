@@ -61,6 +61,21 @@ class PolicyFactory
         }
     }
 
+    public function getPolicyListByKeyword($keyword):array
+    {
+        $results = [];
+        foreach ($this->getPolicyList() as $listedPolicy) {
+            $match = strpos(strtolower($listedPolicy['title']), $keyword) !== false;
+            $match = $match || (strpos(strtolower($listedPolicy['name']), $keyword) !== false);
+            $match = $match || in_array($keyword, $listedPolicy['tags'] ?? []);
+            if (!$match) {
+                continue;
+            }
+            $results[] = $listedPolicy;
+        }
+        return $results;
+    }
+
     /**
      * Acquire a list of available policies.
      *

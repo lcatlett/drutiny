@@ -52,20 +52,15 @@ class PolicySearchCommand extends Command
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $list = $this->policyFactory->getPolicyList();
         $keyword = strtolower($input->getArgument('keyword'));
+        $list = $this->policyFactory->getPolicyListByKeyword($keyword);
 
         $rows = array();
         foreach ($list as $listedPolicy) {
-            $match = strpos(strtolower($listedPolicy['title']), $keyword) !== false;
-            $match = $match || (strpos(strtolower($listedPolicy['name']), $keyword) !== false);
-            if (!$match) {
-                continue;
-            }
             $rows[] = array(
-            'description' => '<options=bold>' . wordwrap($listedPolicy['title'], 50) . '</>',
-            'name' => $listedPolicy['name'],
-            'source' => $listedPolicy['source'],
+                'description' => '<options=bold>' . wordwrap($listedPolicy['title'], 50) . '</>',
+                'name' => $listedPolicy['name'],
+                'source' => $listedPolicy['source'],
             );
         }
 
