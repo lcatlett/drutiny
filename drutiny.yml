@@ -31,6 +31,8 @@ parameters:
   twig.strict: false
   async.forks: 7
   async.timeout: 3600
+  # Change this to false if you want to disable asynchronous forking.
+  async.enabled: true
   language_default: en
   progress_bar.template: |
     %%message%%
@@ -105,6 +107,7 @@ services:
         calls:
            - [setMaxForks, ['%async.forks%']]
            - [setWaitTimeout, ['%async.timeout%']]
+           - [setAsync, ['%async.enabled%']]
 
     Async\ForkManager:
       alias: 'async'

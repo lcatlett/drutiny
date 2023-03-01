@@ -13,7 +13,6 @@ use Drutiny\Entity\SerializableExportableTrait;
 use Drutiny\Sandbox\ReportingPeriodTrait;
 use Drutiny\Target\TargetInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
 
 class Assessment implements ExportableInterface, AssessmentInterface, \Serializable
@@ -42,7 +41,8 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
         protected LoggerInterface $logger,  
         protected ProgressBar $progressBar, 
         protected ForkManager $forkManager,
-        protected AuditFactory $auditFactory
+        protected AuditFactory $auditFactory,
+        protected Settings $settings,
         )
     {
         if (method_exists($logger, 'withName')) {
@@ -102,7 +102,7 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
         });
 
         $this->progressBar->setMaxSteps($this->progressBar->getMaxSteps() + count($policies));
-        $this->forkManager->setAsync(count($policies) > 1);
+        $this->forkManager->setAsync($this->settings->get('async.enabled') && count($policies) > 1);
 
         foreach ($policies as $policy) {
             $this->policyOrder[] = $policy->name;
@@ -242,7 +242,7 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
      *
      * @return array of AuditResponse objects.
      */
-    public function getResults()
+    public function getResults():array
     {
         return array_filter(array_map(function ($name) {
             return $this->results[$name] ?? false;
