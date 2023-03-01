@@ -36,9 +36,7 @@ class DirectoryAnalysis extends AbstractAnalysis
 
         $cmd = "du -sLB$unit $directory && df -B$unit $directory && df --inodes $directory";
 
-        [$usage, $disk, $inode] = $this->target
-            ->
-            ->run($cmd, function ($output) {
+        [$usage, $disk, $inode] = $this->target->run($cmd, function ($output) {
               return array_values(explode(PHP_EOL, $output));
             });
 
