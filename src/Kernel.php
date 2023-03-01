@@ -5,7 +5,6 @@ namespace Drutiny;
 use Drutiny\Console\Application;
 use Drutiny\DependencyInjection\AddConsoleCommandPass;
 use Drutiny\DependencyInjection\AddPluginCommandsPass;
-use Drutiny\DependencyInjection\AddTargetPass;
 use Drutiny\DependencyInjection\InstalledPluginPass;
 use Drutiny\DependencyInjection\PluginArgumentsPass;
 use Drutiny\DependencyInjection\TagCollectionPass;
@@ -27,7 +26,6 @@ use Psr\EventDispatcher\StoppableEventInterface;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
-use Symfony\Component\DependencyInjection\Dumper\PhpDumper;
 use Symfony\Component\Finder\Finder;
 
 class Kernel

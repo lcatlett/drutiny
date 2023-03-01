@@ -2,6 +2,7 @@
 
 namespace Drutiny;
 
+use Drutiny\Attribute\UseService;
 use Drutiny\Audit\AuditInterface;
 use Drutiny\Audit\AuditValidationException;
 use Drutiny\Audit\Exception\AuditException;
@@ -58,6 +59,25 @@ class AuditFactory {
             // Use the container for all other types.
             $args[$name] = $registry[(string) $type] ?? $this->container->get((string) $type);
         }
-        return $reflection->newInstance(...$args);
+        $audit = $reflection->newInstance(...$args);
+
+        $attributes = [];
+        do {
+            $attributes = array_merge($attributes, $reflection->getAttributes(UseService::class));
+            $reflection = $reflection->getParentClass();
+        }
+        while ($reflection);
+
+        if (empty($attributes)) {
+            return $audit;
+        }
+
+        do {
+            $service = array_pop($attributes)->newInstance();
+            $service->inject($audit, $this->container);
+        }
+        while (count($attributes));
+
+        return $audit;
     }
 }
