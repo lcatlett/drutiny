@@ -23,7 +23,7 @@ interface TargetInterface
      * 
      * @deprecated
      */
-    public function run(string $cmd, callable $preProcess, int $ttl);
+    public function run(string $cmd, callable $preProcess, int $ttl = 3600);
 
     /**
      * Send a process to be executed on the target.
