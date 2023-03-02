@@ -75,7 +75,11 @@ class SqlResultAudit extends AbstractAnalysis
         $fields = $this->getFieldsFromSql($query);
         if (!empty($fields)) {
             $result = array_map(function ($row) use ($fields) {
-                return array_combine($fields, $row);
+                // Ensure the row is the same length as the fields.
+                list($values, ) = array_chunk($row, count($fields));
+                // Ensure the keys are the same length as the values.
+                list($keys, ) = array_chunk($fields, count($values));
+                return array_combine($keys, $values);
             },
             $result);
         }
