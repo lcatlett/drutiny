@@ -69,7 +69,7 @@ class LocalCommand {
             // to prevent caching of the result. This means a non-zero exit
             // response can be cached.
             $output = $outputProcessor($command, $item);
-            $this->logger->debug($output);
+            $this->logger->debug($command->getOutput());
             return $output;
           }
         }
