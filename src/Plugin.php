@@ -52,14 +52,15 @@ class Plugin implements PluginInterface {
     final public function __get($name):mixed
     {
       if (!$this->isInstalled()) {
+        // Use the default value if provided.
+        if (($default = $this->attribute->getField($name)->default) !== null) {
+          return $default;
+        }
         throw new PluginRequiredException("{$this->attribute->name} is not installed. Please run 'plugin:setup {$this->attribute->name}' to configure.");
       }
       $field_type = $this->attribute->getField($name)->type;
       $store = $this->stores[$field_type->key()];
-      if (!isset($store[$name])) {
-        return $this->attribute->getField($name)->default;
-      }
-      return $store[$name];
+      return $store[$name] ?? $this->attribute->getField($name)->default;
     }
 
     final public function __isset($name)
