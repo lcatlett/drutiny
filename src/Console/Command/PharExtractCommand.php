@@ -18,7 +18,7 @@ class PharExtractCommand extends DrutinyBaseCommand
 {
     public function __construct(protected Settings $settings, protected LoggerInterface $logger)
     {
-        
+        parent::__construct();
     }
 
     /**
