@@ -2,7 +2,7 @@
 
 <img src="https://github.com/drutiny/drutiny/raw/3.2.x/assets/logo.png" alt="Drutiny logo" align="right"/>
 
-[![CI](https://github.com/drutiny/drutiny/actions/workflows/ci.yml/badge.svg?branch=3.4.x&event=push)](https://github.com/drutiny/drutiny/actions/workflows/ci.yml)
+[![CI](https://github.com/drutiny/drutiny/actions/workflows/ci.yml/badge.svg?branch=3.6.x&event=push)](https://github.com/drutiny/drutiny/actions/workflows/ci.yml)
 [![Latest Stable Version](https://poser.pugx.org/drutiny/drutiny/v/stable)](https://packagist.org/packages/drutiny/drutiny)
 [![Total Downloads](https://poser.pugx.org/drutiny/drutiny/downloads)](https://packagist.org/packages/drutiny/drutiny)
 [![Latest Unstable Version](https://poser.pugx.org/drutiny/drutiny/v/unstable)](https://packagist.org/packages/drutiny/drutiny)
@@ -17,14 +17,10 @@ unless you're planning on building your own auditing tool based on top of Drutin
 
 You can install Drutiny into your project with [composer](https://getcomposer.org).
 
-    composer require drutiny/drutiny ^3.4.0
+    composer require drutiny/drutiny ^3.6.0
 
 Drutiny has native target support for Git and [Drush](http://docs.drush.org/en/master/).
 If you wish to use these types of targets, you must install the underlying software.
-
-For drush, we recommend using drush 8 to access global aliases.
-
-    composer global require drush/drush:8
 
 ## Usage
 
