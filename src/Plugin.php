@@ -7,6 +7,7 @@ use Drutiny\Config\ConfigInterface;
 use Drutiny\Plugin\FieldType;
 use Drutiny\Plugin\PluginInterface;
 use Drutiny\Plugin\PluginRequiredException;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -21,7 +22,8 @@ class Plugin implements PluginInterface {
       protected InputInterface $input, 
       protected OutputInterface $output,
       private PluginAttribute $attribute,
-      protected Settings $settings
+      protected Settings $settings,
+      protected LoggerInterface $logger
     )
     {
         // Set the name from the AsPlugin attribute.

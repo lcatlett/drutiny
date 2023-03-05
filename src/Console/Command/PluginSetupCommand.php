@@ -72,20 +72,22 @@ class PluginSetupCommand extends Command
     protected function setupField(PluginField $field, Plugin $plugin, SymfonyStyle $io)
     {
         $extra = ' ';
+        $default_value = $field->default;
         if (isset($plugin->{$field->name})) {
-            $existing_value = $plugin->{$field->name};
+            $default_value = $plugin->{$field->name};
             $extra = "\n<comment>An existing credential exists.\n";
             if ($field->type == FieldType::CONFIG) {
-                $extra .= "Existing value: {$existing_value}\n";
+                $extra .= "Existing value: {$default_value}\n";
             }
             $extra .= "Leave blank to use existing value.</comment>\n";
         }
         $ask = sprintf("%s%s\n<info>[%s]</info>:     ", $extra, ucfirst($field->description), $field->name);
         do {
+
             $value = match ($field->ask) {
-                Question::CHOICE => $io->choice($ask, $field->choices, $plugin->{$field->name}),
-                Question::CONFIRMATION => $io->confirm("$ask (y/n)?", $plugin->{$field->name} ?? true),
-                Question::DEFAULT => $io->ask($ask,$plugin->{$field->name})
+                Question::CHOICE => $io->choice($ask, $field->choices, $default_value),
+                Question::CONFIRMATION => $io->confirm("$ask (y/n)?", $default_value ?? true),
+                Question::DEFAULT => $io->ask($ask, $default_value)
             };
             if (!call_user_func($field->validation, $value)) {
                 $io->error("Input failed validation");
