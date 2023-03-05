@@ -93,7 +93,7 @@ type: data
 ```
 
 If the type is set to `data`then the audit cannot return a pass or fail outcome.
-However, and `audit` type policy will allow the audit to return
+However, an `audit` type policy will allow the audit to return
 `Drutiny\Audit\AuditInterface::NOTICE` and effectively function like a data
 policy type. This might be a preferred approach if the audit should return pass
 or fail in some scenarios.
@@ -122,17 +122,16 @@ parameters:
 
 For audit classes that extend `Drutiny\Audit\AbstractAnalysis`, you can provide a `variables` key under
 the `parameters` declaration that will be evaluated after the audit to help process audit data into
-formats that are easier to render policy messaging. `variables` require the `syntax` key is also set
-to determine which rendering engine is used (`twig` or `expression_language`).
+formats that are easier to render policy messaging. `variables` are sequentially rendered using Twig
+syntax and preceeding variables can be used in proceeding variable renders.
 
-The recommended syntax is `twig` however `expression_language` is default for backwards compatibility.
+Symfony ExpressionLanguage is no longer supported.
 
 
 ```yaml
 parameters:
-  syntax: twig
   variables:
-      core_needs_update: '(core.releases|first).version != core.version'
+      core_needs_update: 'not ((core.releases|first).version = core.version)'
 ```
 
 ## build_parameters
@@ -153,14 +152,9 @@ build_parameters:
 The depends directive allows policies to only apply if one or more conditions are
 meet such as an enabled module or the value of a target environmental variable (like OS).
 
-Dependencies can be evaluated in one of two languages:
+Dependencies can be evaluated in [Twig](https://twig.symfony.com/) syntax.
 
--   [Symfony Expression Language](https://symfony.com/doc/3.4/components/expression_language.html)
--   [Twig](https://twig.symfony.com/) by Symfony
-
-When no `syntax`is specified, `expression_language` is used for backwards
-compatibility. However, expression language should be considered deprecated.
-Instead you should use **twig** and explicitly declare it as the syntax.
+ExpressionLanguage is no longer supported.
 
 ```yaml
 depends:
