@@ -23,6 +23,7 @@ use Symfony\Component\EventDispatcher\DependencyInjection\RegisterListenersPass;
 use Symfony\Component\EventDispatcher\GenericEvent;
 use Drutiny\DependencyInjection\TwigLoaderPass;
 use Psr\EventDispatcher\StoppableEventInterface;
+use Symfony\Component\Config\Exception\FileLocatorFileNotFoundException;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
@@ -157,12 +158,6 @@ class Kernel
         $container->setParameter('project_dir', $this->getProjectDir());
         $container->setParameter('extension.dirs', $this->findExtensionDirectories());
 
-        // Remove duplicates.
-        $idx = array_search($this->getProjectDir(), $this->loadingPaths);
-        if ($idx !== false) {
-            unset($this->loadingPaths[$idx]);
-        }
-
         // Create config loader.
         $load = function (...$args) use ($loader) {
             $args[] = '{drutiny}'.self::CONFIG_EXTS;
@@ -171,11 +166,8 @@ class Kernel
         };
 
         foreach ($this->loadingPaths as $path) {
-            $load($this->getProjectDir(), $path);
+            $load($path);
         }
-
-        // Load project level config last as it should override all others.
-        $load($this->getProjectDir());
 
         // Load any available global configuration. This should really use
         // user_home_dir but since the container isn't compiled we can't.
@@ -185,11 +177,19 @@ class Kernel
 
         // If we're in a different working directory (e.g. executing from phar)
         // then there may be one last level of config we should inherit from.
-        if ($this->getProjectDir() != getcwd()) {
-            $load(getcwd());
+        if ($this->getProjectDir() != $this->getWorkingDirectory()) {
+            $load($this->getWorkingDirectory());
         }
 
         return $container;
+    }
+
+    /**
+     * Get the current working directory.
+     */
+    protected function getWorkingDirectory(): string
+    {
+        return getcwd();
     }
 
     /**

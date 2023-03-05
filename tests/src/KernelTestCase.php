@@ -3,7 +3,6 @@
 namespace DrutinyTests;
 
 use Drutiny\Audit\TwigEvaluator;
-use Drutiny\Kernel;
 use Drutiny\LocalCommand;
 use Drutiny\ProfileFactory;
 use Drutiny\Settings;
@@ -12,6 +11,7 @@ use Drutiny\Target\TargetInterface;
 use PHPUnit\Framework\MockObject\MockBuilder;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
@@ -30,7 +30,7 @@ abstract class KernelTestCase extends TestCase {
     {
         global $kernel;
         $kernel = new Kernel('phpunit', 'x.y.z-dev');
-        $kernel->addServicePath(str_replace(realpath($kernel->getProjectDir()).'/', '', dirname(dirname(__FILE__))));
+        // $kernel->addServicePath(str_replace(realpath($kernel->getProjectDir()).'/', '', dirname(__DIR__)));
         $builder = $this->getMockBuilder(LocalCommand::class);
 
         // Mock the local command.
@@ -53,6 +53,9 @@ abstract class KernelTestCase extends TestCase {
         $this->application->setAutoExit(FALSE);
         $this->container = $kernel->getContainer();
         $this->output = $this->container->get(OutputInterface::class);
+
+        $this->assertInstanceOf(BufferedOutput::class, $this->output);
+
         $this->profile = $this->container->get(ProfileFactory::class)->loadProfileByName('empty');
     }
 
