@@ -8,24 +8,10 @@ use Drutiny\Entity\EventDispatchedDataBag;
 use Drutiny\Target\DdevTarget;
 use Drutiny\Target\DrushTarget;
 use Drutiny\Target\LandoTarget;
-use Prophecy\Prophet;
 use Symfony\Component\PropertyAccess\Exception\InvalidPropertyPathException;
 
 class TargetTest extends KernelTestCase
 {
-    protected Prophet $prophet;
-    protected function setUp(): void
-    {
-        parent::setup();
-        $this->prophet = new Prophet();
-    }
-
-    protected function tearDown(): void
-    {
-        $this->prophet->checkPredictions();
-        parent::tearDown();
-    }
-
     public function testProperties()
     {
         $target = $this->loadMockTarget();

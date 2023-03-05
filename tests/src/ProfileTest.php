@@ -5,7 +5,6 @@ namespace DrutinyTests;
 // use Drutiny\Console\Application;
 // use Drutiny\Kernel;
 use Drutiny\Profile;
-use PHPUnit\Framework\TestCase;
 
 class ProfileTest extends KernelTestCase {
 
