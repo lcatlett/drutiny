@@ -110,6 +110,9 @@ class AuditResponse implements ExportableInterface
    */
     public function getType():string
     {
+        if ($this->isIrrelevant()) {
+            return 'irrelevant';
+        }
         if ($this->isNotApplicable()) {
             return 'not-applicable';
         }
