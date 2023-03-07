@@ -96,4 +96,14 @@ interface AuditInterface
     public function getDefinition():InputDefinition;
 
     public function hasArgument(string $name): bool;
+
+    /**
+     * Pass a policy to an audit class to prepare it for bulk auditing.
+     * 
+     * When collections of policies use the same audit, some audit classes
+     * may like to conduct data gathering in more effecient manners.
+     * This prepare function is called for all policies that utilse the
+     * same class.
+     */
+    public function prepare(Policy $policy):void;
 }

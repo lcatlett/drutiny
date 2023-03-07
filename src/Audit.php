@@ -2,6 +2,7 @@
 
 namespace Drutiny;
 
+use DateTime;
 use Drutiny\Audit\AuditInterface;
 use Drutiny\Audit\AuditValidationException;
 use Drutiny\Audit\TwigEvaluator;
@@ -14,6 +15,7 @@ use Drutiny\Upgrade\AuditUpgrade;
 use Drutiny\Entity\Exception\DataNotFoundException;
 use Drutiny\Helper\ExpressionLanguageTranslation;
 use Drutiny\Policy\Dependency;
+use Drutiny\Sandbox\ReportingPeriodTrait;
 use Drutiny\Target\TargetPropertyException;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface;
@@ -35,6 +37,8 @@ use Twig\Error\RuntimeError;
  */
 abstract class Audit implements AuditInterface
 {
+    use ReportingPeriodTrait;
+    
     protected DataBag $dataBag;
     protected Policy $policy;
     protected InputDefinition $definition;
@@ -58,8 +62,8 @@ abstract class Audit implements AuditInterface
         $this->definition = new InputDefinition();
         $this->dataBag = new DataBag();
         $this->dataBag->add([
-        'parameters' => new DataBag(),
-      ]);
+            'parameters' => new DataBag(),
+        ]);
         $this->configure();
         $this->twigEvaluator->setContext('target', $this->target);
         $this->verbosity = $output->getVerbosity();
@@ -93,6 +97,14 @@ abstract class Audit implements AuditInterface
     /**
      * {@inheritdoc}
      */
+    public function prepare(Policy $policy):void
+    {
+        
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     final public function execute(Policy $policy, $remediate = false): AuditResponse
     {
         if ($this->deprecated) {
@@ -106,7 +118,7 @@ abstract class Audit implements AuditInterface
         }
         $this->policy = $policy;
         $response = new AuditResponse($policy);
-        $execution_start_time = new \DateTime();
+        $execution_start_time = new DateTime();
         $this->logger->info('Auditing '.$policy->name.' with '.get_class($this));
         $outcome = AuditInterface::ERROR;
         try {
@@ -224,7 +236,7 @@ abstract class Audit implements AuditInterface
               'uri' => $this->target->getUri(),
             ]), 'audit');
         }
-        $execution_end_time = new \DateTime();
+        $execution_end_time = new DateTime();
         $total_execution_time = $execution_start_time->diff($execution_end_time);
         $this->logger->info($total_execution_time->format('Execution completed for policy "' . $policy->name . '" in %m month(s) %d day(s) %H hour(s) %i minute(s) %s second(s)'));
         return $response;

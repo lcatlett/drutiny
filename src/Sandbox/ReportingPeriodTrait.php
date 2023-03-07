@@ -2,6 +2,11 @@
 
 namespace Drutiny\Sandbox;
 
+use DateInterval;
+use DateTime;
+use DateTimeInterface;
+use DateTimeZone;
+
 /**
  *
  */
@@ -11,14 +16,14 @@ trait ReportingPeriodTrait
     /**
      * @var DateTime The begining of the reporting period.
      */
-    protected $reportingPeriodStart;
+    protected DateTimeInterface $reportingPeriodStart;
 
     /**
      * @var DateTime The end of the reporting period.
      */
-    protected $reportingPeriodEnd;
+    protected DateTimeInterface $reportingPeriodEnd;
 
-    public function setReportingPeriod(\DateTimeInterface $start, \DateTimeInterface $end)
+    public function setReportingPeriod(DateTimeInterface $start, DateTimeInterface $end):self
     {
         if (isset($this->logger)) {
             $this->logger->debug(strtr("Reporting period set @start to @end", [
@@ -30,30 +35,30 @@ trait ReportingPeriodTrait
                   ->setReportingPeriodEnd($end);
     }
 
-    public function setReportingPeriodStart(\DateTimeInterface $start)
+    public function setReportingPeriodStart(DateTimeInterface $start):self
     {
         $this->reportingPeriodStart = $start;
         return $this;
     }
 
-    public function setReportingPeriodEnd(\DateTimeInterface $end)
+    public function setReportingPeriodEnd(DateTimeInterface $end):self
     {
         $this->reportingPeriodEnd = $end;
         return $this;
     }
 
-    public function getReportingPeriodStart()
+    public function getReportingPeriodStart():DateTimeInterface
     {
         if (empty($this->reportingPeriodStart)) {
-            $this->reportingPeriodStart = new \DateTime();
+            $this->reportingPeriodStart = new DateTime();
         }
         return $this->reportingPeriodStart;
     }
 
-    public function getReportingPeriodEnd()
+    public function getReportingPeriodEnd():DateTimeInterface
     {
         if (empty($this->reportingPeriodEnd)) {
-            $this->reportingPeriodEnd = new \DateTime();
+            $this->reportingPeriodEnd = new DateTime();
         }
         return $this->reportingPeriodEnd;
     }
@@ -61,12 +66,12 @@ trait ReportingPeriodTrait
     /**
      * @return DateInterval
      */
-    public function getReportingPeriodInterval()
+    public function getReportingPeriodInterval():DateInterval
     {
         return $this->reportingPeriodEnd->diff($this->reportingPeriodStart);
     }
 
-    public function getReportingPeriodDuration()
+    public function getReportingPeriodDuration():int
     {
         $interval = $this->getReportingPeriodInterval();
                // seconds
@@ -87,7 +92,7 @@ trait ReportingPeriodTrait
     /**
      * Get sensible intervals to use for duration grainularity.
      */
-    protected function _getReportingPeriodIntervals()
+    protected function _getReportingPeriodIntervals():array
     {
         return [
         30, // 30 seconds
@@ -118,7 +123,7 @@ trait ReportingPeriodTrait
      *
      * @return int Number of seconds in each step.
      */
-    public function getReportingPeriodSteps()
+    public function getReportingPeriodSteps():int
     {
       $duration = $this->getReportingPeriodDuration();
 

@@ -112,8 +112,17 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
             ]);
 
             $audit = $this->auditFactory->get($policy, $target);
+            $audit->setReportingPeriodStart($this->getReportingPeriodStart());
+            $audit->setReportingPeriodEnd($this->getReportingPeriodEnd());
+
+            // Backward compatibility with 3.4 and earlier.
             $audit->setParameter('reporting_period_start', $start)
                   ->setParameter('reporting_period_end', $end);
+
+            // Get a list of common policies.
+            $common_class_policies = array_filter($policies, fn($p) => $p->class == $policy->class);
+            // Allow the audit class to prepare for bulk auditing policies.
+            array_walk($common_class_policies, fn($p) => $audit->prepare($p));
 
             $this->forkManager->create()
             ->setLabel($policy->name)
