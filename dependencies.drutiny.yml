@@ -78,7 +78,7 @@ Drupal:
   moduleIsEnabled:
     description: Ensures a given Drupal module is enabled.
     use_audit: Drutiny\Audit\Drupal\ModuleAnalysis
-    expression: Drupal.isBootstrapped and modules[$module] is defined and modules[$module].status == 'enabled'
+    expression: Drupal.isBootstrapped and modules[$module] is defined and modules[$module].status|lower == 'enabled'
     arguments:
       # Map the order of arguments in the twig function to tokens server in the 'expression'.
       - $module
