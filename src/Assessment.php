@@ -130,11 +130,12 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
                 return $audit->execute($policy);
             })
             ->onSuccess(function (AuditResponse $response, ForkInterface $fork) {
+                $this->captureStats($response);
                 $this->progressBar->advance();
                 $this->progressBar->setMessage('Audit response of ' . $response->getPolicy()->name . ' recieved.');
                 $this->logger->info(sprintf('Policy "%s" assessment on %s completed: %s.', $response->getPolicy()->title, $this->uri(), $response->getType()));
 
-                // Attempt remediation.
+
                 if ($response->isIrrelevant()) {
                     $this->logger->info("Omitting policy result from assessment: ".$response->getPolicy()->name);
                     return;
@@ -152,9 +153,10 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
                 // Capture the error as a policy error outcome.
                 $response = new AuditResponse($policy);
                 $response->set(AuditInterface::ERROR, [
-                'exception' => $err_msg,
-                'exception_type' => get_class($e),
-              ]);
+                    'exception' => $err_msg,
+                    'exception_type' => get_class($e),
+                ]);
+                $this->captureStats($response);
                 $this->setPolicyResult($response);
             });
         }
@@ -194,8 +196,13 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
         if (!$response->isSuccessful() && ($this->severityCode < $severity)) {
             $this->severityCode = $severity;
         }
+    }
 
-        // Statistics.
+    /**
+     * Capture statistics about the response in the context of the assessment.
+     */
+    protected function captureStats(AuditResponse $response):void
+    {
         $this->statsByResult[$response->getType()] = $this->statsByResult[$response->getType()] ?? 0;
         $this->statsByResult[$response->getType()]++;
 
