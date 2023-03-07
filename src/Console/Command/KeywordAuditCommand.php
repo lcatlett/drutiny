@@ -14,7 +14,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Yaml\Yaml;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  *
@@ -70,6 +70,10 @@ class KeywordAuditCommand extends DrutinyBaseCommand
             InputOption::VALUE_OPTIONAL,
             'Send an exit code to the console if a policy of a given severity fails. Defaults to none (exit code 0). (Options: none, low, normal, high, critical)',
             FALSE
+        )
+        ->addOption(
+          'yes', 'y', InputOption::VALUE_NONE,
+          'Implicity answer yes to any confirmation prompts.'
         );
         parent::configure();
         $this->configureReporting();
@@ -83,6 +87,11 @@ class KeywordAuditCommand extends DrutinyBaseCommand
     {
         $this->progressBar->start();
         $this->initLanguage($input);
+
+        $io = new SymfonyStyle($input, $output);
+
+        // Validate and Setup the target.
+        $target = $this->targetFactory->create($input->getArgument('target'), $input->getOption('uri'));
 
         $profile = $this->profileFactory->create([
           'title' => 'Keyword audit: ',
@@ -107,14 +116,28 @@ class KeywordAuditCommand extends DrutinyBaseCommand
         }
 
         $unique_policies = [];
+        $rows = [];
         foreach ($list as $policy) {
             $unique_policies[$policy['name']] = [];
+            $rows[$policy['name']] = [$policy['title'], $policy['name'], $policy['class'], implode(', ', $policy['tags'] ?? [])];
+        }
+
+        if (empty($unique_policies)) {
+          $io->warning("No policies found with keywords: " . implode(', ', $input->getOption('keyword')));
+          return 0;
+        }
+        $io->text("Audit these policies:");
+        $io->table(['policy', 'name', 'class', 'tags'], $rows);
+        if (!$input->getOption('yes') && !$io->confirm("Are you sure you want to audit these policies?")) {
+          $io->text('Cancelling');
+          return 0;
+        }
+        else {
+          $io->text('Keyword audit will run these policies.');
+          $io->text('');
         }
         
         $profile->addPolicies($unique_policies);
- 
-        // Setup the target.
-        $target = $this->targetFactory->create($input->getArgument('target'), $input->getOption('uri'));
 
         // Get the URLs.
         if ($uri = $input->getOption('uri')) {
@@ -137,6 +160,17 @@ class KeywordAuditCommand extends DrutinyBaseCommand
 
         $this->progressBar->finish();
         $this->progressBar->clear();
+
+        $rows = [];
+        foreach ($this->assessment->getStatsByResult() as $type => $frequency) {
+          $rows[] = [ucwords($type, " -"), $frequency];
+        }
+
+        $io->title('Policy result summary');
+        $io->table(
+          ['Result', 'Frequency'],
+          $rows
+        );
 
         foreach ($this->getFormats($input, $profile, $this->formatFactory) as $format) {
             $format->setNamespace($this->getReportNamespace($input, $uri));
