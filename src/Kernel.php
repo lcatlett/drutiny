@@ -23,7 +23,6 @@ use Symfony\Component\EventDispatcher\DependencyInjection\RegisterListenersPass;
 use Symfony\Component\EventDispatcher\GenericEvent;
 use Drutiny\DependencyInjection\TwigLoaderPass;
 use Psr\EventDispatcher\StoppableEventInterface;
-use Symfony\Component\Config\Exception\FileLocatorFileNotFoundException;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
@@ -40,8 +39,11 @@ class Kernel
 
     public function __construct(private string $environment, private string $version)
     {
-        $this->addServicePath($this->getProjectDir());
-        $this->addServicePath('./vendor/*/*');
+        // If Drutiny is located elsewhere, lets load her in.
+        if ($this->getProjectDir() != $this->getWorkingDirectory()) {
+            $this->addServicePath($this->getProjectDir());
+        }
+        $this->addServicePath($this->getProjectDir().'/vendor/*/*');
     }
 
     /**
@@ -177,9 +179,7 @@ class Kernel
 
         // If we're in a different working directory (e.g. executing from phar)
         // then there may be one last level of config we should inherit from.
-        if ($this->getProjectDir() != $this->getWorkingDirectory()) {
-            $load($this->getWorkingDirectory());
-        }
+        $load($this->getWorkingDirectory());
 
         return $container;
     }
