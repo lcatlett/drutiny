@@ -1,5 +1,5 @@
 Policy | Severity | Audit
 ------ | -------- | -----
 {% for result in assessment.results %}
-{{ result.policy.title }} | {{ result.policy.severity }} | {{ result.type|split('-')|join(' ')|title  }}
+{{ result.policy.title }} | {{ result.policy.severity.value|capitalize }} | {{ result.type|split('-')|join(' ')|title  }}
 {% endfor %}

@@ -2,177 +2,142 @@
 
 namespace Drutiny;
 
-use Drutiny\Config\PolicyConfiguration;
+use Drutiny\Attribute\ArrayType;
+use Drutiny\Attribute\Description;
+use Drutiny\Audit\AbstractAnalysis;
 use Drutiny\Policy\Dependency;
-use Drutiny\Entity\DataBag;
 use Drutiny\Entity\ExportableInterface;
-use Drutiny\Policy\UnavailablePolicyException;
-use Symfony\Component\Config\Definition\Processor;
-use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
+use Drutiny\Helper\MergeUtility;
+use Drutiny\Policy\Chart;
+use Drutiny\Policy\PolicyType;
+use Drutiny\Policy\Severity;
+use Drutiny\Policy\Tag;
+use Drutiny\Profile\PolicyDefinition;
+use Symfony\Component\DependencyInjection\ParameterBag\FrozenParameterBag;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 
+use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
+
+#[Autoconfigure(autowire: false)]
 class Policy implements ExportableInterface
 {
-    const SEVERITY_LOW = 1;
-    const SEVERITY_NORMAL = 2;
-    const SEVERITY_HIGH = 4;
-    const SEVERITY_CRITICAL = 8;
+    #[Description('What type of policy this is. Audit types return a pass/fail result while data types return only data.')]
+    public readonly PolicyType $type;
+    
+    #[Description('A set of tags to categorize a policy.')]
+    #[ArrayType('indexed', Tag::class)]
+    public readonly array $tags;
 
-    protected $propertyBag;
-    protected $parameterBag;
-    protected $remediable = false;
-    protected $dependencies = [];
-    protected $severityCode;
+    #[Description('What severity level the policy is rated at.')]
+    public readonly Severity $severity;
 
-    public function __construct()
+    #[Description('Parameters are values that maybe used to configure an audit for use with the Policy.')]
+    public readonly ParameterBagInterface $parameters;
+
+    #[Description('Create parameters to pass to the audit before it is executed. Target object is available.')]
+    public readonly ParameterBagInterface $build_parameters;
+
+    #[Description('A list of executable dependencies to require before auditing the policy against a target.')]
+    #[ArrayType('indexed', Dependency::class)]
+    public readonly array $depends;
+
+    #[Description('Configuration for any charts used in the policy messaging.')]
+    #[ArrayType('indexed', Chart::class)]
+    public readonly array $chart;
+
+    public function __construct(
+      #[Description('The human readable name of the policy.')]
+      public readonly string $title,
+
+      #[Description('The machine-name of the policy.')]
+      public readonly string $name,
+
+      #[Description('A description why the policy is valuable.')]
+      public readonly string $description,
+
+      #[Description('Unique identifier such as a URL.')]
+      public readonly string $uuid,
+
+      #[Description('Where the policy is sourced from.')]
+      public readonly string $source,
+
+      // Arrays and Enums are declared in the class.
+      string $type = 'audit',
+      array $tags = [],
+      string $severity = 'normal',
+      array $parameters = [],
+      array $build_parameters = [],
+      array $depends = [],
+      array $chart = [],
+
+      #[Description('Weight of a policy to sort it amoung other policies.')]
+      public readonly int $weight = 0,
+
+      #[Description('A PHP Audit class to pass the policy to be assessed.')]
+      public readonly string $class = AbstractAnalysis::class,
+
+      #[Description('Language code')]
+      public readonly string $language = 'en',
+
+      #[Description('Content to communicate how to remediate a policy failure.')]
+      public readonly string $remediation = '',
+
+      #[Description('Content to communicate a policy failure.')]
+      public readonly string $failure = '',
+
+      #[Description('Content to communicate a policy success.')]
+      public readonly string $success = '',
+
+      #[Description('Content to communicate a policy warning (in a success).')]
+      public readonly ?string $warning = '',
+    )
     {
-      $this->parameterBag = new DataBag();
-      $this->propertyBag = new DataBag();
+      $this->type = PolicyType::from($type);
+      $this->severity = Severity::from($severity);
+      $this->tags = array_map(fn(string $t) => new Tag($t), $tags);
+      $this->parameters = new FrozenParameterBag($parameters);
+      $this->build_parameters = new FrozenParameterBag($build_parameters);
+      $this->depends = array_map(fn(string|array $d) => is_string($d) ? Dependency::fromString($d) : new Dependency(...$d), $depends);
+      $this->chart = array_map(fn($c) => Chart::fromArray($c), $chart);
     }
 
     /**
-     * Make properties read-only attributes of object.
+     * Produce policy object variation with altered properties.
      */
-    public function __get(string $property)
+    public function with(...$properties):self
     {
-      if ($property == 'parameters') {
-        return $this->parameterBag->all();
-      }
-      return $this->propertyBag->get($property);
+        $args = MergeUtility::arrayMerge($this->export(), $properties);
+        return new static(...$args);
     }
 
     /**
-     * Required for __get to work in twig templates.
+     * Get a policy definition from the policy.
      */
-    public function __isset($property)
+    public function getDefinition():PolicyDefinition
     {
-      if ($property == 'parameters') {
-        return true;
-      }
-      return $this->propertyBag->has($property);
+      return new PolicyDefinition(
+        name: $this->name,
+        parameters: $this->parameters->all(),
+        weight: $this->weight,
+        severity: $this->severity->value,
+        policy: $this
+      );
     }
 
-  /**
-   * Set policy property.
-   */
-    public function setProperty(string $property, $value)
+    /**
+     * {@inheritdoc}
+     */
+    public function export():array
     {
-        return $this->setProperties([$property => $value]);
-    }
-
-    public function setProperties(array $new_properties = [])
-    {
-
-        $data = $this->propertyBag->all();
-
-        foreach ($new_properties as $property => $value) {
-            $data[$property] = $value;
-        }
-
-        $processor = new Processor();
-        $configuration = new PolicyConfiguration();
-
-        try {
-          $policyData = $processor->processConfiguration(
-              $configuration,
-              ['policy' => $data]
-          );
-        }
-        catch (InvalidConfigurationException $e) {
-            throw new InvalidConfigurationException("Policy '{$data['name']}' configuration invalid: " . $e->getMessage());
-        }
-
-
-        // Parameters sit on their own DataBag.
-        if (isset($new_properties['parameters'])) {
-            $this->parameterBag->add($new_properties['parameters']);
-            unset($new_properties['parameters']);
-        }
-
-        $this->propertyBag->add($policyData);
-
-        if (isset($new_properties['class'])) {
-            try {
-              $reflect = new \ReflectionClass($policyData['class']);
-            }
-            catch (\ReflectionException $e) {
-              throw new UnavailablePolicyException("Policy {$data['name']} is not available. Class {$policyData['class']} does not exist.");
-            }
-        }
-
-        if (isset($new_properties['depends'])) {
-            $builder = function ($depends) {
-                return new Dependency($depends['expression'], $depends['on_fail'], $depends['syntax'], $depends['description']);
-            };
-            $this->dependencies = array_map($builder, $policyData['depends']);
-        }
-
-        if (!isset($this->severityCode)) {
-          $this->severityCode = Policy::SEVERITY_NORMAL;
-        }
-
-      // Map a severity value to its respective security code.
-        if (isset($new_properties['severity'])) {
-            switch ($policyData['severity']) {
-                case 'low':
-                    $this->severityCode = Policy::SEVERITY_LOW;
-                    break;
-                case 'normal':
-                    $this->severityCode = Policy::SEVERITY_NORMAL;
-                    break;
-                case 'high':
-                    $this->severityCode = Policy::SEVERITY_HIGH;
-                    break;
-                case 'critical':
-                    $this->severityCode = Policy::SEVERITY_CRITICAL;
-                    break;
-            }
-        }
-
-        return $this;
-    }
-
-    public function addParameter(string $key, $value)
-    {
-        return $this->parameterBag->set($key, $value);
-    }
-
-    public function addParameters(array $parameters)
-    {
-      return $this->parameterBag->add($parameters);
-    }
-
-    public function getParameter(string $key)
-    {
-      return $this->parameterBag->get($key);
-    }
-
-    public function getAllParameters()
-    {
-      return $this->parameterBag->all();
-    }
-
-  /**
-   * Get list of Drutiny\Policy\Dependency objects.
-   */
-    public function getDepends()
-    {
-        return $this->dependencies;
-    }
-
-    public function setSeverity(string $severity)
-    {
-        return $this->setProperty('severity', $severity);
-    }
-
-    public function getSeverity()
-    {
-        return $this->severityCode;
-    }
-
-    public function export()
-    {
-        $data = $this->propertyBag->all();
-        $data['parameters'] = $this->parameterBag->all();
+        $data = get_object_vars($this);
+        $data['type'] = $data['type']->value;
+        $data['severity'] = $data['severity']->value;
+        $data['parameters'] = $data['parameters']->all();
+        $data['build_parameters'] = $data['build_parameters']->all();
+        $data['chart'] = array_map(fn($c) => get_object_vars($c), $data['chart']);
+        $data['depends'] = array_map(fn($d) => $d->export(), $data['depends']);
+        $data['tags'] = array_map(fn ($t) => $t->name, $this->tags);
 
         // Fix Yaml::dump bug where it doesn't correctly split \r\n to multiple
         // lines.

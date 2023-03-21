@@ -4,6 +4,7 @@ namespace Drutiny\Console\Command;
 
 use Drutiny\Report\FilesystemFormatInterface;
 use Drutiny\Profile;
+use Drutiny\Profile\FormatDefinition;
 use Drutiny\Report\FormatFactory;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputInterface;
@@ -92,7 +93,7 @@ trait ReportingCommandTrait
       protected function getFormats(InputInterface $input, Profile $profile = null, FormatFactory $formatFactory):array
       {
         foreach ($input->getOption('format') as $format_option) {
-          $formats[$format_option] = $formatFactory->create($format_option, $profile->format[$format_option] ?? []);
+          $formats[$format_option] = $formatFactory->create($format_option, $profile->format[$format_option] ?? new FormatDefinition($format_option));
 
           if ($formats[$format_option] instanceof FilesystemFormatInterface) {
             $formats[$format_option]->setWriteableDirectory($input->getOption('report-dir'));

@@ -2,8 +2,7 @@
 
 namespace Drutiny\Report;
 
-use Drutiny\Profile;
-use Drutiny\AssessmentInterface;
+use Drutiny\Profile\FormatDefinition;
 
 interface FormatInterface
 {
@@ -20,12 +19,12 @@ interface FormatInterface
     /**
      * Set options for the format.
      */
-    public function setOptions(array $options = []):FormatInterface;
+    public function setDefinition(FormatDefinition $definition):FormatInterface;
 
     /**
      * Render the assessment into the format.
      */
-    public function render(Profile $profile, AssessmentInterface $assessment):FormatInterface;
+    public function render(Report $report):FormatInterface;
 
     /**
      * Write the format to the format medium (e.g. filesystem).

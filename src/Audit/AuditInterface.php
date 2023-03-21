@@ -2,6 +2,7 @@
 
 namespace Drutiny\Audit;
 
+use DateTimeInterface;
 use Drutiny\AuditResponse\AuditResponse;
 use Drutiny\Sandbox\Sandbox;
 use Drutiny\Policy;
@@ -106,4 +107,6 @@ interface AuditInterface
      * same class.
      */
     public function prepare(Policy $policy):void;
+
+    public function setReportingPeriod(DateTimeInterface $start, DateTimeInterface $end):self;
 }

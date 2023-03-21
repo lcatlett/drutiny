@@ -11,7 +11,7 @@ trait SerializableExportableTrait {
    */
   public function serialize(): string
   {
-    return serialize($this->__unserialize());
+    return serialize($this->__serialize());
   }
 
   /**

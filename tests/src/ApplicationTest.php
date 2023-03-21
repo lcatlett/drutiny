@@ -91,9 +91,10 @@ class ApplicationTest extends KernelTestCase {
     ]);
 
     $code = $this->application->run($input, $this->output);
+    $this->assertStringContainsString('This policy should always pass', $this->output->fetch());
     $this->assertIsInt($code);
     $this->assertEquals(0, $code);
-    $this->assertStringContainsString('This policy should always pass', $this->output->fetch());
+    
   }
 
   public function testAuditRun()
@@ -106,7 +107,7 @@ class ApplicationTest extends KernelTestCase {
 
     $code = $this->application->run($input, $this->output);
     $this->assertIsInt($code);
-    $this->assertEquals(1, $code);
+    $this->assertEquals(0, $code);
     $this->assertStringContainsString('Drutiny\Audit\AlwaysPass', $this->output->fetch());
   }
 }

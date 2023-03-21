@@ -4,7 +4,7 @@ namespace DrutinyTests;
 
 use Drutiny\Target\TargetInterface;
 use Drutiny\Target\TargetPropertyException;
-use Drutiny\Entity\EventDispatchedDataBag;
+use Drutiny\Entity\DataBag;
 use Drutiny\Target\DdevTarget;
 use Drutiny\Target\DrushTarget;
 use Drutiny\Target\LandoTarget;
@@ -31,11 +31,11 @@ class TargetTest extends KernelTestCase
         $target['a.b.c'] = 'foo';
 
         $this->assertIsString($target['a.b.c']);
-        $this->assertInstanceOf(EventDispatchedDataBag::class, $target['a.b']);
-        $this->assertInstanceOf(EventDispatchedDataBag::class, $target['a']);
+        $this->assertInstanceOf(DataBag::class, $target['a.b']);
+        $this->assertInstanceOf(DataBag::class, $target['a']);
         $this->assertIsString($target->a->b->c);
-        $this->assertInstanceOf(EventDispatchedDataBag::class, $target->a);
-        $this->assertInstanceOf(EventDispatchedDataBag::class, $target->a->b);
+        $this->assertInstanceOf(DataBag::class, $target->a);
+        $this->assertInstanceOf(DataBag::class, $target->a->b);
 
         try {
             $target['a.b'] = ['c' => 'bar'];
@@ -49,7 +49,7 @@ class TargetTest extends KernelTestCase
         $this->assertIsArray($target['a.b.d']);
         $this->assertIsArray($target->a->b->d);
         $this->assertIsString($target->a->b->d['e']);
-        $this->assertInstanceOf(EventDispatchedDataBag::class, $target['a.b']);
+        $this->assertInstanceOf(DataBag::class, $target['a.b']);
 
         $target['h.i'] = 'hi';
         $this->assertIsString($target['h.i']);
@@ -72,9 +72,9 @@ class TargetTest extends KernelTestCase
         $this->assertEquals($target['test.foo'], 'bar:baz', "Test using array reference syntax.");
         $this->assertEquals($target->test->foo, 'bar:baz', "Test using property reference syntax.");
         $this->assertEquals($target->getProperty('test.foo'), 'bar:baz', "Test using getProperty syntax.");
-        $this->assertInstanceOf(EventDispatchedDataBag::class, $target['test']);
-        $this->assertInstanceOf(EventDispatchedDataBag::class, $target->test);
-        $this->assertInstanceOf(EventDispatchedDataBag::class, $target->getProperty('test'));
+        $this->assertInstanceOf(DataBag::class, $target['test']);
+        $this->assertInstanceOf(DataBag::class, $target->test);
+        $this->assertInstanceOf(DataBag::class, $target->getProperty('test'));
 
         $this->assertInstanceOf(TargetInterface::class, $target);
         $this->assertEquals($target->getUri(), $uri);

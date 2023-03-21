@@ -4,6 +4,7 @@ namespace Drutiny\Report\Twig;
 
 use Drutiny\AssessmentInterface;
 use Drutiny\AuditResponse\AuditResponse;
+use Drutiny\Policy\Chart;
 use Twig\Environment;
 
 
@@ -21,26 +22,37 @@ class Helper {
   /**
    * Registered as a Twig filter to be used as: chart.foo|chart.
    */
-  public static function filterChart(array $chart)
+  public static function filterChart(Chart|null|array $chart):string
   {
+    if (is_null($chart)) {
+      return '';
+    }
+    if (is_array($chart)) {
+      $chart = Chart::fromArray($chart);
+    }
     $class = 'chart-unprocessed';
-    if (isset($chart['html-class'])) {
-        $class .= ' '.$chart['html-class'];
+    if (isset($chart->htmlClass)) {
+        $class .= ' '.$chart->htmlClass;
     }
     $element = '<div class="'.$class.'" ';
-    foreach ($chart as $name => $key) {
+    foreach (get_object_vars($chart) as $name => $key) {
+      $name = strtolower(preg_replace('/[A-Z]/', '-$0', $name));
       $value = is_array($key) ? implode(',', $key) : $key;
-      $element .= 'data-chart-'.$name . '="'.$value.'" ' ;
+      $element .= 'data-chart-'.$name . '='.json_encode($value).' ' ;
     }
     return $element . '></div>';
   }
 
-  public static function renderAuditReponse(Environment $twig, AuditResponse $response, AssessmentInterface $assessment)
+  public static function renderAuditReponse(Environment $twig, AuditResponse $response, AssessmentInterface $assessment):string
   {
+      // Irrelevant responses should be omitted from rendering.
+      if ($response->state->isIrrelevant()) {
+        return '';
+      }
       $globals = $twig->getGlobals();
       $template = 'report/policy/'.$response->getType().'.'.$globals['ext'].'.twig';
-      $globals['logger']->info("Rendering audit response for ".$response->getPolicy()->name.' with '.$template);
-      $globals['logger']->debug('Keys: ' . implode(', ', array_keys($response->getTokens())));
+      $globals['logger']->info("Rendering audit response for ".$response->policy->name.' with '.$template);
+      $globals['logger']->debug('Keys: ' . implode(', ', array_keys($response->tokens)));
       return $twig->render($template, [
         'audit_response' => $response,
         'assessment' => $assessment,

@@ -4,6 +4,7 @@ namespace Drutiny\Console\Command;
 
 use Drutiny\LanguageManager;
 use Drutiny\PolicyFactory;
+use Drutiny\Profile;
 use Drutiny\ProfileFactory;
 use Drutiny\Settings;
 use Symfony\Component\Console\Helper\ProgressBar;
@@ -86,7 +87,7 @@ class PolicyListCommand extends DrutinyBaseCommand
             'description' => '<options=bold>' . wordwrap($listedPolicy['title'], 50) . '</>',
             'name' => $listedPolicy['name'],
             'source' => implode(', ', $listedPolicy['sources']),
-            'profile_util' => count(array_filter($profiles, function ($profile) use ($listedPolicy) {
+            'profile_util' => count(array_filter($profiles, function (Profile $profile) use ($listedPolicy) {
                 return in_array($listedPolicy['name'], array_keys($profile->policies));
               })),
             );

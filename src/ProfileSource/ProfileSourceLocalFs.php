@@ -2,47 +2,38 @@
 
 namespace Drutiny\ProfileSource;
 
+use Drutiny\Attribute\AsSource;
 use Drutiny\LanguageManager;
 use Drutiny\Profile;
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drutiny\ProfileFactory;
+use Drutiny\Settings;
+use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Finder\Exception\DirectoryNotFoundException;
+use Symfony\Contracts\Cache\CacheInterface;
 
-class ProfileSourceLocalFs extends ProfileSource
+#[AsSource(name: 'localfs', weight: -10)]
+#[Autoconfigure(tags: ['profile.source'])]
+class ProfileSourceLocalFs extends AbstractProfileSource
 {
-    protected int $weight = -10;
-    protected Finder $finder;
-
-    public function __construct(Finder $finder, ContainerInterface $container)
+    public function __construct(protected Finder $finder, Settings $settings, AsSource $source, CacheInterface $cache, ProfileFactory $profileFactory)
     {
-        $this->finder = $finder
-          ->files()
-          ->in(DRUTINY_LIB)
-          ->name('*.profile.yml');
+        parent::__construct(source: $source, cache: $cache, profileFactory: $profileFactory);
+        $this->finder->files()->in(DRUTINY_LIB)->name('*.profile.yml');
 
         try {
-          $this->finder->in($container->getParameter('drutiny_config_dir'));
+          $this->finder->in($settings->get('profile.library.fs'));
         }
         catch (DirectoryNotFoundException $e) {
           // Ignore not finding an existing config dir.
         }
-
-        parent::__construct($container);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function getName():string
-    {
-        return 'localfs';
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getList(LanguageManager $languageManager):array
+    public function doGetList(LanguageManager $languageManager):array
     {
         $list = [];
         foreach ($this->finder as $file) {
@@ -63,10 +54,10 @@ class ProfileSourceLocalFs extends ProfileSource
         return $list;
     }
 
-  /**
-   * {@inheritdoc}
-   */
-    public function load(array $definition):Profile
+    /**
+     * {@inheritdoc}
+     */
+    protected function doLoad(array $definition):Profile
     {
       $filepath = $definition['filepath'];
 
@@ -74,6 +65,6 @@ class ProfileSourceLocalFs extends ProfileSource
       $info['name'] = str_replace('.profile.yml', '', pathinfo($filepath, PATHINFO_BASENAME));
       $info['uuid'] = $filepath;
 
-      return parent::load($info);
+      return parent::doLoad($info);
     }
 }

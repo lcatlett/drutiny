@@ -5,15 +5,15 @@ namespace Drutiny;
 use DateTime;
 use Drutiny\Audit\AuditInterface;
 use Drutiny\Audit\AuditValidationException;
-use Drutiny\Audit\TwigEvaluator;
+use Drutiny\Audit\SyntaxProcessor;
 use Drutiny\AuditResponse\AuditResponse;
+use Drutiny\AuditResponse\State;
 use Drutiny\Entity\DataBag;
 use Drutiny\Policy\DependencyException;
 use Drutiny\Sandbox\Sandbox;
 use Drutiny\Target\TargetInterface;
 use Drutiny\Upgrade\AuditUpgrade;
 use Drutiny\Entity\Exception\DataNotFoundException;
-use Drutiny\Helper\ExpressionLanguageTranslation;
 use Drutiny\Policy\Dependency;
 use Drutiny\Sandbox\ReportingPeriodTrait;
 use Drutiny\Target\TargetPropertyException;
@@ -50,7 +50,7 @@ abstract class Audit implements AuditInterface
         protected ContainerInterface $container,
         protected TargetInterface $target,
         protected LoggerInterface $logger,
-        protected TwigEvaluator $twigEvaluator,
+        protected SyntaxProcessor $syntaxProcessor,
         protected ProgressBar $progressBar,
         protected CacheInterface $cache,
         protected EventDispatcher $eventDispatcher,
@@ -65,7 +65,6 @@ abstract class Audit implements AuditInterface
             'parameters' => new DataBag(),
         ]);
         $this->configure();
-        $this->twigEvaluator->setContext('target', $this->target);
         $this->verbosity = $output->getVerbosity();
     }
 
@@ -99,7 +98,7 @@ abstract class Audit implements AuditInterface
      */
     public function prepare(Policy $policy):void
     {
-        
+
     }
 
     /**
@@ -117,7 +116,6 @@ abstract class Audit implements AuditInterface
             }
         }
         $this->policy = $policy;
-        $response = new AuditResponse($policy);
         $execution_start_time = new DateTime();
         $this->logger->info('Auditing '.$policy->name.' with '.get_class($this));
         $outcome = AuditInterface::ERROR;
@@ -126,10 +124,9 @@ abstract class Audit implements AuditInterface
                 throw new AuditValidationException("Target of type ".get_class($this->target)." is not suitable for audit class ".get_class($this). " with policy: ".$policy->name);
             }
 
-            $dependencies = $policy->getDepends();
-            $this->progressBar->setMaxSteps(count($dependencies) + $this->progressBar->getMaxSteps());
+            $this->progressBar->setMaxSteps(count($policy->depends) + $this->progressBar->getMaxSteps());
             // Ensure policy dependencies are met.
-            foreach ($policy->getDepends() as $dependency) {
+            foreach ($policy->depends as $dependency) {
                 // Throws DependencyException if dependency is not met.
                 $this->executeDependency($dependency);
                 // $dependency->execute($this);
@@ -137,7 +134,7 @@ abstract class Audit implements AuditInterface
             }
 
             // Build parameters to be used in the audit.
-            foreach ($policy->build_parameters ?? [] as $key => $value) {
+            foreach ($policy->build_parameters->all() as $key => $value) {
                 try {
                     $this->logger->debug(__CLASS__ . ':build_parameters('.$key.'): ' . $value);
                     $value = $this->evaluate($value, 'twig');
@@ -147,22 +144,23 @@ abstract class Audit implements AuditInterface
 
                     // Set the parameter to be available in the audit().
                     if ($this->definition->hasArgument($key)) {
-                        $policy->addParameter($key, $value);
+                        $parameters = $policy->parameters->all();
+                        $parameters[$key] = $value;
+                        $policy = $policy->with(['parameters' => $parameters]);
                     }
                 } catch (RuntimeError $e) {
                     throw new \Exception("Failed to create key: $key. Encountered Twig runtime error: " . $e->getMessage());
                 }
             }
 
-            $input = new ArrayInput($policy->getAllParameters(), $this->definition);
+            $input = new ArrayInput($policy->parameters->all(), $this->definition);
             $this->dataBag->get('parameters')->add($input->getArguments());
             $this->dataBag->add($input->getArguments());
 
             // Run the audit over the policy.
             $outcome = $this->audit(new Sandbox($this));
         } catch (DependencyException $e) {
-            $outcome = AuditInterface::ERROR;
-            $outcome = $e->getDependency()->getFailBehaviour();
+            $outcome = $e->getDependency()->onFail->getAuditOutcome();
             $message = $e->getMessage();
             $this->set('exception', $message);
             $this->set('exception_type', get_class($e));
@@ -204,7 +202,7 @@ abstract class Audit implements AuditInterface
             ]);
             $this->logger->warning($e->getTraceAsString());
             $this->logger->warning($policy->name . ': ' . get_class($this));
-            $this->logger->warning(print_r($policy->getAllParameters(), 1));
+            $this->logger->warning(print_r($policy->parameters->all(), 1));
 
             $helper = AuditUpgrade::fromAudit($this);
             $helper->addParameterFromException($e);
@@ -227,7 +225,11 @@ abstract class Audit implements AuditInterface
             $tokens = $this->dataBag->export();
             $this->logger->debug("Tokens:\n".Yaml::dump($tokens, 4, 4, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK));
             // Set the response.
-            $response->set($outcome ?? AuditInterface::ERROR, $tokens);
+            $response = new AuditResponse(
+                policy: $this->policy,
+                state: State::from((int) $outcome ?? State::ERROR),
+                tokens: $tokens
+            );
 
             $this->eventDispatcher->dispatch(new GenericEvent('audit', [
               'class' => get_class($this),
@@ -291,23 +293,7 @@ abstract class Audit implements AuditInterface
      */
     public function evaluate(string $expression, $language = 'expression_language', array $contexts = []):mixed
     {
-        try {
-            if ($language == 'expression_language') {
-                $translation = new ExpressionLanguageTranslation($old = $expression);
-                $expression = $translation->toTwigSyntax();
-                $this->logger->warning("Expression language is deprecreated. Syntax will be translated to Twig. '$old' => '$expression'.");
-            }
-            $contexts = array_merge($contexts, $this->getContexts());
-            return $this->twigEvaluator->execute($expression, $contexts);
-        } catch (\Exception $e) {
-            $this->logger->error("Evaluation failure {syntax}: {expression}: {message}", [
-            'syntax' => $language,
-            'expression' => $expression,
-            'exception' => get_class($e),
-            'message' => $e->getMessage(),
-          ]);
-            throw $e;
-        }
+        return $this->syntaxProcessor->evaluate($expression, $language, array_merge($contexts, $this->getContexts()));
     }
 
     /**
@@ -315,29 +301,7 @@ abstract class Audit implements AuditInterface
      */
     public function interpolate(string $string, array $contexts = []): string
     {
-        return $this->_interpolate($string, array_merge($contexts, $this->getContexts()));
-    }
-
-    /**
-     * Helper function for the public interpolate function.
-     */
-    private function _interpolate(string $string, iterable $vars, $key_prefix = ''): string
-    {
-        foreach ($vars as $key => $value) {
-            if (is_iterable($value)) {
-                $string = $this->_interpolate($string, $value, $key.'.');
-            }
-
-            $token = '{'.$key_prefix.$key.'}';
-            if (false === strpos($string, $token)) {
-                continue;
-            }
-
-            $value = (string) $value;
-            $string = str_replace($token, $value, $string);
-        }
-
-        return $string;
+        return $this->syntaxProcessor->interpolate($string, array_merge($contexts, $this->getContexts()));
     }
 
     /**

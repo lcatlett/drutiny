@@ -56,7 +56,7 @@ class TargetMetadataCommand extends DrutinyBaseCommand
         $this->progressBar->start();
         $this->progressBar->setMessage("Loading target..");
         $this->progressBar->advance();
-
+        
         $target = $this->targetFactory->create(
           $input->getArgument('target'), 
           $input->getOption('uri')

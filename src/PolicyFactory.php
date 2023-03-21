@@ -2,34 +2,35 @@
 
 namespace Drutiny;
 
-use Drutiny\PolicySource\PolicySourceInterface;
-use Drutiny\PolicySource\PolicyStorage;
+use Drutiny\Attribute\AsSource;
 use Drutiny\Policy\UnavailablePolicyException;
 use Drutiny\Policy\UnknownPolicyException;
 use Drutiny\LanguageManager;
-use Drutiny\Plugin\PluginRequiredException;
-use Symfony\Component\DependencyInjection\ContainerAwareTrait;
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drutiny\PolicySource\PolicySourceInterface;
+use Drutiny\PolicySource\PolicyStorage;
+use Exception;
+use InvalidArgumentException;
+use Psr\Container\ContainerInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Psr\Log\LoggerInterface;
+use ReflectionClass;
 
 class PolicyFactory
 {
-    use ContainerAwareTrait;
 
-    protected LanguageManager $languageManager;
-    protected ProgressBar $progress;
-    protected LoggerInterface $logger;
+    public readonly array $sources;
 
-    public function __construct(ContainerInterface $container, LoggerInterface $logger, LanguageManager $languageManager, ProgressBar $progress)
+    public function __construct(
+        protected ContainerInterface $container, 
+        protected LoggerInterface $logger, 
+        protected LanguageManager $languageManager, 
+        protected ProgressBar $progress,
+        protected Settings $settings)
     {
-        $this->setContainer($container);
         if (method_exists($logger, 'withName')) {
-            $logger = $logger->withName('policy.factory');
+            $this->logger = $logger->withName('policy.factory');
         }
-        $this->logger = $logger;
-        $this->languageManager = $languageManager;
-        $this->progress = $progress;
+        $this->sources = $this->buildSources();
     }
 
     /**
@@ -52,16 +53,17 @@ class PolicyFactory
         unset($definition['sources']);
 
         try {
-            $policy = $this->getSource($definition['source'])->load($definition);
-            $policy->setProperty('source', $definition['source']);
-            return $policy;
-        } catch (\InvalidArgumentException $e) {
+            return $this->getSource($definition['source'])->load($definition);
+        } catch (InvalidArgumentException $e) {
             $this->logger->warning($e->getMessage());
             throw new UnavailablePolicyException("$name requires {$list[$name]['class']} but is not available in this environment.");
         }
     }
 
-    public function getPolicyListByKeyword($keyword):array
+    /**
+     * Load policies by a keyword search.
+     */
+    public function getPolicyListByKeyword(string $keyword):array
     {
         $results = [];
         foreach ($this->getPolicyList() as $listedPolicy) {
@@ -95,13 +97,15 @@ class PolicyFactory
 
         $policy_list = [];
         // Add steps to the progress bar.
-        $this->progress->setMaxSteps($this->progress->getMaxSteps() + count($this->getSources()));
-        foreach ($this->getSources() as $source) {
+        $this->progress->setMaxSteps($this->progress->getMaxSteps() + count($this->sources));
+        foreach ($this->sources as $ref) {
+            $source = $this->getSource($ref->name);
+
             try {
                 $items = $source->getList($this->languageManager);
-                $this->logger->notice($source->getName() . " has " . count($items) . " polices.");
+                $this->logger->notice($ref->name . " has " . count($items) . " polices.");
                 foreach ($items as $name => $item) {
-                    $item['source'] = $source->getName();
+                    $item['source'] = $ref->name;
 
                     if (isset($policy_list[$name])) {
                         $item['sources'] = $policy_list[$name]['sources'] ?? [];
@@ -111,7 +115,7 @@ class PolicyFactory
                 }
             } catch (\Exception $e) {
                 $this->logger->error(strtr("Failed to load policies from source: @name: @error", [
-                '@name' => $source->getName(),
+                '@name' => $ref->name,
                 '@error' => $e->getMessage(),
                 ]));
             }
@@ -137,8 +141,7 @@ class PolicyFactory
      */
     public function getSourcePolicyList(string $source): array
     {
-        return $this->getSource($source)
-        ->getList($this->languageManager);
+        return $this->getSource($source)->getList($this->languageManager);
     }
 
     /**
@@ -146,32 +149,22 @@ class PolicyFactory
      *
      * @return array of PolicySourceInterface objects.
      */
-    public function getSources()
+    private function buildSources():array
     {
-        static $sources;
-        if (!empty($sources)) {
-            return $sources;
-        }
-
         $sources = [];
-        foreach ($this->container->findTaggedServiceIds('policy.source') as $id => $info) {
-            if (strpos($id, 'PolicyStorage') !== false) {
-                continue;
+        foreach ($this->settings->get('policy.source.registry') as $name => $class) {
+            $reflectionAttributes = (new ReflectionClass($class))->getAttributes(AsSource::class);
+            if (empty($reflectionAttributes)) {
+                throw new Exception("PolicySource '$name' is missing the AsSource attribute.");
             }
-            try {
-                $sources[] = new PolicyStorage($this->container->get($id), $this->container, $this->container->get('Drutiny\LanguageManager'));
-            } catch (PluginRequiredException $e) {
-                $this->logger->warning("Cannot load policy source: $id: " . $e->getMessage());
-            }
+            $sources[$class] = $reflectionAttributes[0]->newInstance();
         }
 
-        // If multiple sources provide the same policy by name, then the policy from
-        // the first source in the list will by used.
         usort($sources, function ($a, $b) {
-            if ($a->getWeight() == $b->getWeight()) {
+            if ($a->weight == $b->weight) {
                 return 0;
             }
-            return $a->getWeight() > $b->getWeight() ? 1 : -1;
+            return $a->weight > $b->weight ? 1 : -1;
         });
 
         return $sources;
@@ -180,19 +173,12 @@ class PolicyFactory
     /**
      * Load a single source.
      */
-    public function getSource($name): PolicySourceInterface
+    public function getSource(string $name): PolicySourceInterface
     {
-        foreach ($this->getSources() as $source) {
-            if ($source->getName() == $name) {
-                return $source;
-            }
-
-            // Attempt lookup without formatting.
-            $raw_name = preg_replace('/<[^>]+>/', '', $source->getName());
-            if ($raw_name == $name) {
-                return $source;
-            }
+        $registry = $this->settings->get('policy.source.registry');
+        if (!isset($registry[$name])) {
+            throw new Exception("Policy source '$name' does not exist.");
         }
-        throw new \Exception("No such source found: $name.");
+        return $this->container->get($registry[$name]);
     }
 }

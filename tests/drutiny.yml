@@ -1,11 +1,15 @@
 parameters:
   cache.directory: .cache/phpunit
+  policy.sources.fs: .cache/phpunit
+  profile.sources.fs: .cache/phpunit
   cache.ttl: 0
+  sources.ttl: 0
   twig.cache: false #~/.drutiny/cache/twig
   twig.debug: true
   twig.strict: true
   phpunit.testing: true
   async.forks: false
+  profile.allow_list: [ empty, test ]
 
 services:
   _defaults:

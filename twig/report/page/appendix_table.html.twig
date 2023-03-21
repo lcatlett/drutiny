@@ -13,7 +13,7 @@
         {% for result in assessment.results|filter(r => r.getType != 'notice') %}
           <tr class="{% if result.isFailure %}has-failure{% elseif result.isSuccessful %}has-success{% elseif result.hasWarning %}has-warning{% else %}has-error{% endif %}">
             <th><a href="#{{ result.policy.name }}">{{ result.policy.title }}</a></th>
-            <td>{{ result.policy.severity }}</td>
+            <td>{{ result.policy.severity.value|capitalize }}</td>
             <td class="control-label">{{ result.type|split('-')|join(' ')|title  }}</td>
           </tr>
         {% endfor %}

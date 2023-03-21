@@ -16,12 +16,12 @@ trait ReportingPeriodTrait
     /**
      * @var DateTime The begining of the reporting period.
      */
-    protected DateTimeInterface $reportingPeriodStart;
+    public readonly DateTimeInterface $reportingPeriodStart;
 
     /**
      * @var DateTime The end of the reporting period.
      */
-    protected DateTimeInterface $reportingPeriodEnd;
+    public readonly DateTimeInterface $reportingPeriodEnd;
 
     public function setReportingPeriod(DateTimeInterface $start, DateTimeInterface $end):self
     {
@@ -47,6 +47,9 @@ trait ReportingPeriodTrait
         return $this;
     }
 
+    /**
+     * @deprecated use reportingPeriodStart property
+     */
     public function getReportingPeriodStart():DateTimeInterface
     {
         if (empty($this->reportingPeriodStart)) {
@@ -55,6 +58,9 @@ trait ReportingPeriodTrait
         return $this->reportingPeriodStart;
     }
 
+    /**
+     * @deprecated use reportingPeriodEnd property.
+     */
     public function getReportingPeriodEnd():DateTimeInterface
     {
         if (empty($this->reportingPeriodEnd)) {

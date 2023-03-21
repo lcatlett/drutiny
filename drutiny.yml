@@ -10,6 +10,10 @@ parameters:
   drutiny_releases_dir: '%drutiny_config_dir%/releases'
   drutiny_release_bin: '%drutiny_config_dir%/bin/drutiny'
   policy.library.fs: '%drutiny_config_dir%/policy'
+  policy.sources.fs: '%drutiny_config_dir%/sources/policy'
+  profile.sources.fs: '%drutiny_config_dir%/sources/profile'
+  profile.library.fs: '%drutiny_config_dir%/profile'
+  sources.ttl: 2592000
   cache.directory: '%drutiny_config_dir%/cache'
   cache.ttl: 3600
   cache.namespace: 'drutiny-%instance_id%'
@@ -54,16 +58,6 @@ services:
       Symfony\Component\Console\Command\Command:
         tags: [command]
 
-      # Drutiny pulls any class tagged as "profile.source" as a source to load
-      # profiles from.
-      Drutiny\ProfileSource\ProfileSourceInterface:
-        tags: [profile.source]
-
-      # Drutiny pulls any class tagged as "policy.source" as a source to load
-      # policies from.
-      Drutiny\PolicySource\PolicySourceInterface:
-        tags: [policy.source]
-
       Drutiny\Target\Service\ServiceInterface:
         tags: [service]
 
@@ -101,37 +95,43 @@ services:
     Symfony\Component\DependencyInjection\TaggedContainerInterface:
       alias: service_container
     
-    async:
-        shared: false
-        class: Async\ForkManager
-        calls:
-           - [setMaxForks, ['%async.forks%']]
-           - [setWaitTimeout, ['%async.timeout%']]
-           - [setAsync, ['%async.enabled%']]
-
     Async\ForkManager:
-      alias: 'async'
-
-    cache.array:
-        class: Symfony\Component\Cache\Adapter\ArrayAdapter
-        arguments: ['%cache.ttl%']
-        calls:
-          - [setLogger, ['@logger']]
-
-    cache.chain:
-        class: Symfony\Component\Cache\Adapter\ChainAdapter
-        arguments: [['@cache.filesystem'], '%cache.ttl%']
+      shared: false
+      class: Async\ForkManager
+      calls:
+          - [setMaxForks, ['%async.forks%']]
+          - [setWaitTimeout, ['%async.timeout%']]
+          - [setAsync, ['%async.enabled%']]
 
     cache.filesystem:
-        class: Symfony\Component\Cache\Adapter\FilesystemAdapter
-        arguments: ['%cache.namespace%', '%cache.ttl%', '%cache.directory%']
-        calls:
-          - [setLogger, ['@logger']]
-          - [prune]
+      tags: ['cache']
+      class: Symfony\Component\Cache\Adapter\FilesystemAdapter
+      arguments: ['%cache.namespace%', '%cache.ttl%', '%cache.directory%']
+      calls:
+        - [setLogger, ['@logger']]
+        - [prune]
+
     cache:
       alias: cache.filesystem
 
+    policy.store:
+      tags: ['source.cache']
+      class: Symfony\Component\Cache\Adapter\FilesystemAdapter
+      arguments: ['policy.store', '%sources.ttl%', '%policy.sources.fs%']
+      calls:
+        - [setLogger, ['@logger']]
+        - [prune]
+
+    profile.store:
+      tags: ['source.cache']
+      class: Symfony\Component\Cache\Adapter\FilesystemAdapter
+      arguments: ['profile.store', '%sources.ttl%', '%profile.sources.fs%']
+      calls:
+        - [setLogger, ['@logger']]
+        - [prune]
+
     cache.global:
+      tags: ['cache']
       class: Symfony\Component\Cache\Adapter\FilesystemAdapter
       arguments: [drutiny, '%cache.ttl%', '%cache.directory%']
       calls:
@@ -155,18 +155,15 @@ services:
       class: Drutiny\Config\ConfigFile
       arguments: ['%state.filepath%']
 
+    # This is just to fool the autoloader. It is always overridden by compiler passes.
     Drutiny\Config\ConfigInterface:
       alias: 'config'
 
     # DomainList provider using YAML files.
     # This is manually mentioned to associate the name "yaml" with the
     # DomainListInterface provider.
-    domain_list.yaml:
-        class: Drutiny\DomainList\DomainListYamlFile
+    Drutiny\DomainList\DomainListYamlFile:
         tags: [domain_list]
-
-    domain.source:
-        class: Drutiny\DomainSource
 
     event_dispatcher:
         class: Symfony\Component\EventDispatcher\EventDispatcher
@@ -176,11 +173,11 @@ services:
         - [setDispatcher, ['@event_dispatcher']]
 
     Drutiny\Audit\TwigEvaluator:
+    Drutiny\Audit\SyntaxProcessor:
     Drutiny\Event\EventSubscriber:
 
     # A factory class for producing a reporting format instance.
-    format.factory:
-      class: Drutiny\Report\FormatFactory
+    Drutiny\Report\FormatFactory:
 
     # The Drutiny Guzzle HTTP factory.
     http.client:
@@ -363,13 +360,13 @@ services:
         resource: 'src/*'
         exclude:
           - 'src/{ExpressionFunction,DependencyInjection,Entity,Migrations,Tests,Kernel.php}'
-          
           # Exclude audit classes from dependency injection. See Drutiny\AuditFactory.
           - src/Audit/*
           - src/Http/Audit/*
           - src/Plugin/Drupal7/Audit/*
           - src/Plugin/Drupal8/Audit/*
-
+          - src/Policy.php
+          - src/Profile.php
           - src/Config/Config.*
           - src/Report/Backport/*
           - src/Event/*
@@ -382,18 +379,11 @@ services:
     Drutiny\Entity\DataBag:
       shared: false
 
-    Drutiny\Entity\EventDispatchedDataBag:
-      shared: false
-
     Drutiny\Config\ConfigFile:
       alias: config
 
     Drutiny\Assessment:
       shared: false
-
-    Drutiny\PolicySource\PolicyStorage:
-      autowire: false
-      tags: []
 
     assessment:
       alias: Drutiny\Assessment

@@ -62,7 +62,6 @@ class DependencyTest extends KernelTestCase {
     }
 
     protected function getPolicyWithDepends(...$expressions):Policy {
-        $policy = new Policy;
         $depends = [];
         foreach ($expressions as $expression) {
             $depends[] = [
@@ -72,7 +71,7 @@ class DependencyTest extends KernelTestCase {
             ];
         }
         // Set required fields.
-        $policy->setProperties([
+        $policy = new Policy(...[
             'uuid' => __FUNCTION__,
             'name' => __FUNCTION__,
             'title' => __FUNCTION__,
@@ -80,6 +79,7 @@ class DependencyTest extends KernelTestCase {
             'failure' => 'Failure message',
             'success' => 'Success message',
             'class' => 'Drutiny\Audit\AbstractAnalysis',
+            'source' => 'phpunit',
             'parameters' => [
                 'expression' => 'true'
             ],

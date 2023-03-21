@@ -2,11 +2,11 @@
 
 namespace Drutiny\Console\Command;
 
-use Drutiny\Assessment;
 use Drutiny\LanguageManager;
 use Drutiny\PolicyFactory;
 use Drutiny\ProfileFactory;
 use Drutiny\Report\FormatFactory;
+use Drutiny\Report\ReportFactory;
 use Drutiny\Target\TargetFactory;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
@@ -28,7 +28,7 @@ class PolicyAuditCommand extends DrutinyBaseCommand
     protected ProfileFactory $profileFactory,
     protected PolicyFactory $policyFactory,
     protected TargetFactory $targetFactory,
-    protected Assessment $assessment,
+    protected ReportFactory $reportFactory,
     protected FormatFactory $formatFactory,
     protected LoggerInterface $logger,
     protected ProgressBar $progressBar,
@@ -92,11 +92,26 @@ class PolicyAuditCommand extends DrutinyBaseCommand
 
         $name = $input->getArgument('policy');
 
+        // Setup any parameters for the check.
+        $parameters = [];
+        foreach ($input->getOption('set-parameter') as $option) {
+            list($key, $value) = explode('=', $option, 2);
+            // Using Yaml::parse to ensure datatype is correct.
+            $parameters[$key] = Yaml::parse($value);
+        }
+
+        $policy_definition = [$name => [
+          'name' => $name,
+          'parameters' => $parameters
+        ]];
+
         $profile = $this->profileFactory->create([
           'title' => 'Policy audit: ' . $name,
           'name' => '_policy_audit',
           'uuid' => '_policy_audit',
+          'source' => 'policy:audit',
           'description' => 'Wrapper profile for policy:audit',
+          'policies' => $policy_definition,
           'format' => [
             'terminal' => [
               'content' => "
@@ -107,19 +122,6 @@ class PolicyAuditCommand extends DrutinyBaseCommand
           ]
         ]);
 
-        // Setup any parameters for the check.
-        $parameters = [];
-        foreach ($input->getOption('set-parameter') as $option) {
-            list($key, $value) = explode('=', $option, 2);
-            // Using Yaml::parse to ensure datatype is correct.
-            $parameters[$key] = Yaml::parse($value);
-        }
-
-        $profile->addPolicies([$name => [
-          'name' => $name,
-          'parameters' => $parameters
-        ]]);
-
         // Setup the target.
         $target = $this->targetFactory->create($input->getArgument('target'), $input->getOption('uri'));
 
@@ -128,28 +130,24 @@ class PolicyAuditCommand extends DrutinyBaseCommand
           $target->setUri($uri);
         }
 
-        $result = [];
-
         $profile->setReportingPeriod($this->getReportingPeriodStart($input), $this->getReportingPeriodEnd($input));
 
         $policies = [];
         $this->progressBar->setMessage("Loading policy definitions...");
-        foreach ($profile->getAllPolicyDefinitions() as $definition) {
+        foreach ($profile->policies as $definition) {
             $policies[] = $definition->getPolicy($this->policyFactory);
         }
 
         $this->progressBar->setMessage("Assessing target...");
 
-        $this->assessment
-          ->setUri($uri)
-          ->assessTarget($target, $policies, $profile->getReportingPeriodStart(), $profile->getReportingPeriodEnd());
+        $report = $this->reportFactory->create($profile, $target);
 
         $this->progressBar->finish();
         $this->progressBar->clear();
 
         foreach ($this->getFormats($input, $profile, $this->formatFactory) as $format) {
             $format->setNamespace($this->getReportNamespace($input, $uri));
-            $format->render($profile, $this->assessment);
+            $format->render($report);
             foreach ($format->write() as $location) {
               $output->writeln("Policy Audit written to $location.");
             }
@@ -164,7 +162,7 @@ class PolicyAuditCommand extends DrutinyBaseCommand
         $this->logger->info("Exiting with max severity code.");
 
         // Return the max severity as the exit code.
-        $exit_code = $this->assessment->getSeverityCode();
+        $exit_code = $report->severity->getWeight();
 
         return $exit_code >= $exit_severity ? $exit_code : 0;
     }

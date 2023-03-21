@@ -2,9 +2,11 @@
 
 namespace Drutiny;
 
+use Drutiny\Attribute\AsSource;
 use Drutiny\Console\Application;
 use Drutiny\DependencyInjection\AddConsoleCommandPass;
 use Drutiny\DependencyInjection\AddPluginCommandsPass;
+use Drutiny\DependencyInjection\AddSourcesCachePass;
 use Drutiny\DependencyInjection\InstalledPluginPass;
 use Drutiny\DependencyInjection\PluginArgumentsPass;
 use Drutiny\DependencyInjection\TagCollectionPass;
@@ -22,6 +24,7 @@ use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\EventDispatcher\DependencyInjection\RegisterListenersPass;
 use Symfony\Component\EventDispatcher\GenericEvent;
 use Drutiny\DependencyInjection\TwigLoaderPass;
+use Drutiny\DependencyInjection\UseServiceAttributePass;
 use Psr\EventDispatcher\StoppableEventInterface;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
@@ -143,13 +146,19 @@ class Kernel
         $container->addCompilerPass(new RegisterListenersPass('event_dispatcher', 'kernel.event_listener', 'drutiny.event_subscriber'));
         $container->addCompilerPass(new TwigLoaderPass);
         $container->addCompilerPass(new AddConsoleCommandPass);
+        $container->addCompilerPass(new TagCollectionPass('cache', 'cache.registry'));
+        $container->addCompilerPass(new TagCollectionPass('source.cache', 'source.cache.registry'));
         $container->addCompilerPass(new TagCollectionPass('format', 'format.registry'));
         $container->addCompilerPass(new TagCollectionPass('service', 'service.registry'));
         $container->addCompilerPass(new TagCollectionPass('target', 'target.registry'));
+        $container->addCompilerPass(new TagCollectionPass('policy.source', 'policy.source.registry', AsSource::class));
+        $container->addCompilerPass(new TagCollectionPass('profile.source', 'profile.source.registry', AsSource::class));
         $container->addCompilerPass(new PluginArgumentsPass());
         $container->addCompilerPass(new TwigEvaluatorPass());
         $container->addCompilerPass(new InstalledPluginPass(), PassConfig::TYPE_OPTIMIZE);
         $container->addCompilerPass(new AddPluginCommandsPass(), PassConfig::TYPE_OPTIMIZE);
+        $container->addCompilerPass(new AddSourcesCachePass());
+        $container->addCompilerPass(new UseServiceAttributePass());
 
         foreach ($this->compilers as [$pass, $type, $priority]) {
             $container->addCompilerPass($pass, $type, $priority);

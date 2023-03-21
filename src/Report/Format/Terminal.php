@@ -2,11 +2,10 @@
 
 namespace Drutiny\Report\Format;
 
-use Drutiny\Profile;
-use Drutiny\AssessmentInterface;
 use Drutiny\Report\FormatInterface;
 use Fiasco\SymfonyConsoleStyleMarkdown\Renderer;
 use Drutiny\Attribute\AsFormat;
+use Drutiny\Report\Report;
 
 #[AsFormat(
     name: 'terminal',
@@ -19,15 +18,15 @@ class Terminal extends Markdown
      */
     public function setDependencyReport()
     {
-      $this->options['content'] = $this->loadTwigTemplate('report/dependency');
+      $this->definition = $this->definition->with(content: $this->loadTwigTemplate('report/dependency'));
     }
 
     /**
      * {@inheritdoc}
      */
-    public function render(Profile $profile, AssessmentInterface $assessment):FormatInterface
+    public function render(Report $report):FormatInterface
     {
-        parent::render($profile, $assessment);
+        parent::render($report);
         $this->buffer->write(Renderer::createFromMarkdown($this->buffer->fetch()));
         return $this;
     }

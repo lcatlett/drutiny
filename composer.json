@@ -16,6 +16,7 @@
       "ext-pcntl": "*"
     },
     "require": {
+        "cebe/php-openapi": "^1.7",
         "composer/semver": "^1.4.2",
         "erusev/parsedown": "^1.6.3",
         "fiasco/async": "^4.0-beta1",
@@ -59,6 +60,7 @@
     },
     "scripts": {
       "docs": "docker run --rm -it -p 8000:8000 -v ${PWD}:/docs squidfunk/mkdocs-material",
-      "docs:build": "docker run --rm -it -v ${PWD}:/docs squidfunk/mkdocs-material build"
+      "docs:build": "docker run --rm -it -v ${PWD}:/docs squidfunk/mkdocs-material build",
+      "openapi-spec:build": "Drutiny\\Helper\\OpenApi::writeSpec"
     }
 }

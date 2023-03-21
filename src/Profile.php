@@ -2,234 +2,145 @@
 
 namespace Drutiny;
 
-use Drutiny\Config\ProfileConfigurationTrait;
-use Drutiny\Entity\PolicyOverride;
-use Drutiny\Entity\StrictEntity;
+use Drutiny\Attribute\ArrayType;
+use Drutiny\Attribute\Description;
+use Drutiny\Helper\MergeUtility;
+use Drutiny\Policy\Dependency;
+use Drutiny\Profile\FormatDefinition;
+use Drutiny\Profile\PolicyDefinition;
 use Drutiny\Sandbox\ReportingPeriodTrait;
-use Drutiny\Entity\Exception\DataNotFoundException;
+use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 
-class Profile extends StrictEntity
+#[Autoconfigure(autowire:false)]
+class Profile
 {
     use ReportingPeriodTrait;
-    use ProfileConfigurationTrait;
-    public const ENTITY_NAME = 'profile';
 
-    protected bool $reportPerSite = false;
-    protected Profile $parent;
-    protected bool $compiled = false;
-    protected array $policyOverrides = [];
-    protected array $dependencies = [];
-    protected array $includes = [];
-    protected array $bypassPropertyValidationOnSet = ['include', 'policies'];
+    #[Description('A list of policies that this profile runs.')]
+    #[ArrayType('keyed', PolicyDefinition::class)]
+    public readonly array $policies;
 
-    /**
-     * {@inheritdoc}
-     */
-    protected function setPropertyData($property, $value)
+    #[Description('A list of policies that must pass for this profile to be applicable against a given target.')]
+    #[ArrayType('keyed', PolicyDefinition::class)]
+    public readonly array $dependencies;
+
+    #[Description('An array for formats with repspective properties.')]
+    #[ArrayType('keyed', FormatDefinition::class)]
+    public readonly array $format;
+
+    public function __construct(
+        #[Description('The human readable name of the profile.')]
+        public readonly string $title,
+
+        #[Description('The machine-name of the profile.')]
+        public readonly string $name,
+
+        #[Description('Unique identifier such as a URL.')]
+        public readonly string $uuid,
+
+        #[Description('Where the profile is sourced from.')]
+        public readonly string $source,
+
+        #[Description('A description why the profile is valuable.')]
+        public readonly string $description,
+
+        #[Description('Language code')]
+        public readonly string $language = 'en',
+
+        array $policies = [],
+        array $dependencies = [],
+        public readonly array $excluded_policies = [],
+        array $format = ['terminal' => []],
+    )
     {
-        switch ($property) {
-        case 'dependencies':
-          $this->setDependencies($value);
-          break;
-
-        case 'policies':
-          $this->setPolicies($value);
-          break;
-
-        case 'include':
-          foreach ($value as $include) {
-              $this->addInclude($include);
-          }
-          break;
-
-        default:
-          return parent::setPropertyData($property, $value);
-      }
-        return $this;
+        $this->policies = $this->buildPolicyDefinitions($policies);
+        $this->dependencies = $this->buildPolicyDefinitions($dependencies);
+        $this->format = $this->buildFormatDefinitions($format);
     }
 
     /**
-     * Set the policy definitions.
+     * Produce profile object variation with altered properties.
      */
-    public function setPolicies(array $policy_definitions): Profile
+    public function with(...$properties):self
     {
-        $this->dataBag->set('policies', []);
-        return $this->addPolicies($policy_definitions);
+        $args = MergeUtility::arrayMerge($this->export(), $properties);
+        return new static(...$args);
     }
+
 
     /**
-     * Set profile dependencies.
-     *
-     * These must pass on the target for the profile to be valid for the target.
+     * @deprecated Use dependencies property.
      */
-    public function setDependencies(array $policy_definitions): Profile
-    {
-        $this->dependencies = $this->buildPolicyDefinitions($policy_definitions);
-        $this->dataBag->set('dependencies', array_map(
-            fn (PolicyOverride $policy) => $policy->export(),
-            $this->dependencies
-        ));
-        return $this;
-    }
-
     public function getDependencyDefinitions(): array
     {
         return $this->dependencies;
     }
 
     /**
-     * Build an array of policy definitions.
-     *
-     * @param array $policy_definitions
-     *  An array of policy definitions. Can be an indexed array of keys or an
-     *  assoc array of definitions.
-     * @return array of PolicyOverride objects.
+     * Build format definitions.
      */
-    protected function buildPolicyDefinitions(array $policy_definitions): array
+    private function buildFormatDefinitions(array $formats): array
     {
-        $policies = [];
-        foreach ($policy_definitions as $idx => $definition) {
-            $name = is_string($idx) ? $idx : $definition;
-            $policy = new PolicyOverride($name);
-
-            if (is_array($definition)) {
-                foreach ($definition as $key => $value) {
-                    $policy->{$key} = $value;
-                }
-                if (!isset($policy->weight)) {
-                    $weight = count($policies);
-                    $policy->weight = $weight;
-                }
-            }
-            $policies[$name] = $policy;
+        $definitions = [];
+        foreach ($formats as $name => $definition) {
+            $definition['name'] = $name;
+            $definitions[$name] = new FormatDefinition(...$definition);
         }
-        return $policies;
+        return $definitions;
     }
 
     /**
-     * Append policy definitions.
+     * Build policy definitions for constructor arrays.
      */
-    public function addPolicies(array $policy_definitions): Profile
+    private function buildPolicyDefinitions(array $policies): array
     {
-        $new_policies = $this->buildPolicyDefinitions($policy_definitions);
-        $this->policyOverrides = array_merge($this->policyOverrides, $new_policies);
+        $definitions = [];
+        foreach ($policies as $key => $definition) {
+            if ($definition instanceof PolicyDefinition) {
+                $definitions[$definition->name] = $definition;
+                continue;
+            }
+            // The name is either the array key or a key on the $definition array.
+            $name = is_string($key) ? $key : $definition['name'];
+            if (in_array($name, $this->excluded_policies)) {
+                continue;
+            }
+            $definition['name'] = $name;
+            $definitions[$name] = new PolicyDefinition(...$definition);
+        }
+        uasort($definitions, fn($a, $b) => $a->sort($b));
+        return $definitions;
+    }
 
-        $policies = array_map(
-            function (PolicyOverride $policy) {
-                return $policy->export();
-            },
-            $this->policyOverrides
+    /**
+     * Merge an existing profile's policies and dependencies in with this one.
+     */
+    public function mergeWith(Profile $profile):Profile
+    {
+        $export = $profile->export();
+        return $this->with(
+            policies: $export['policies'],
+            dependencies: $export['dependencies']
         );
-
-        $this->dataBag->set('policies', $policies);
-
-        return $this;
     }
 
     /**
-     * Add a PolicyDefinition to the profile.
+     * {@inheritdoc}
      */
-    public function getAllPolicyDefinitions(): array
+    public function export():array
     {
-        $list = array_filter($this->policyOverrides, function (PolicyOverride $policy_override) {
-            return !in_array($policy_override->name, $this->excluded_policies ?? []);
-        });
+        $data = get_object_vars($this);
+        $data['policies'] = array_map(fn($p) => $p->export(), $data['policies']);
+        $data['dependencies'] = array_map(fn($d) => get_object_vars($d), $data['dependencies']);
+        $data['format'] = array_map(fn($f) => get_object_vars($f), $data['format']);
 
-        // Sort $policies
-        // 1. By weight. Lighter policies float to the top.
-        // 2. By name, alphabetical sorting.
-        uasort($list, function (PolicyOverride $a, PolicyOverride $b) {
-
-          // 1. By weight. Lighter policies float to the top.
-            if ($a->weight == $b->weight) {
-                $alpha = [$a->name, $b->name];
-                sort($alpha);
-                // 2. By name, alphabetical sorting.
-                return $alpha[0] == $a->name ? -1 : 1;
-            }
-            return $a->weight > $b->weight ? 1 : -1;
-        });
-        return $list;
-    }
-
-    /**
-     * Add a Profile to the profile.
-     */
-    public function addInclude(Profile $profile)
-    {
-        // Detect recursive loop and skip include.
-        if (!$profile->setParent($this)) {
-            return $this;
+        // Fix Yaml::dump bug where it doesn't correctly split \r\n to multiple
+        // lines.
+        foreach ($data as $key => $value) {
+          if (is_string($value)) {
+            $data[$key] = str_replace("\r\n", "\n", $value);
+          }
         }
-
-        $this->includes[$profile->uuid] = $profile->name;
-        parent::setPropertyData('include', array_values($this->includes));
-
-        $this->addPolicies($profile->getAllPolicyDefinitions());
-        return $this;
-    }
-
-    public function hasParent(): bool
-    {
-        return !empty($this->parent);
-    }
-
-    public function setParent(Profile $parent): bool
-    {
-        if (!$parent->hasAncestor($this)) {
-            $this->parent = $parent;
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Traverse ancestry of parent relationships to see if profile is in linage.
-     */
-    public function hasAncestor(Profile $ancestor): bool
-    {
-        if (!$this->hasParent()) {
-            return false;
-        }
-        return $this->parent->name === $ancestor->name || $this->parent->hasAncestor($ancestor);
-    }
-
-    public function reportPerSite()
-    {
-        return $this->reportPerSite;
-    }
-
-    public function setReportPerSite($flag = true)
-    {
-        $this->reportPerSite = (bool) $flag;
-        return $this;
-    }
-
-    public function export()
-    {
-        $profile = $this->build()->dataBag->export();
-        foreach (['dependencies', 'policies'] as $category) {
-            foreach ($profile[$category] ?? [] as &$policy) {
-                if ($policy['weight'] === 0) {
-                    unset($policy['weight']);
-                }
-                if (empty($policy['parameters'])) {
-                    unset($policy['parameters']);
-                }
-            }
-        }
-        return $profile;
-    }
-
-    /**
-     * Compile the profile to validate it is complete.
-     */
-    public function build(): Profile
-    {
-        if (!$this->compiled) {
-            $this->validateAllPropertyData();
-            $this->compiled = true;
-        }
-        return $this;
+        return $data;
     }
 }

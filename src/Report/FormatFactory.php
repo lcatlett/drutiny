@@ -2,6 +2,7 @@
 
 namespace Drutiny\Report;
 
+use Drutiny\Profile\FormatDefinition;
 use Drutiny\Settings;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -14,7 +15,7 @@ class FormatFactory
     {
     }
 
-    public function create(string $format, array $options = [])
+    public function create(string $format, FormatDefinition $definition):FormatInterface
     {
         // Registry built by compiler pass. See Drutiny\Kernel.
         $registry = $this->settings->get('format.registry');
@@ -22,7 +23,7 @@ class FormatFactory
             throw new \InvalidArgumentException("Reporting format '$format' is not supported.");
         }
         $formatter = $this->container->get($registry[$format]);
-        $formatter->setOptions($options);
+        $formatter->setDefinition($definition);
         return $formatter;
     }
 }

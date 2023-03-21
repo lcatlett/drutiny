@@ -6,7 +6,6 @@ use Drutiny\LanguageManager;
 use Drutiny\PolicyFactory;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
-use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -54,7 +53,7 @@ class PolicyUpdateCommand extends DrutinyBaseCommand
           $sources = [$this->policyFactory->getSource($source)];
         }
         else {
-          $sources = $this->policyFactory->getSources();
+          $sources = array_map(fn ($s) => $this->policyFactory->getSource($s->name), $this->policyFactory->sources);
         }
 
         $this->progressBar->start(array_sum(array_map(function ($source) {
@@ -62,11 +61,11 @@ class PolicyUpdateCommand extends DrutinyBaseCommand
         }, $sources)));
 
         foreach ($sources as $source) {
-            $this->logger->notice("Updating " . $source->getName());
+            $this->logger->notice("Updating " . $source->name);
 
-            foreach ($source->refresh() as $policy) {
+            foreach ($source->refresh($this->languageManager) as $policy) {
               $this->progressBar->advance();
-              $this->logger->notice($source->getName() . ': Updated "' . $policy->title . '"');
+              $this->logger->notice($source->name . ': Updated "' . $policy->title . '"');
             }
         }
 

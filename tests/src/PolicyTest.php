@@ -3,6 +3,7 @@
 namespace DrutinyTests;
 
 use Drutiny\AuditFactory;
+use Drutiny\Policy;
 use Drutiny\PolicyFactory;
 use Drutiny\Target\TargetFactory;
 
@@ -69,4 +70,24 @@ class PolicyTest extends KernelTestCase {
     $this->assertTrue($response->isNotice());
   }
 
+  public function testSerializable()
+  {
+      $policy = $this->container->get(PolicyFactory::class)->loadPolicyByName('Test:Notice');
+      $serial = serialize($policy);
+      $this->assertIsString($serial, "Policy can be serialized");
+      $this->assertInstanceOf(Policy::class, unserialize($serial), "Policy can be unserialized");
+  }
+
+  public function testBuildParameters()
+  {
+    $policy = $this->container->get(PolicyFactory::class)->loadPolicyByName('Test:Pass')->with(
+      build_parameters: [
+        'foo' => "'site.env'|split('.')|last"
+      ]
+    );
+    $this->assertTrue($policy->build_parameters->has('foo'));
+    $audit = $this->container->get(AuditFactory::class)->get($policy, $this->target);
+    $response = $audit->execute($policy);
+    $this->assertEquals('env', $response->tokens['foo'], "build parameter was correctly evaluated and converted into a token.");
+  }
 }

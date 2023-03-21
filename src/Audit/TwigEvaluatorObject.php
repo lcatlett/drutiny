@@ -93,18 +93,18 @@ class TwigEvaluatorObject {
                 $contexts['syntax'] = 'twig';
             }
 
-            $policy = new Policy;
             // Set required fields.
-            $policy->setProperties([
-                'uuid' => $this->namespace.$name,
-                'name' => $this->namespace.':'.$name,
-                'title' => "{$this->namespace}.$name",
-                'description' => $name,
-                'failure' => 'Failure message',
-                'success' => 'Success message',
-                'class' => $info['use_audit'],
-                'parameters' => $contexts,
-            ]);
-            return $audit->execute($policy)->isSuccessful();
+            $policy = new Policy(
+                uuid: $this->namespace.$name,
+                name: $this->namespace.':'.$name,
+                title: "{$this->namespace}.$name",
+                description: $name,
+                failure: 'Failure message',
+                success: 'Success message',
+                class: $info['use_audit'],
+                parameters: $contexts,
+                source: 'phpunit'
+            );
+            return $audit->execute($policy)->state->isSuccessful();
         }
 }

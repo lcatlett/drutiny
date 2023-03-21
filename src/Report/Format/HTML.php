@@ -2,11 +2,10 @@
 
 namespace Drutiny\Report\Format;
 
-use Drutiny\AssessmentInterface;
-use Drutiny\Profile;
 use Drutiny\Report\FormatInterface;
 use Drutiny\Attribute\AsFormat;
-
+use Drutiny\Profile\FormatDefinition;
+use Twig\Extra\Markdown\MarkdownRuntime;
 
 #[AsFormat(
   name: 'html',
@@ -14,34 +13,29 @@ use Drutiny\Attribute\AsFormat;
 )]
 class HTML extends TwigFormat
 {
-    public function setOptions(array $options = []):FormatInterface
+    public function setDefinition(FormatDefinition $definition): FormatInterface
     {
-        if (!isset($options['content'])) {
-            $options['content'] = $this->loadTwigTemplate('report/profile');
+        if (empty($definition->content)) {
+            $definition = $definition->with(content: $this->loadTwigTemplate('report/profile'));
         }
-        elseif (is_string($options['content'])) {
-            $options['content'] = $this->twig->createTemplate($options['content']);
+        elseif (is_string($definition->content)) {
+            $definition = $definition->with(content: $this->twig->createTemplate($definition->content));
         }
-        $options['template'] = $options['template'] ?? 'report/page.' . $this->getExtension() . '.twig';
-        return parent::setOptions($options);
+        if (empty($definition->template)) {
+          $definition = $definition->with(template: 'report/page.' . $this->getExtension() . '.twig');
+        }
+        return parent::setDefinition($definition);
     }
 
-
-    protected function prepareContent(Profile $profile, AssessmentInterface $assessment):array
+    protected function prepareContent(array $variables):array
     {
-      // 2.x style no longer supported.
-      if (is_array($this->options['content'])) {
-        throw new \Exception("format.html.content in profile is using 2.x format. Not supported in 3.4 or later.");
-      }
-
-      $variables = ['profile' => $profile, 'assessment' => $assessment];
       $sections = [];
-      $markdown = $this->twig->getRuntime('Twig\Extra\Markdown\MarkdownRuntime');
+      $markdown = $this->twig->getRuntime(MarkdownRuntime::class);
 
       // In 3.x we support Twig TemplateWrappers to be passed directly
       // to the report format.
-      foreach ($this->options['content']->getBlockNames() as $block){
-        $sections[] = $markdown->convert($this->options['content']->renderBlock($block, $variables));
+      foreach ($this->definition->content->getBlockNames() as $block){
+        $sections[] = $markdown->convert($this->definition->content->renderBlock($block, $variables));
       }
       return $sections;
     }

@@ -10,12 +10,6 @@ use Drutiny\Profile;
  */
 interface ProfileSourceInterface
 {
-
-    /**
-     * The short name that defines this source.
-     */
-    public function getName():string;
-
     /**
      * Return a list of policy definitions.
      *
@@ -35,10 +29,7 @@ interface ProfileSourceInterface
     public function load(array $definition):Profile;
 
     /**
-     * Get the weight of the source.
-     *
-     * @return int a number to indicate which priority the policies should take
-     *  if duplicates are provided by other sources.
+     * Clear the cache and run getList() to refresh the profile list.
      */
-    public function getWeight():int;
+    public function refresh(LanguageManager $languageManager): array;
 }

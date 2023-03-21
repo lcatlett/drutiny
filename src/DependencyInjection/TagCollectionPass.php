@@ -4,6 +4,7 @@ namespace Drutiny\DependencyInjection;
 
 use Drutiny\Attribute\KeyableAttributeInterface;
 use ReflectionAttribute;
+use ReflectionClass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 
@@ -17,7 +18,7 @@ class TagCollectionPass implements CompilerPassInterface
      * @param string $tag The tag to pull from the service container.
      * @param string $parameter The name of the parameter to store the tag registry.
      */
-    public function __construct(protected string $tag, protected string $parameter)
+    public function __construct(protected string $tag, protected string $parameter, protected $keyableInterface = KeyableAttributeInterface::class)
     {
       
     }
@@ -29,8 +30,9 @@ class TagCollectionPass implements CompilerPassInterface
         $registry = [];
         foreach (array_keys($container->findTaggedServiceIds($this->tag)) as $id) {
             $key = null;
-            $reflection = $container->getReflectionClass($id);
-            $attributes = $reflection->getAttributes(KeyableAttributeInterface::class, ReflectionAttribute::IS_INSTANCEOF);
+            $reflection = new ReflectionClass($container->getDefinition($id)->getClass());
+            //$reflection = $container->getReflectionClass($id);
+            $attributes = $reflection->getAttributes($this->keyableInterface, ReflectionAttribute::IS_INSTANCEOF);
             if (!empty($attributes)) {
                 $key = $attributes[0]->newInstance()->getKey();
             }

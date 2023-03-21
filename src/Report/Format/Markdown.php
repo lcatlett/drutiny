@@ -3,11 +3,9 @@
 namespace Drutiny\Report\Format;
 
 use Drutiny\Profile;
-use Drutiny\AssessmentInterface;
 use Drutiny\Report\FormatInterface;
-use Twig\TemplateWrapper;
 use Drutiny\Attribute\AsFormat;
-
+use Drutiny\Report\Report;
 
 #[AsFormat(
   name: 'markdown',
@@ -16,9 +14,9 @@ use Drutiny\Attribute\AsFormat;
 class Markdown extends HTML
 {
 
-    public function render(Profile $profile, AssessmentInterface $assessment):FormatInterface
+    public function render(Report $report):FormatInterface
     {
-        parent::render($profile, $assessment);
+        parent::render($report);
 
         $markdown = self::formatTables($this->buffer->fetch());
 
@@ -31,44 +29,14 @@ class Markdown extends HTML
         return $this;
     }
 
-    protected function prepareContent(Profile $profile, AssessmentInterface $assessment):array
+    protected function prepareContent(array $variables):array
     {
-      $variables = ['profile' => $profile, 'assessment' => $assessment];
       $sections = [];
 
       // In 3.x we support Twig TemplateWrappers to be passed directly
       // to the report format.
-      if ($this->options['content'] instanceof TemplateWrapper) {
-        foreach ($this->options['content']->getBlockNames() as $block){
-          $sections[] = $this->options['content']->renderBlock($block, $variables);
-        }
-        return $sections;
-      }
-
-      // Backward compatible 2.x Yaml style.
-      foreach ($this->options['content'] as $section) {
-        foreach ($section as $attribute => $value) {
-          // Convert from Mustache (supported in Drutiny 2.x) over to twig syntax.
-          $template = $this->convertMustache2TwigSyntax($section[$attribute]);
-
-          // Map the old Drutiny 2.x variables to the Drutiny 3.x versions.
-          $template = $this->mapDrutiny2toDrutiny3variables($template);
-
-          try {
-            // Convert template into a Twig template and render into HTML.
-            $template = $this->twig
-              ->createTemplate($template)
-              ->render($variables);
-          }
-          catch (\Twig\Error\Error $e) {
-            $this->logger->error($e->getMessage());
-            $source = $e->getSourceContext();
-            $this->logger->info($source->getCode());
-          }
-
-          $section[$attribute] = $template;
-        }
-        $sections[] = $section;
+      foreach ($this->definition->content->getBlockNames() as $block){
+        $sections[] = $this->definition->content->renderBlock($block, $variables);
       }
       return $sections;
     }

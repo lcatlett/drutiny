@@ -2,13 +2,12 @@
 
 namespace Drutiny\Console\Command;
 
+use Drutiny\Settings;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\Cache\Adapter\FilesystemAdapter as Cache;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 
@@ -18,7 +17,8 @@ use Symfony\Contracts\Cache\CacheInterface;
 class CacheClearCommand extends Command
 {
     public function __construct(
-      protected ContainerInterface $container, 
+      protected ContainerInterface $container,
+      protected Settings $settings,
       protected CacheInterface $cache)
     {
       parent::__construct();
@@ -37,14 +37,20 @@ class CacheClearCommand extends Command
           null,
           InputOption::VALUE_OPTIONAL,
           'The cache ID to purge from cache.'
-          )
-          ->addOption(
-            'twig-only',
-            't',
-            InputOption::VALUE_NONE,
-            'Purge the '
-          )
-        ;
+        )
+        ->addOption(
+          'twig-only',
+          't',
+          InputOption::VALUE_NONE,
+          'Purge the '
+        )
+        ->addOption(
+          'include-source-cache',
+          's',
+          InputOption::VALUE_NONE,
+          'Clear policy and profile source caches also.'
+        )
+      ;
     }
 
     /**
@@ -53,21 +59,17 @@ class CacheClearCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $io = new SymfonyStyle($input, $output);
-
-        $adaptors = [
-          $this->container->get('cache'),
-          $this->container->get('cache.global'),
-        ];
-
-        if ($input->getOption('twig-only')) {
-          $adaptors = [];
-        }
+        $registry = $this->settings->get('cache.registry');
+        $registry = $input->getOption('include-source-cache') ? array_merge($registry, $this->settings->get('source.cache.registry')) : $registry;
+        $registry = $input->getOption('twig-only') ? [] : $registry;
 
         $cid = $input->getOption('cid');
 
-        foreach ($adaptors as $adaptor) {
-          empty($cid) ? $adaptor->clear() : $adaptor->delete($cid);
-        }
+        foreach ($registry as $id) {
+          $service = $this->container->get($id);
+          empty($cid) ? $service->clear() : $service->delete($cid);
+          $io->success("Cleared '$id' cache.");
+        } 
 
         $dir = $this->container->getParameter('twig.cache');
 

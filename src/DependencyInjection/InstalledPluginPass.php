@@ -27,7 +27,7 @@ class InstalledPluginPass implements CompilerPassInterface
                 // Load the definition of the dependant service to this uninstalled plugin.
                 $definition = $container->getDefinition($edge->getSourceNode()->getId());
                 // Don't load these classes because they won't be needed if the plugins are not installed.
-                $definition->setLazy(true);
+                //$definition->setLazy(true);
             }
         }
     }

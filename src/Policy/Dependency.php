@@ -2,9 +2,10 @@
 
 namespace Drutiny\Policy;
 
-use Drutiny\Audit\AuditInterface;
 use Drutiny\Helper\ExpressionLanguageTranslation;
+use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 
+#[Autoconfigure(autowire: false)]
 class Dependency
 {
 
@@ -28,13 +29,8 @@ class Dependency
      */
       const ON_FAIL_REPORT_ONLY = 'report_only';
 
-    /**
-     * @var string Must be one of ON_FAIL constants.
-     */
-      protected string $onFail = 'fail';
-
+      public readonly DependencyBehaviour $onFail;
       public readonly string $expression;
-
       public readonly string $syntax;
 
     public function __construct(
@@ -44,7 +40,7 @@ class Dependency
       public readonly string $description = ''
       )
     {
-        $this->setFailBehaviour($on_fail);
+        $this->onFail = DependencyBehaviour::get($on_fail);
         
         // Gracefully port expression language syntax into twig.
         if ($syntax == 'expression_language') {
@@ -56,57 +52,32 @@ class Dependency
         $this->expression = $expression;
     }
 
-    public function getExpression()
-    {
-        return $this->expression;
-    }
-
-    public function getFailBehaviour()
-    {
-        switch ($this->onFail) {
-            case self::ON_FAIL_ERROR:
-                return AuditInterface::ERROR;
-
-            case self::ON_FAIL_REPORT_ONLY:
-                return AuditInterface::NOT_APPLICABLE;
-
-            case self::ON_FAIL_OMIT:
-                return AuditInterface::IRRELEVANT;
-
-            case self::ON_FAIL_DEFAULT;
-            default:
-            return AuditInterface::FAIL;
-        }
-    }
-
     public function export()
     {
         return [
-        'on_fail' => $this->onFail,
-        'expression' => $this->expression,
-        'syntax' => $this->syntax
+            'on_fail' => $this->onFail->label(),
+            'expression' => $this->expression,
+            'syntax' => $this->syntax
         ];
     }
 
-    public function setFailBehaviour($on_fail = self::ON_FAIL_DEFAULT)
-    {
-        switch ($on_fail) {
-            case self::ON_FAIL_ERROR:
-            case self::ON_FAIL_DEFAULT:
-            case self::ON_FAIL_REPORT_ONLY:
-            case self::ON_FAIL_OMIT:
-                $this->onFail = $on_fail;
-                return $this;
-            default:
-                throw new \Exception("Unknown behaviour: $on_fail.");
-        }
-    }
-
     /**
-     * Get the description.
+     * @deprecated use description property.
      */
     public function getDescription():string
     {
       return $this->description;
+    }
+
+    /**
+     * When dependencies are expressed as a string, they implicitly refer to another policy.
+     */
+    public static function fromString(string $dependency):Dependency
+    {
+      return new static(
+        syntax: 'twig',
+        expression: sprintf('Policy.succeeds("%s")', $dependency),
+        description: "Ensure policy '$dependency' passes.",
+      );
     }
 }

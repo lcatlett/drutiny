@@ -2,11 +2,13 @@
 
 namespace Drutiny\Report\Format;
 
-use Drutiny\AssessmentInterface;
+use DateTime;
 use Drutiny\Attribute\AsFormat;
+use Drutiny\Helper\Json as HelperJson;
 use Drutiny\Profile;
 use Drutiny\Report\FilesystemFormatInterface;
 use Drutiny\Report\FormatInterface;
+use Drutiny\Report\Report;
 use Symfony\Component\Console\Output\StreamOutput;
 
 #[AsFormat(
@@ -19,50 +21,33 @@ class JSON extends FilesystemFormat implements FilesystemFormatInterface
     protected string $extension = 'json';
     protected $data;
 
-    /**
-     * Return an array of FormattedOutput objects.
-     */
-    public function getOutput():iterable
+    protected function prepareContent(Report $report):array
     {
-      return [];
-    }
+        $this->data = HelperJson::extract($report);
 
-    protected function prepareContent(Profile $profile, AssessmentInterface $assessment):array
-    {
-        $json = [
-          'date' => date('Y-m-d'),
-          'human_date' => date('F jS, Y'),
-          'time' => date('h:ia'),
-          'uri' => $assessment->uri(),
-        ];
-        $json['profile'] = $profile->export();
-        $json['reporting_period_start'] = $profile->getReportingPeriodStart()->format('Y-m-d H:i:s e');
-        $json['reporting_period_end'] = $profile->getReportingPeriodEnd()->format('Y-m-d H:i:s e');
-        $json['policy'] = [];
-        $json['results'] = [];
-        $json['totals'] = [];
+        // Backwards compatibility formats
+        $datetime = new DateTime();
+        $this->data['date'] = $datetime->format('Y-m-d');
+        $this->data['human_date'] = $datetime->format('F jS, Y');
+        $this->data['time'] = $datetime->format('h:ia');
 
-        foreach ($assessment->getResults() as $response) {
-          $policy = $response->getPolicy();
-          $json['policy'][] = $policy->export();
+        $this->data['reporting_period_start'] = $report->reportingPeriodStart->format('Y-m-d H:i:s e');
+        $this->data['reporting_period_end'] = $report->reportingPeriodEnd->format('Y-m-d H:i:s e');
 
-          $result = $response->export();
-          $result['policy'] = $policy->name;
-          $json['results'][] = $result;
+        foreach ($report->results as $name => $response) {
+          $this->data['policy'][] = $this->data['results'][$name]['policy'];
 
-          $total = $json['totals'][$response->getType()] ?? 0;
-          $json['totals'][$response->getType()] = $total+1;
+          $total = $this->data['totals'][$response->getType()] ?? 0;
+          $this->data['totals'][$response->getType()] = $total+1;
         }
 
-        $json['total'] = array_sum($json['totals']);
-
-        $this->data = $json;
+        $this->data['total'] = array_sum($this->data['totals']);
         return $this->data;
     }
 
-    public function render(Profile $profile, AssessmentInterface $assessment):FormatInterface
+    public function render(Report $report):FormatInterface
     {
-        $this->buffer->write(json_encode($this->prepareContent($profile, $assessment)));
+        $this->buffer->write(json_encode($this->prepareContent($report)));
         return $this;
     }
 
@@ -76,13 +61,5 @@ class JSON extends FilesystemFormat implements FilesystemFormatInterface
       $stream->write($this->buffer->fetch());
       $this->logger->info("Written $filepath.");
       yield $filepath;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function setWriteableDirectory(string $dir):void
-    {
-      $this->directory = $dir;
     }
 }

@@ -20,4 +20,9 @@ class TextCleaner {
             return $result;
         }
     }
+
+    public static function machineValue(string $text): string
+    {
+        return str_replace(' ', '_', preg_replace('/[^a-z0-9\. ]/', '', strtolower($text)));
+    }
 }

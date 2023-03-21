@@ -2,6 +2,7 @@
 
 namespace Drutiny\Target;
 
+use Drutiny\Audit\TwigEvaluator;
 use Drutiny\Settings;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -11,6 +12,7 @@ class TargetFactory
 
     public function __construct(
       protected ContainerInterface $container,
+      protected TwigEvaluator $twigEvaluator,
       Settings $settings
     )
     {
@@ -34,7 +36,10 @@ class TargetFactory
         $target = $this->container->get($this->targetMap[$target_name]);
         $target->setTargetName($target_reference);
         $target->load($target_data, $uri);
-        
+
+        // This makes the target inherintly accessible by the twigEvaluator 
+        // in other services.
+        $this->twigEvaluator->setContext('target', $target);
         return $target;
     }
 

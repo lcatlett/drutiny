@@ -3,7 +3,6 @@
 namespace Drutiny\Target;
 
 use Drutiny\Entity\DataBag;
-use Drutiny\Entity\EventDispatchedDataBag;
 use Drutiny\Entity\Exception\DataNotFoundException;
 use Drutiny\LocalCommand;
 use Drutiny\Target\Service\ServiceFactory;
@@ -25,14 +24,12 @@ abstract class Target implements \ArrayAccess, TargetInterface
 {
     /* @var PropertyAccess */
     protected $propertyAccessor;
-    protected $properties;
-    protected $dispatcher;
     private string $targetName;
     protected TransportInterface $transport;
+    protected DataBag $properties;
 
     public function __construct(
         protected LoggerInterface $logger, 
-        EventDispatchedDataBag $databag,
         protected LocalCommand $localCommand,
         protected ServiceFactory $serviceFactory,
         protected EventDispatcher $eventDispatcher
@@ -41,11 +38,11 @@ abstract class Target implements \ArrayAccess, TargetInterface
         if ($logger instanceof Logger) {
             $this->logger = $logger->withName('target');
         }
+        $this->properties = new DataBag();
         $this->propertyAccessor = PropertyAccess::createPropertyAccessorBuilder()
             ->enableExceptionOnInvalidIndex()
             ->getPropertyAccessor();
 
-        $this->properties = $databag->setObject($this);
         $this->transport = new LocalTransport($this->localCommand);
     }
 
@@ -210,7 +207,7 @@ abstract class Target implements \ArrayAccess, TargetInterface
 
         // Create all the DataBag objects required to support this pathway.
         foreach (array_reverse($new_paths) as $pathway) {
-            $this->setProperty($pathway, $this->properties->create()->setEventPrefix($pathway));
+            $this->setProperty($pathway, new DataBag);
         }
         return $this;
     }

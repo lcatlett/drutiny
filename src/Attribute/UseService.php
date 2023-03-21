@@ -21,5 +21,6 @@ class UseService {
      */
     public function inject(object $service, ContainerInterface $container) {
         call_user_func([$service, $this->method], $container->get($this->id));
+        return $service;
     }
 }

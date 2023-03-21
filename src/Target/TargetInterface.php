@@ -2,7 +2,6 @@
 
 namespace Drutiny\Target;
 
-use Drutiny\Target\Service\ExecutionInterface;
 use Drutiny\Target\Service\ServiceInterface;
 use Symfony\Component\Process\Process;
 

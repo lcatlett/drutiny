@@ -9,7 +9,7 @@ class DependencyException extends \Exception
     public function __construct(Dependency $dependency, string $message = '')
     {
         $this->dependency = $dependency;
-        parent::__construct(sprintf("Policy dependency failed: %s (%s). %s",$dependency->getDescription(), $dependency->getExpression(), $message));
+        parent::__construct(sprintf("Policy dependency failed: %s (%s). %s",$dependency->description, $dependency->expression, $message));
     }
 
     public function getDependency()

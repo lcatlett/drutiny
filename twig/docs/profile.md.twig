@@ -13,7 +13,7 @@ drutiny profile:run {{ name }} <target>
 Policy | Severity | Overrides
 ------ | -------- | ---------
 {% for key in policies|keys %}
-{{ key }} | {{ policies[key].severity is defined ? policies[key].severity }} | {{ policies[key].parameters is defined ? policies[key].parameters|json_encode()|raw }}
+{{ key }} | {{ policies[key].severity.value|capitalize }} | {{ policies[key].parameters is defined ? policies[key].parameters|json_encode()|raw }}
 {% endfor %}
 {% endif %}
 

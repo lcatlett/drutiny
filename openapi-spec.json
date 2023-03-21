@@ -1,0 +1,734 @@
+{
+    "openapi": "3.0.2",
+    "info": {
+        "title": "Drutiny API",
+        "version": "3.6.0"
+    },
+    "paths": {},
+    "components": {
+        "schemas": {
+            "Policy": {
+                "required": [
+                    "type",
+                    "tags",
+                    "severity",
+                    "parameters",
+                    "build_parameters",
+                    "depends",
+                    "chart",
+                    "title",
+                    "name",
+                    "description",
+                    "uuid",
+                    "source",
+                    "weight",
+                    "class",
+                    "language",
+                    "remediation",
+                    "failure",
+                    "success",
+                    "warning"
+                ],
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "title": "type",
+                        "enum": [
+                            "audit",
+                            "data"
+                        ],
+                        "type": "string",
+                        "description": "What type of policy this is. Audit types return a pass\/fail result while data types return only data.",
+                        "nullable": false,
+                        "readOnly": true,
+                        "x-class": "Drutiny\\Policy\\PolicyType"
+                    },
+                    "tags": {
+                        "title": "tags",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#\/components\/schemas\/Tag"
+                        },
+                        "description": "A set of tags to categorize a policy.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "severity": {
+                        "title": "severity",
+                        "enum": [
+                            "none",
+                            "low",
+                            "normal",
+                            "high",
+                            "critical"
+                        ],
+                        "type": "string",
+                        "description": "What severity level the policy is rated at.",
+                        "nullable": false,
+                        "readOnly": true,
+                        "x-class": "Drutiny\\Policy\\Severity"
+                    },
+                    "parameters": {
+                        "title": "parameters",
+                        "type": "object",
+                        "properties": {},
+                        "description": "Parameters are values that maybe used to configure an audit for use with the Policy.",
+                        "nullable": false,
+                        "readOnly": true,
+                        "x-class": "Symfony\\Component\\DependencyInjection\\ParameterBag\\ParameterBagInterface"
+                    },
+                    "build_parameters": {
+                        "title": "build_parameters",
+                        "type": "object",
+                        "properties": {},
+                        "description": "Create parameters to pass to the audit before it is executed. Target object is available.",
+                        "nullable": false,
+                        "readOnly": true,
+                        "x-class": "Symfony\\Component\\DependencyInjection\\ParameterBag\\ParameterBagInterface"
+                    },
+                    "depends": {
+                        "title": "depends",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#\/components\/schemas\/Dependency"
+                        },
+                        "description": "A list of executable dependencies to require before auditing the policy against a target.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "chart": {
+                        "title": "chart",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#\/components\/schemas\/Chart"
+                        },
+                        "description": "Configuration for any charts used in the policy messaging.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "title": {
+                        "title": "title",
+                        "type": "string",
+                        "description": "The human readable name of the policy.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "name": {
+                        "title": "name",
+                        "type": "string",
+                        "description": "The machine-name of the policy.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "description": {
+                        "title": "description",
+                        "type": "string",
+                        "description": "A description why the policy is valuable.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "uuid": {
+                        "title": "uuid",
+                        "type": "string",
+                        "description": "Unique identifier such as a URL.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "source": {
+                        "title": "source",
+                        "type": "string",
+                        "description": "Where the policy is sourced from.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "weight": {
+                        "title": "weight",
+                        "type": "number",
+                        "description": "Weight of a policy to sort it amoung other policies.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "class": {
+                        "title": "class",
+                        "type": "string",
+                        "description": "A PHP Audit class to pass the policy to be assessed.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "language": {
+                        "title": "language",
+                        "type": "string",
+                        "description": "Language code",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "remediation": {
+                        "title": "remediation",
+                        "type": "string",
+                        "description": "Content to communicate how to remediate a policy failure.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "failure": {
+                        "title": "failure",
+                        "type": "string",
+                        "description": "Content to communicate a policy failure.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "success": {
+                        "title": "success",
+                        "type": "string",
+                        "description": "Content to communicate a policy success.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "warning": {
+                        "title": "warning",
+                        "type": "string",
+                        "description": "Content to communicate a policy warning (in a success).",
+                        "nullable": false,
+                        "readOnly": true
+                    }
+                },
+                "x-name": "Policy",
+                "additionalProperties": false
+            },
+            "Profile": {
+                "required": [
+                    "policies",
+                    "dependencies",
+                    "format",
+                    "title",
+                    "name",
+                    "uuid",
+                    "source",
+                    "description",
+                    "language",
+                    "excluded_policies",
+                    "reportingPeriodStart",
+                    "reportingPeriodEnd"
+                ],
+                "type": "object",
+                "properties": {
+                    "policies": {
+                        "title": "policies",
+                        "type": "object",
+                        "description": "A list of policies that this profile runs.",
+                        "nullable": false,
+                        "readOnly": true,
+                        "additionalProperties": {
+                            "$ref": "#\/components\/schemas\/PolicyDefinition"
+                        }
+                    },
+                    "dependencies": {
+                        "title": "dependencies",
+                        "type": "object",
+                        "description": "A list of policies that must pass for this profile to be applicable against a given target.",
+                        "nullable": false,
+                        "readOnly": true,
+                        "additionalProperties": {
+                            "$ref": "#\/components\/schemas\/PolicyDefinition"
+                        }
+                    },
+                    "format": {
+                        "title": "format",
+                        "type": "object",
+                        "description": "An array for formats with repspective properties.",
+                        "nullable": false,
+                        "readOnly": true,
+                        "additionalProperties": {
+                            "$ref": "#\/components\/schemas\/FormatDefinition"
+                        }
+                    },
+                    "title": {
+                        "title": "title",
+                        "type": "string",
+                        "description": "The human readable name of the profile.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "name": {
+                        "title": "name",
+                        "type": "string",
+                        "description": "The machine-name of the profile.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "uuid": {
+                        "title": "uuid",
+                        "type": "string",
+                        "description": "Unique identifier such as a URL.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "source": {
+                        "title": "source",
+                        "type": "string",
+                        "description": "Where the profile is sourced from.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "description": {
+                        "title": "description",
+                        "type": "string",
+                        "description": "A description why the profile is valuable.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "language": {
+                        "title": "language",
+                        "type": "string",
+                        "description": "Language code",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "excluded_policies": {
+                        "title": "excluded_policies",
+                        "type": "array",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "reportingPeriodStart": {
+                        "title": "reportingPeriodStart",
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": false,
+                        "readOnly": true,
+                        "x-class": "DateTimeInterface"
+                    },
+                    "reportingPeriodEnd": {
+                        "title": "reportingPeriodEnd",
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": false,
+                        "readOnly": true,
+                        "x-class": "DateTimeInterface"
+                    }
+                },
+                "x-name": "Profile",
+                "additionalProperties": false
+            },
+            "Target": {
+                "required": [],
+                "type": "object",
+                "properties": {},
+                "x-name": "Target",
+                "additionalProperties": true
+            },
+            "Report": {
+                "required": [
+                    "uuid",
+                    "results",
+                    "severity",
+                    "successful",
+                    "uri",
+                    "profile",
+                    "target",
+                    "type",
+                    "reportingPeriodStart",
+                    "reportingPeriodEnd"
+                ],
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "title": "uuid",
+                        "type": "string",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "results": {
+                        "title": "results",
+                        "type": "object",
+                        "nullable": false,
+                        "readOnly": true,
+                        "additionalProperties": {
+                            "$ref": "#\/components\/schemas\/Result"
+                        }
+                    },
+                    "severity": {
+                        "title": "severity",
+                        "enum": [
+                            "none",
+                            "low",
+                            "normal",
+                            "high",
+                            "critical"
+                        ],
+                        "type": "string",
+                        "nullable": false,
+                        "readOnly": true,
+                        "x-class": "Drutiny\\Policy\\Severity"
+                    },
+                    "successful": {
+                        "title": "successful",
+                        "type": "boolean",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "uri": {
+                        "title": "uri",
+                        "type": "string",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "profile": {
+                        "$ref": "#\/components\/schemas\/Profile"
+                    },
+                    "target": {
+                        "$ref": "#\/components\/schemas\/Target"
+                    },
+                    "type": {
+                        "title": "type",
+                        "enum": [
+                            "assessment",
+                            "dependencies"
+                        ],
+                        "type": "string",
+                        "nullable": false,
+                        "readOnly": true,
+                        "x-class": "Drutiny\\Report\\ReportType"
+                    },
+                    "reportingPeriodStart": {
+                        "title": "reportingPeriodStart",
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": false,
+                        "readOnly": true,
+                        "x-class": "DateTimeInterface"
+                    },
+                    "reportingPeriodEnd": {
+                        "title": "reportingPeriodEnd",
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": false,
+                        "readOnly": true,
+                        "x-class": "DateTimeInterface"
+                    }
+                },
+                "x-name": "Report",
+                "additionalProperties": false
+            },
+            "Result": {
+                "required": [
+                    "tokens",
+                    "policy",
+                    "state"
+                ],
+                "type": "object",
+                "properties": {
+                    "tokens": {
+                        "title": "tokens",
+                        "type": "object",
+                        "nullable": false,
+                        "readOnly": true,
+                        "additionalProperties": true
+                    },
+                    "policy": {
+                        "$ref": "#\/components\/schemas\/Policy"
+                    },
+                    "state": {
+                        "title": "state",
+                        "enum": [
+                            1,
+                            0,
+                            2,
+                            4,
+                            8,
+                            16,
+                            -1,
+                            -2
+                        ],
+                        "type": "integer",
+                        "nullable": false,
+                        "readOnly": true,
+                        "x-class": "Drutiny\\AuditResponse\\State"
+                    }
+                },
+                "x-name": "Result",
+                "additionalProperties": false
+            },
+            "Tag": {
+                "required": [
+                    "name"
+                ],
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "title": "name",
+                        "type": "string",
+                        "nullable": false,
+                        "readOnly": true
+                    }
+                },
+                "x-name": "Tag",
+                "additionalProperties": false
+            },
+            "Chart": {
+                "required": [
+                    "title",
+                    "height",
+                    "yAxis",
+                    "xAxis",
+                    "bootstrapColumns",
+                    "width",
+                    "series",
+                    "seriesLabels",
+                    "colors",
+                    "labels",
+                    "tableIndex",
+                    "htmlClass",
+                    "legend",
+                    "type",
+                    "hideTable",
+                    "stacked",
+                    "maintainAspectRatio"
+                ],
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "title": "title",
+                        "type": "string",
+                        "description": "The title of the graph",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "height": {
+                        "title": "height",
+                        "type": "string",
+                        "description": "The height of the graph area set as a CSS style on the <canvas> element.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "yAxis": {
+                        "title": "yAxis",
+                        "type": "string",
+                        "description": "The label for the y-axis.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "xAxis": {
+                        "title": "xAxis",
+                        "type": "string",
+                        "description": "The label for the x-axis.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "bootstrapColumns": {
+                        "title": "bootstrapColumns",
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "width": {
+                        "title": "width",
+                        "type": "string",
+                        "description": "\tThe width of the graph area set as a CSS style on the <canvas> element.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "series": {
+                        "title": "series",
+                        "type": "string",
+                        "description": "\tAn array of css selectors that return the HTML elements whose text will become chart data.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "seriesLabels": {
+                        "title": "seriesLabels",
+                        "type": "string",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "colors": {
+                        "title": "colors",
+                        "type": "array",
+                        "description": "An array of colors expressed using RGB syntax. E.g. rgba(52, 73, 94,1.0).",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "labels": {
+                        "title": "labels",
+                        "type": "string",
+                        "description": "A css selector that returns an array of HTML elements whose text will become labels in a pie chart or x-axis in a bar graph.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "tableIndex": {
+                        "title": "tableIndex",
+                        "type": "number",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "htmlClass": {
+                        "title": "htmlClass",
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "legend": {
+                        "title": "legend",
+                        "type": "string",
+                        "description": "The position of the legend. Options are: top, bottom, left, right or none (to remove legend).",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "type": {
+                        "title": "type",
+                        "type": "string",
+                        "description": "The type of chart to render. Recommend bar, pie or doughnut.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "hideTable": {
+                        "title": "hideTable",
+                        "type": "boolean",
+                        "description": "A boolean to determine if the table used to read the tabular data should be hidden. Defaults to false.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "stacked": {
+                        "title": "stacked",
+                        "type": "boolean",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "maintainAspectRatio": {
+                        "title": "maintainAspectRatio",
+                        "type": "boolean",
+                        "nullable": false,
+                        "readOnly": true
+                    }
+                },
+                "x-name": "Chart",
+                "additionalProperties": false
+            },
+            "Dependency": {
+                "required": [
+                    "onFail",
+                    "expression",
+                    "syntax",
+                    "description"
+                ],
+                "type": "object",
+                "properties": {
+                    "onFail": {
+                        "title": "onFail",
+                        "enum": [
+                            0,
+                            1,
+                            4,
+                            3,
+                            2
+                        ],
+                        "type": "integer",
+                        "nullable": false,
+                        "readOnly": true,
+                        "x-class": "Drutiny\\Policy\\DependencyBehaviour"
+                    },
+                    "expression": {
+                        "title": "expression",
+                        "type": "string",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "syntax": {
+                        "title": "syntax",
+                        "type": "string",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "description": {
+                        "title": "description",
+                        "type": "string",
+                        "nullable": false,
+                        "readOnly": true
+                    }
+                },
+                "x-name": "Dependency",
+                "additionalProperties": false
+            },
+            "PolicyDefinition": {
+                "required": [
+                    "parameters",
+                    "severity",
+                    "name",
+                    "weight"
+                ],
+                "type": "object",
+                "properties": {
+                    "parameters": {
+                        "title": "parameters",
+                        "type": "object",
+                        "properties": {},
+                        "description": "The parameter overrides to use for the policy in this profile.",
+                        "nullable": false,
+                        "readOnly": true,
+                        "x-class": "Symfony\\Component\\DependencyInjection\\ParameterBag\\ParameterBagInterface"
+                    },
+                    "severity": {
+                        "title": "severity",
+                        "enum": [
+                            "none",
+                            "low",
+                            "normal",
+                            "high",
+                            "critical"
+                        ],
+                        "type": "string",
+                        "description": "The severity override to use for the policy in this profile.",
+                        "nullable": false,
+                        "readOnly": true,
+                        "x-class": "Drutiny\\Policy\\Severity"
+                    },
+                    "name": {
+                        "title": "name",
+                        "type": "string",
+                        "description": "A list of policies that must pass for this profile to be applicable against a given target.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "weight": {
+                        "title": "weight",
+                        "type": "number",
+                        "description": "Weighting to influence policy ordering in the profile.",
+                        "nullable": false,
+                        "readOnly": true
+                    }
+                },
+                "x-name": "PolicyDefinition",
+                "additionalProperties": false
+            },
+            "FormatDefinition": {
+                "required": [
+                    "name",
+                    "template",
+                    "content"
+                ],
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "title": "name",
+                        "type": "string",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "template": {
+                        "title": "template",
+                        "type": "string",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "content": {
+                        "title": "content",
+                        "type": "string",
+                        "nullable": false,
+                        "readOnly": true
+                    }
+                },
+                "x-name": "FormatDefinition",
+                "additionalProperties": false
+            }
+        }
+    }
+}

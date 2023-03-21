@@ -2,7 +2,6 @@
 
 namespace Drutiny\Console\Command;
 
-use Fiasco\SymfonyConsoleStyleMarkdown\Renderer;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -10,7 +9,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Drutiny\ProfileFactory;
 use Drutiny\PolicyFactory;
-use Drutiny\Entity\PolicyOverride;
+use Drutiny\Profile\PolicyDefinition;
 use Twig\Environment;
 
 /**
@@ -55,8 +54,8 @@ class ProfileInfoCommand extends Command
 
         $profile = $this->profileFactory->loadProfileByName($input->getArgument('profile'));
 
-        $policies = array_map(fn (PolicyOverride $p) => $p->getPolicy($this->policyFactory), $profile->getAllPolicyDefinitions());
-        $dependencies = array_map(fn (PolicyOverride $d) => $d->getPolicy($this->policyFactory), $profile->getDependencyDefinitions());
+        $policies = array_map(fn (PolicyDefinition $p) => $p->getPolicy($this->policyFactory), $profile->policies);
+        $dependencies = array_map(fn (PolicyDefinition $d) => $d->getPolicy($this->policyFactory), $profile->dependencies);
 
 
         $render->title($profile->title);
@@ -77,9 +76,9 @@ class ProfileInfoCommand extends Command
         }
 
         $render->section('Policies');
-        $headers = ['Title', 'Name', 'Class', 'Source'];
+        $headers = ['Title', 'Name', 'Severity', 'Class', 'Source'];
         $render->table($headers, array_map(function ($policy) {
-          return [$policy->title, $policy->name, $policy->class, $policy->source];
+          return [$policy->title, $policy->name, $policy->severity->value, $policy->class, $policy->source];
         }, $policies));
 
         return 0;

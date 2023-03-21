@@ -7,6 +7,7 @@ use Drutiny\LanguageManager;
 use Drutiny\PolicyFactory;
 use Drutiny\ProfileFactory;
 use Drutiny\Report\FormatFactory;
+use Drutiny\Report\ReportFactory;
 use Drutiny\Target\TargetFactory;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
@@ -28,8 +29,8 @@ class KeywordAuditCommand extends DrutinyBaseCommand
     protected ProfileFactory $profileFactory,
     protected PolicyFactory $policyFactory,
     protected TargetFactory $targetFactory,
-    protected Assessment $assessment,
     protected FormatFactory $formatFactory,
+    protected ReportFactory $reportFactory,
     protected LoggerInterface $logger,
     protected ProgressBar $progressBar,
     protected LanguageManager $languageManager
@@ -93,23 +94,6 @@ class KeywordAuditCommand extends DrutinyBaseCommand
         // Validate and Setup the target.
         $target = $this->targetFactory->create($input->getArgument('target'), $input->getOption('uri'));
 
-        $profile = $this->profileFactory->create([
-          'title' => 'Keyword audit: ',
-          'name' => '_keyword_audit',
-          'uuid' => '_keyword_audit',
-          'description' => 'Wrapper profile for keyword:audit',
-          'format' => [
-            'terminal' => [
-              'content' => "
-              {% block audit %}
-                {% for response in assessment.getResults %}
-                    {{ policy_result(response, assessment) }}
-                {% endfor %}
-              {% endblock %}"
-            ]
-          ]
-        ]);
-
         $list = [];
         foreach ($input->getOption('keyword') as $keyword) {
             $list += $this->policyFactory->getPolicyListByKeyword($keyword);
@@ -136,8 +120,25 @@ class KeywordAuditCommand extends DrutinyBaseCommand
           $io->text('Keyword audit will run these policies.');
           $io->text('');
         }
-        
-        $profile->addPolicies($unique_policies);
+
+        $profile = $this->profileFactory->create([
+          'title' => 'Keyword audit: ',
+          'name' => '_keyword_audit',
+          'uuid' => '_keyword_audit',
+          'source' => 'keyword:audit',
+          'description' => 'Wrapper profile for keyword:audit',
+          'policies' => $unique_policies,
+          'format' => [
+            'terminal' => [
+              'content' => "
+              {% block audit %}
+                {% for response in assessment.getResults %}
+                    {{ policy_result(response, assessment) }}
+                {% endfor %}
+              {% endblock %}"
+            ]
+          ]
+        ]);
 
         // Get the URLs.
         if ($uri = $input->getOption('uri')) {
@@ -146,23 +147,15 @@ class KeywordAuditCommand extends DrutinyBaseCommand
 
         $profile->setReportingPeriod($this->getReportingPeriodStart($input), $this->getReportingPeriodEnd($input));
 
-        $policies = [];
-        $this->progressBar->setMessage("Loading policy definitions...");
-        foreach ($profile->getAllPolicyDefinitions() as $definition) {
-            $policies[] = $definition->getPolicy($this->policyFactory);
-        }
-
         $this->progressBar->setMessage("Assessing target...");
 
-        $this->assessment
-          ->setUri($uri)
-          ->assessTarget($target, $policies, $profile->getReportingPeriodStart(), $profile->getReportingPeriodEnd());
+        $report = $this->reportFactory->create($profile, $target);
 
         $this->progressBar->finish();
         $this->progressBar->clear();
 
         $rows = [];
-        foreach ($this->assessment->getStatsByResult() as $type => $frequency) {
+        foreach ((new Assessment($report))->getStatsByResult() as $type => $frequency) {
           $rows[] = [ucwords($type, " -"), $frequency];
         }
 
@@ -174,7 +167,7 @@ class KeywordAuditCommand extends DrutinyBaseCommand
 
         foreach ($this->getFormats($input, $profile, $this->formatFactory) as $format) {
             $format->setNamespace($this->getReportNamespace($input, $uri));
-            $format->render($profile, $this->assessment);
+            $format->render($report);
             foreach ($format->write() as $location) {
               $output->writeln("Policy Audit written to $location.");
             }
@@ -189,7 +182,7 @@ class KeywordAuditCommand extends DrutinyBaseCommand
         $this->logger->info("Exiting with max severity code.");
 
         // Return the max severity as the exit code.
-        $exit_code = $this->assessment->getSeverityCode();
+        $exit_code = $report->severity->getWeight();
 
         return $exit_code >= $exit_severity ? $exit_code : 0;
     }

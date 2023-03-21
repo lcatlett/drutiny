@@ -9,6 +9,18 @@ use Exception;
 use ReflectionClass;
 
 abstract class FilesystemFormat extends Format implements FilesystemFormatInterface {
+    /**
+     * Location where the writeable directory is.
+     */
+    public readonly string $directory;
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setWriteableDirectory(string $dir):void
+    {
+      $this->directory = $dir;
+    }
 
     /**
      * {@inheritdoc}
@@ -19,7 +31,7 @@ abstract class FilesystemFormat extends Format implements FilesystemFormatInterf
         $attributes = $reflect->getAttributes(AsFormat::class);
 
         if (empty($attributes)) {
-            throw new Exception(get_class($this) . " has no format attribute.");
+            throw new Exception(get_class($this) . " has no AsFormat attribute.");
         }
 
         $format = $attributes[0]->newInstance();

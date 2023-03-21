@@ -4,6 +4,7 @@ namespace Drutiny\Console\Command;
 
 use Drutiny\LanguageManager;
 use Drutiny\PolicyFactory;
+use Drutiny\Profile;
 use Drutiny\ProfileFactory;
 use Fiasco\SymfonyConsoleStyleMarkdown\Renderer;
 use Symfony\Component\Console\Input\InputArgument;
@@ -69,11 +70,11 @@ class PolicyInfoCommand extends DrutinyBaseCommand
         }, $this->profileFactory->getProfileList());
         
         $io->title('Profiles');
-        $profiles = array_filter($profiles, function ($profile) use ($policy) {
-          $list = array_keys($profile->getAllPolicyDefinitions());
+        $profiles = array_filter($profiles, function (Profile $profile) use ($policy) {
+          $list = array_keys($profile->policies);
           return in_array($policy->name, $list);
         });
-        $io->listing(array_map(function ($profile) {
+        $io->listing(array_map(function (Profile $profile) {
           return $profile->name;
         }, $profiles));
         return 0;

@@ -2,11 +2,11 @@
 
 namespace Drutiny\Console\Command;
 
-use Drutiny\Assessment;
 use Drutiny\LanguageManager;
 use Drutiny\Policy;
 use Drutiny\ProfileFactory;
 use Drutiny\Report\FormatFactory;
+use Drutiny\Report\ReportFactory;
 use Drutiny\Target\TargetFactory;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -24,7 +24,7 @@ class AuditRunCommand extends DrutinyBaseCommand
 
   public function __construct(
     protected TargetFactory $targetFactory,
-    protected Assessment $assessment,
+    protected ReportFactory $reportFactory,
     protected ProfileFactory $profileFactory,
     protected FormatFactory $formatFactory,
     protected LanguageManager $languageManager
@@ -80,11 +80,11 @@ class AuditRunCommand extends DrutinyBaseCommand
         $audit_class = $input->getArgument('audit');
 
         // Fabricate a policy to run the audit.
-        $policy = new Policy();
-        $policy->setProperties([
+        $policy = new Policy(...[
           'title' => 'Audit: ' . $audit_class,
           'name' => '_test',
           'class' => $audit_class,
+          'source' => 'audit:run',
           'description' => 'Verbatim run of an audit class',
           'remediation' => 'none',
           'success' => 'success',
@@ -100,7 +100,9 @@ class AuditRunCommand extends DrutinyBaseCommand
 
             $info = Yaml::parse($value);
 
-            $policy->addParameter($key, $info);
+            $parameters = $policy->parameters;
+            $parameters[$key] = $info;
+            $policy = $policy->with(parameters: $parameters);
         }
 
         // Setup the target.
@@ -115,24 +117,28 @@ class AuditRunCommand extends DrutinyBaseCommand
         // If a URI is provided set it on the Target.
         $target->setUri($uri);
 
-        $this->assessment->setUri($uri);
-        $this->assessment->assessTarget($target, [$policy], $this->getReportingPeriodStart($input), $this->getReportingPeriodEnd($input));
-
         $profile = $this->profileFactory->create([
           'title' => 'Audit:Run',
           'name' => 'audit_run',
           'uuid' => 'audit_run',
-          'description' => 'Wrapper profile for audit:run'
+          'source' => 'audit:run',
+          'description' => 'Wrapper profile for audit:run',
+          'policies' => [
+            $policy->name => $policy->getDefinition()
+          ]
         ]);
+        $profile->setReportingPeriod($start, $end);
+
+        $report = $this->reportFactory->create($profile, $target);
 
         foreach ($this->getFormats($input, $profile, $this->formatFactory) as $format) {
             $format->setNamespace($this->getReportNamespace($input, $uri));
-            $format->render($profile, $this->assessment);
+            $format->render($report);
             foreach ($format->write() as $written_location) {
               // To nothing.
             }
         }
 
-        return $this->assessment->getSeverityCode();
+        return $report->successful ? 0 : $report->severity->getWeight();
     }
 }

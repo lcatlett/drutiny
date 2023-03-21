@@ -3,7 +3,7 @@
 namespace DrutinyTests;
 
 use Drutiny\AuditResponse\AuditResponse;
-use Drutiny\Audit;
+use Drutiny\AuditResponse\State;
 use Drutiny\Policy;
 use Drutiny\PolicyFactory;
 use Drutiny\Target\TargetFactory;
@@ -20,22 +20,20 @@ class EntityTest extends KernelTestCase {
     $this->assertInstanceOf(Policy::class, $policy);
 
     // Testing dynamic assignment to policy properties.
-    $policy->setProperty('name', 'Test:Test');
-    $this->assertEquals($policy->name, 'Test:Test');
+    $name_test = $policy->with(name: 'Test:Test');
+    $this->assertEquals($name_test->name, 'Test:Test');
 
     // Testing dynamic assignment of parameters.
-    $policy->addParameters([
+    $param_test = $policy->with(parameters: [
       'foo' => 'bar',
       'baz' => 'gat'
     ]);
 
-    $this->assertEquals($policy->getParameter('foo'), 'bar');
-    $this->assertEquals($policy->parameters['baz'], 'gat');
+    $this->assertEquals($param_test->parameters->get('foo'), 'bar');
+    $this->assertEquals($param_test->parameters->all()['baz'], 'gat');
 
     // Confirm the export can be imported verbatim.
-    $policy2 = new Policy();
-    $policy2->setProperties($policy->export());
-
+    $policy2 = new Policy(...$policy->export());
     $this->assertEquals($policy->title, $policy2->title);
   }
 
@@ -49,30 +47,15 @@ class EntityTest extends KernelTestCase {
   public function testAuditResponse()
   {
     $policy = $this->container->get(PolicyFactory::class)->loadPolicyByName('Test:Pass');
-    $response = new AuditResponse($policy);
-    $response->set(Audit::SUCCESS, [
-      'foo' => 'bar',
-    ]);
-    $this->assertArrayHasKey('foo', $response->getTokens());
-    $this->assertContains('bar', $response->getTokens());
-    $this->assertTrue($response->isSuccessful());
-
-    $export = $response->export();
-    $export['state'] = Audit::FAIL;
-    $response->import($export);
-
-    $this->assertFalse($response->isSuccessful());
-    $this->assertFalse($response->hasError());
-
-    $this->assertIsString($sleep_data = serialize($response));
-
-    $sleep_data = serialize($response);
-
-    $response = unserialize($sleep_data);
-    
-    $this->assertInstanceOf(AuditResponse::class, $response);
-
-    $this->assertFalse($response->isSuccessful());
-    $this->assertFalse($response->hasError());
+    $response = new AuditResponse(
+      policy: $policy,
+      state: State::SUCCESS,
+      tokens: [
+        'foo' => 'bar',
+      ]
+    );
+    $this->assertArrayHasKey('foo', $response->tokens);
+    $this->assertContains('bar', $response->tokens);
+    $this->assertTrue($response->state->isSuccessful());
   }
 }

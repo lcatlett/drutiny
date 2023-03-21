@@ -1,6 +1,6 @@
 # {{ title }}
 
-## Severity: {{ severity }}
+## Severity: {{ severity|capitalize }}
 {% if depends %}## Depends
 {% for dependency in depends %}- [{{ dependency.on_fail }}] {{ dependency.expression|raw }}{% endfor %}
 

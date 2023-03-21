@@ -3,190 +3,136 @@
 namespace Drutiny\AuditResponse;
 
 use Drutiny\Policy;
-use Drutiny\Audit;
-use Drutiny\Kernel;
+use Drutiny\Attribute\ArrayType;
 use Drutiny\Entity\ExportableInterface;
-use Drutiny\Entity\SerializableExportableTrait;
+use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 
 /**
  * Class AuditResponse.
  *
  * @package Drutiny\AuditResponse
  */
+#[Autoconfigure(autowire: false)  ]
 class AuditResponse implements ExportableInterface
 {
-    use SerializableExportableTrait {
-      import as importUnserialized;
-    }
-
-    protected Policy $policy;
-    protected $state = Audit::NOT_APPLICABLE;
-    protected $tokens = [];
-
-  /**
-   * AuditResponse constructor.
-   *
-   * @param Policy $policy
-   *   A policy object of type Drutiny\Policy.
-   */
-    public function __construct(Policy $policy)
+    #[ArrayType('keyed')]
+    public readonly array $tokens;
+    public function __construct(
+      public readonly Policy $policy,
+      public readonly State $state,  
+      array $tokens = [],
+    )
     {
-        $this->policy = $policy;
+      $tokens['chart'] = $policy->chart;
+      $this->tokens = $tokens;
     }
 
-  /**
-   * Get the AudiResponse Policy.
-   */
+    /**
+     * Get the AudiResponse Policy.
+     * @deprecated use policy attribute.
+     */
     public function getPolicy():Policy
     {
         return $this->policy;
     }
 
-  /**
-   * Set the state of the response.
-   */
-    public function set(int $state = Audit::ERROR, array $tokens = []):AuditResponse
-    {
-        switch (true) {
-            case ($state === Audit::SUCCESS):
-            case ($state === Audit::PASS):
-                $state = Audit::SUCCESS;
-                break;
-
-            case ($state === Audit::FAILURE):
-            case ($state === Audit::FAIL):
-                $state = Audit::FAIL;
-                break;
-
-            case ($state === Audit::NOT_APPLICABLE):
-            case ($state === null):
-                $state = Audit::NOT_APPLICABLE;
-                break;
-
-            case ($state === Audit::IRRELEVANT):
-            case ($state === Audit::WARNING):
-            case ($state === Audit::WARNING_FAIL):
-            case ($state === Audit::NOTICE):
-            case ($state === Audit::ERROR):
-              // Do nothing. These are all ok.
-                break;
-
-            default:
-                throw new AuditResponseException("Unknown state set in Audit Response: $state");
-        }
-        $this->setTokens($tokens);
-        $this->state = $state;
-        return $this;
-    }
-
-    public function setTokens(array $tokens = []):AuditResponse
-    {
-        $this->tokens = $tokens;
-        $this->tokens['chart'] = $this->policy->chart;
-        return $this;
-    }
-
-    public function setToken($name, $value):AuditResponse
-    {
-      $this->tokens[$name] = $value;
-      return $this;
-    }
-
+    /**
+     * @deprecated use tokens attribute.
+     */
     public function getTokens():array
     {
       return $this->tokens;
     }
 
-  /**
-   * Get the exception message if present.
-   */
+    /**
+     * Get the exception message if present.
+     */
     public function getExceptionMessage():string
     {
         return isset($this->tokens['exception']) ? $this->tokens['exception'] : '';
     }
 
-  /**
-   * Get the type of response based on policy type and audit response.
-   */
+    /**
+     * Get the type of response based on policy type and audit response.
+     */
     public function getType():string
     {
-        if ($this->isIrrelevant()) {
-            return 'irrelevant';
+        // Data type policies cannot 'fail' irrespective of their state.
+        if (!$this->state->isSuccessful() && $this->policy->type == 'data') {
+          return 'data';
         }
-        if ($this->isNotApplicable()) {
-            return 'not-applicable';
-        }
-        if ($this->hasError()) {
-            return 'error';
-        }
-        if ($this->isNotice()) {
-            return 'notice';
-        }
-        $policy_type = $this->policy->type;
-        if ($policy_type == 'data') {
-            return 'data';
-        }
-        if (!$this->isSuccessful()) {
-          return 'failure';
-        }
-        if ($this->hasWarning()) {
-            return 'warning';
-        }
-        return 'success';
+
+        $type = str_replace('_', '-', strtolower($this->state->name));
+        return match ($type) {
+          'warning-fail' => 'failure',
+          default => $type
+        };
     }
 
     /**
-     *
+     * @deprecated use state property.
      */
     public function isSuccessful():bool
     {
-        return $this->state === Audit::SUCCESS || $this->isNotice() || $this->state === Audit::WARNING;
+        return $this->state->isSuccessful();
     }
 
+    /**
+     * @deprecated use state property.
+     */
     public function isFailure():bool
     {
-      return $this->getType() == 'failure';
+      return $this->state->isFailure();
     }
 
-  /**
-   *
-   */
+    /**
+     * @deprecated use state property.
+     */
     public function isNotice():bool
     {
-        return $this->state === Audit::NOTICE;
+        return $this->state->isNotice();
     }
 
-  /**
-   *
-   */
+    /**
+     * @deprecated use state property.
+     */
     public function hasWarning():bool
     {
-        return $this->state === Audit::WARNING || $this->state === Audit::WARNING_FAIL;
+        return $this->state->hasWarning();
     }
 
+    /**
+     * @deprecated use state property.
+     */
     public function hasError():bool
     {
-        return $this->state === Audit::ERROR;
+        return $this->state->hasError();
     }
 
+    /**
+     * @deprecated use state property.
+     */
     public function isNotApplicable():bool
     {
-        return $this->state === Audit::NOT_APPLICABLE;
+        return $this->state->isNotApplicable();
     }
 
+    /**
+     * @deprecated use state property.
+     */
     public function isIrrelevant():bool
     {
-        return $this->state === Audit::IRRELEVANT;
+        return $this->state->isIrrelevant();
     }
 
     public function getSeverity():string
     {
-        return $this->policy->severity;
+        return $this->policy->severity->value;
     }
 
     public function getSeverityCode():int
     {
-        return $this->policy->getSeverity();
+        return $this->policy->severity->getWeight();
     }
 
     /**
@@ -196,11 +142,11 @@ class AuditResponse implements ExportableInterface
     {
       return [
         'policy' => $this->policy->name,
-        'status' => $this->isSuccessful(),
-        'is_notice' => $this->isNotice(),
-        'has_warning' => $this->hasWarning(),
-        'has_error' => $this->hasError(),
-        'is_not_applicable' => $this->isNotApplicable(),
+        'status' => $this->state->isSuccessful(),
+        'is_notice' => $this->state->isNotice(),
+        'has_warning' => $this->state->hasWarning(),
+        'has_error' => $this->state->hasError(),
+        'is_not_applicable' => $this->state->isNotApplicable(),
         'type' => $this->getType(),
         'severity' => $this->getSeverity(),
         'severity_code' => $this->getSeverityCode(),

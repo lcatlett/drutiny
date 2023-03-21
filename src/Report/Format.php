@@ -8,11 +8,12 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use Drutiny\Attribute\AsFormat;
+use Drutiny\Profile\FormatDefinition;
 
 abstract class Format implements FormatInterface
 {
     protected string $namespace;
-    protected array $options = [];
+    protected FormatDefinition $definition;
     protected BufferedOutput $buffer;
 
     public function __construct(protected OutputInterface $output, protected LoggerInterface $logger)
@@ -34,9 +35,9 @@ abstract class Format implements FormatInterface
     /**
      * {@inheritdoc}
      */
-    public function setOptions(array $options = []):FormatInterface
+    public function setDefinition(FormatDefinition $definition):FormatInterface
     {
-      $this->options = $options;
+      $this->definition = $definition;
       return $this;
     }
 
