@@ -21,6 +21,7 @@
         "erusev/parsedown": "^1.6.3",
         "fiasco/async": "^4.0-beta1",
         "fiasco/symfony-console-style-markdown": "^1.2",
+        "fiasco/tabular-openapi": "dev-main",
         "guzzlehttp/guzzle": "^7.0",
         "kevinrob/guzzle-cache-middleware": "^4.0",
         "league/html-to-markdown": "^4.9",
