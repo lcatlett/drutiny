@@ -6,6 +6,7 @@ use Drutiny\Assessment;
 use Drutiny\LanguageManager;
 use Drutiny\PolicyFactory;
 use Drutiny\ProfileFactory;
+use Drutiny\Report\Format\Terminal;
 use Drutiny\Report\FormatFactory;
 use Drutiny\Report\ReportFactory;
 use Drutiny\Target\TargetFactory;
@@ -121,14 +122,14 @@ class KeywordAuditCommand extends DrutinyBaseCommand
           $io->text('');
         }
 
-        $profile = $this->profileFactory->create([
-          'title' => 'Keyword audit: ',
-          'name' => '_keyword_audit',
-          'uuid' => '_keyword_audit',
-          'source' => 'keyword:audit',
-          'description' => 'Wrapper profile for keyword:audit',
-          'policies' => $unique_policies,
-          'format' => [
+        $profile = $this->profileFactory->loadProfileByName('empty')->with(
+          title: 'Keyword audit',
+          name: '_keyword_audit',
+          uuid: '_keyword_audit',
+          source: 'keyword:audit',
+          description: 'Wrapper profile for keyword:audit',
+          policies: $unique_policies,
+          format: [
             'terminal' => [
               'content' => "
               {% block audit %}
@@ -136,9 +137,8 @@ class KeywordAuditCommand extends DrutinyBaseCommand
                     {{ policy_result(response, assessment) }}
                 {% endfor %}
               {% endblock %}"
-            ]
-          ]
-        ]);
+          ]]
+        );
 
         // Get the URLs.
         if ($uri = $input->getOption('uri')) {
@@ -169,6 +169,7 @@ class KeywordAuditCommand extends DrutinyBaseCommand
             $format->setNamespace($this->getReportNamespace($input, $uri));
             $format->render($report);
             foreach ($format->write() as $location) {
+              if ($format instanceof Terminal) continue;
               $output->writeln("Policy Audit written to $location.");
             }
         }

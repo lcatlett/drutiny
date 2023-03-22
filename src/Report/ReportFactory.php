@@ -22,6 +22,8 @@ use Drutiny\Profile\PolicyDefinition;
 use Drutiny\Target\TargetInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
+use Twig\Error\RuntimeError;
+use UnexpectedValueException;
 
 class ReportFactory {
     public function __construct(
@@ -179,14 +181,23 @@ class ReportFactory {
     private function requireDependency(Dependency $dependency, array $contexts):true
     {
         $contexts['dependency'] = $dependency;
-        $return = $this->syntaxProcessor->evaluate(
-            expression: $this->syntaxProcessor->interpolate($dependency->expression, $contexts),
-            language: $dependency->syntax,
-            contexts: $contexts
-        );
-        if (($return === 1) || ($return === true)) {
-            return true;
+        try {
+            $return = $this->syntaxProcessor->evaluate(
+                expression: $this->syntaxProcessor->interpolate($dependency->expression, $contexts),
+                language: $dependency->syntax,
+                contexts: $contexts
+            );
+            if (($return === 1) || ($return === true)) {
+                return true;
+            }
         }
+        catch (RuntimeError $e) {
+            throw new DependencyException($dependency, $e->getMessage(), $e);
+        }
+        catch (UnexpectedValueException $e) {
+            throw new DependencyException($dependency, $e->getMessage(), $e);
+        }
+        // UnexpectedValueException
         throw new DependencyException($dependency);
     }
 
