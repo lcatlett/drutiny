@@ -178,7 +178,7 @@ class ReportFactory {
     /**
      * @throws DependencyException when dependency is not met.
      */
-    private function requireDependency(Dependency $dependency, array $contexts):true
+    private function requireDependency(Dependency $dependency, array $contexts):bool
     {
         $contexts['dependency'] = $dependency;
         try {
