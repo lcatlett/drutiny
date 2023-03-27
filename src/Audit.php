@@ -146,7 +146,7 @@ abstract class Audit implements AuditInterface
                     if ($this->definition->hasArgument($key)) {
                         $parameters = $policy->parameters->all();
                         $parameters[$key] = $value;
-                        $policy = $policy->with(['parameters' => $parameters]);
+                        $policy = $policy->with(parameters: $parameters);
                     }
                 } catch (RuntimeError $e) {
                     throw new \Exception("Failed to create key: $key. Encountered Twig runtime error: " . $e->getMessage());
