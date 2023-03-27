@@ -19,7 +19,7 @@ class ArrayType {
         $this->type = $type;
     }
 
-    public function validate(array $value):true {
+    public function validate(array $value):bool {
         $correct_type = match($this->type) {
             'keyed' => !array_is_list($value),
             'indexed' => array_is_list($value)
