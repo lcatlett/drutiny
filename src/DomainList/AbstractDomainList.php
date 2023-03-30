@@ -2,6 +2,8 @@
 
 namespace Drutiny\DomainList;
 
+use Drutiny\Target\TargetInterface;
+
 /**
  * Abstract domain source provider
  */
@@ -30,5 +32,5 @@ abstract class AbstractDomainList implements DomainListInterface
         return $this->options;
     }
 
-    abstract public function getDomains(array $options = []);
+    abstract public function getDomains(TargetInterface $target, array $options = []):array;
 }

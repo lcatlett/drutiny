@@ -4,6 +4,7 @@ namespace Drutiny\Attribute;
 
 use Attribute;
 use Drutiny\Plugin as DrutinyPlugin;
+use InvalidArgumentException;
 use ReflectionClass;
 
 #[Attribute]
@@ -44,5 +45,20 @@ class Plugin implements KeyableAttributeInterface {
     public function getField($name):PluginField
     {
         return $this->fields->get($name);
+    }
+
+    /**
+     * Build a Plugin instance from a class with a Plugin attribute declared.
+     */
+    public static function fromClass(string $class_name):Plugin
+    {
+        if (!class_exists($class_name)) {
+            throw new InvalidArgumentException("$class_name is not a valid class that exists.");
+        }
+        $reflection = new ReflectionClass($class_name);
+        $attributes = $reflection->getAttributes(Plugin::class);
+        $pluginInstance = $attributes[0]->newInstance();
+        $pluginInstance->buildFieldAttributes($class_name);
+        return $pluginInstance;
     }
 }

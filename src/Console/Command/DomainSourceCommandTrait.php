@@ -41,15 +41,13 @@ trait DomainSourceCommandTrait
 
         // Build a way for the command line to specify the options to derive
         // domains from their sources.
-        foreach ($domainSource->getSources() as $driver => $properties) {
-            foreach ($properties as $name => $description) {
-                $this->addOption(
-                    'domain-source-' . $driver . '-' . $name,
-                    null,
-                    InputOption::VALUE_OPTIONAL,
-                    $description
-                );
-            }
+        foreach ($domainSource->getAllInputOptions() as $option) {
+            $this->addOption(
+                'domain-source-' . $option->getName(),
+                null,
+                $domainSource->getInputOptionMode($option),
+                $option->getDescription()
+            );
         }
     }
 
