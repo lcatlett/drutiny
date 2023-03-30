@@ -53,7 +53,7 @@ class ReportFactory {
             profile: $profile,
             target: $target
         );
-        
+
         $report = !$report->successful ? $report : new Report(
             uri: $target->uri,
             results: $this->auditPolicies($contexts, $target, $profile->reportingPeriodStart, $profile->reportingPeriodEnd, ...$profile->policies),
@@ -70,6 +70,8 @@ class ReportFactory {
      */
     private function auditPolicies(array $contexts, TargetInterface $target, DateTime $start, DateTime $end, PolicyDefinition ...$definitions)
     {
+        $this->forkManager->clearForks();
+
         $batch = [];
         $early_results = [];
 
