@@ -17,6 +17,9 @@ use Symfony\Component\EventDispatcher\EventDispatcher;
  */
 abstract class DrutinyBaseCommand extends Command
 {
+    /**
+     * @deprecated
+     */
     protected function getProgressBar(): ProgressBar
     {
         throw new RuntimeException("Please use dependency injection in the constructor method instead for :" . ProgressBar::class);
@@ -24,6 +27,7 @@ abstract class DrutinyBaseCommand extends Command
 
     /**
      * Get container logger.
+     * @deprecated
      */
     protected function getLogger(): LoggerInterface
     {
@@ -32,6 +36,7 @@ abstract class DrutinyBaseCommand extends Command
 
     /**
      * Get container policy factory.
+     * @deprecated
      */
     protected function getPolicyFactory(): PolicyFactory
     {
@@ -40,6 +45,7 @@ abstract class DrutinyBaseCommand extends Command
 
     /**
      * Get profile factory.
+     * @deprecated
      */
     protected function getProfileFactory(): ProfileFactory
     {
@@ -48,6 +54,7 @@ abstract class DrutinyBaseCommand extends Command
 
     /**
      * Get profile factory.
+     * @deprecated
      */
     protected function getTargetFactory(): TargetFactory
     {
@@ -56,12 +63,16 @@ abstract class DrutinyBaseCommand extends Command
 
     /**
      * Get utility for managing forks.
+     * @deprecated
      */
     protected function getForkManager(): ForkManager
     {
         throw new RuntimeException("Please use dependency injection in the constructor method instead for :" . ForkManager::class);
     }
 
+    /**
+     * @deprecated
+     */
     protected function dispatchEvent(string $event, array $args)
     {
         throw new RuntimeException("Please use dependency injection in the constructor method instead for :" . EventDispatcher::class);
