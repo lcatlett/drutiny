@@ -4,6 +4,7 @@ namespace Drutiny\DependencyInjection;
 
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
+use Symfony\Component\DependencyInjection\Reference;
 
 class TwigLoaderPass implements CompilerPassInterface
 {
@@ -14,7 +15,7 @@ class TwigLoaderPass implements CompilerPassInterface
     {
         $definition = $container->getDefinition('twig.loader');
         foreach ($container->findTaggedServiceIds('twig.loader', true) as $id => $events) {
-          $definition->addMethodCall('addLoader', [$container->get($id)]);
+          $definition->addMethodCall('addLoader', [new Reference($id)]);
         }
     }
 }

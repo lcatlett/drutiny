@@ -45,7 +45,9 @@ class PluginArgumentsPass implements CompilerPassInterface
             $pluginAttribute = $attributes[0]->newInstance();
             $pluginAttribute->buildFieldAttributes($class);
 
-            $pluginCollections[$pluginAttribute->name] = $pluginAttribute->collectionKey === null ? null : $pluginAttribute;
+            $pluginServiceId = 'plugin'.$pluginAttribute->name;
+
+            $pluginCollections[$pluginServiceId] = $pluginAttribute->collectionKey === null ? null : $class;
 
             // Create a config service for the namespace.
             $configDefinition = new Definition(Config::class);
@@ -64,17 +66,22 @@ class PluginArgumentsPass implements CompilerPassInterface
             $stateDefinition->setFactory([new Reference('state'), 'load']);
             $stateDefinition->setArgument('$namespace', $pluginAttribute->name);
             $container->setDefinition($stateServiceId = 'state.'.$pluginAttribute->name, $stateDefinition);
+
+            // Create a service representation of the plugin attribute
+            $pluginAttributeDefinition = new Definition(Plugin::class);
+            $pluginAttributeDefinition->setFactory([Plugin::class, 'fromClass']);
+            $pluginAttributeDefinition->setArgument('$class_name', $class);
+            $container->setDefinition($pluginAttributeServiceId = 'attribute.' . $pluginAttribute->name, $pluginAttributeDefinition);
             
             // Create a new service matching the plugin requirements.
             $serviceDefinition = $pluginAttribute->collectionKey === null ? clone $container->getDefinition($pluginAttribute->class) : clone $container->getDefinition(PluginCollection::class);
             $serviceDefinition->setArgument('$pluginConfig', new Reference($configServiceId));
             $serviceDefinition->setArgument('$pluginCredentials', new Reference($credentialServiceId));
             $serviceDefinition->setArgument('$pluginState', new Reference($stateServiceId));
-            $serviceDefinition->setArgument('$attribute', $pluginAttribute);
-            $container->setDefinition($pluginAttribute->name, $serviceDefinition);
-
+            $serviceDefinition->setArgument('$attribute', new Reference($pluginAttributeServiceId));
             // Explicitly using pluginServiceId to be clear we're using the attribute name as an ID.
-            $pluginServiceId = $pluginAttribute->name;
+            $container->setDefinition($pluginServiceId, $serviceDefinition);
+
             $registry[$pluginAttribute->name] = $pluginServiceId;
 
             // Inject the new service as the passed in argument for the consuming service.

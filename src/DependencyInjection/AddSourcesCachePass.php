@@ -5,6 +5,7 @@ namespace Drutiny\DependencyInjection;
 use Drutiny\Attribute\AsSource;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
+use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
 
 class AddSourcesCachePass implements CompilerPassInterface
@@ -19,8 +20,13 @@ class AddSourcesCachePass implements CompilerPassInterface
             $definition->setArgument('$cache', new Reference('policy.store'));
             
             $reflection = $container->getReflectionClass($id);
-            $source = $reflection->getAttributes(AsSource::class)[0]->newInstance();
-            $definition->setArgument('$source', $source);
+
+            $sourceDefinition = new Definition(AsSource::class);
+            $sourceDefinition->setFactory([AsSource::class, 'fromClass']);
+            $sourceDefinition->setArgument('$class_name', $reflection->name);
+            $container->setDefinition($sourceDefinitionId = 'source.'.$id, $sourceDefinition);
+
+            $definition->setArgument('$source', new Reference($sourceDefinitionId));
         }
 
         foreach ($container->findTaggedServiceIds('profile.source', true) as $id => $events) {
@@ -28,8 +34,13 @@ class AddSourcesCachePass implements CompilerPassInterface
             $definition->setArgument('$cache', new Reference('profile.store'));
 
             $reflection = $container->getReflectionClass($id);
-            $source = $reflection->getAttributes(AsSource::class)[0]->newInstance();
-            $definition->setArgument('$source', $source);
+
+            $sourceDefinition = new Definition(AsSource::class);
+            $sourceDefinition->setFactory([AsSource::class, 'fromClass']);
+            $sourceDefinition->setArgument('$class_name', $reflection->name);
+            $container->setDefinition($sourceDefinitionId = 'source.'.$id, $sourceDefinition);
+            
+            $definition->setArgument('$source', new Reference($sourceDefinitionId));
         }
     }
 }

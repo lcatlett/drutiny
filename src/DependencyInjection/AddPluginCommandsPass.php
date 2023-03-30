@@ -5,59 +5,34 @@ namespace Drutiny\DependencyInjection;
 use Drutiny\Console\Application;
 use Drutiny\Console\Command\PluginCollectionCommand;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Definition;
+use Symfony\Component\DependencyInjection\Reference;
 
 class AddPluginCommandsPass implements CompilerPassInterface {
     public function process(ContainerBuilder $container)
     {
-        foreach ($container->getParameter('plugin.collections') as $id => $pluginAttribute) {
-            $listCommand = new Command($id.':list');
-            $listCommand->setDescription("List the available configurations for $id.");
-            $listCommand->addOption(
-                name: 'show-credentials',
-                shortcut: 's',
-                mode: InputOption::VALUE_NONE,
-                description: "Print credentials to terminal."
-            );
-            $listCommand->setCode(function (InputInterface $input, OutputInterface $output) use ($container, $id) {
-                return (new PluginCollectionCommand($container->get($id)))->list($input, $output);
-            });
+        foreach ($container->getParameter('plugin.collections') as $id => $class_name) {
+            $listCommandDefinition = new Definition(Command::class);
+            $listCommandDefinition->setFactory([PluginCollectionCommand::class, 'getListCommand']);
+            $listCommandDefinition->setArgument('pluginCollection', new Reference($id));
+            $container->setDefinition($listCommandDefinitionId = 'command.list.'.$id, $listCommandDefinition);
 
-            $container->getDefinition(Application::class)->addMethodCall('add', [$listCommand]);
+            $addCommandDefinition = new Definition(Command::class);
+            $addCommandDefinition->setFactory([PluginCollectionCommand::class, 'getAddCommand']);
+            $addCommandDefinition->setArgument('pluginCollection', new Reference($id));
+            $container->setDefinition($addCommandDefinitionId = 'command.add.'.$id, $addCommandDefinition);
 
-            $setupCommand = new Command($id.':add');
-            $setupCommand->setDescription("Add a new configuration entry to $id.");
-            $setupCommand->addArgument(
-                name: $pluginAttribute->collectionKey, 
-                mode: InputOption::VALUE_REQUIRED, 
-                description: $pluginAttribute->getField($pluginAttribute->collectionKey)->description
-            );
-            foreach ($pluginAttribute->getFieldAttributes() as $field_name => $field) {
-                $setupCommand->addOption($field_name, null, InputOption::VALUE_OPTIONAL, $field->description, $field->default);
-            }
-            $setupCommand->setCode(function (InputInterface $input, OutputInterface $output) use ($container, $id) {
-                return (new PluginCollectionCommand($container->get($id)))->add($input, $output);
-            });
-
-            $container->getDefinition(Application::class)->addMethodCall('add', [$setupCommand]);
-
-
-            $deleteCommand = new Command($id.':delete');
-            $deleteCommand->setDescription("Remove a configuration entry from $id.");
-            $deleteCommand->addArgument(
-                name: $pluginAttribute->collectionKey, 
-                mode: InputOption::VALUE_REQUIRED, 
-                description: $pluginAttribute->getField($pluginAttribute->collectionKey)->description
-            );
-            $deleteCommand->setCode(function (InputInterface $input, OutputInterface $output) use ($container, $id) {
-                return (new PluginCollectionCommand($container->get($id)))->delete($input, $output);
-            });
-
-            $container->getDefinition(Application::class)->addMethodCall('add', [$deleteCommand]);
+            $deleteCommandDefinition = new Definition(Command::class);
+            $deleteCommandDefinition->setFactory([PluginCollectionCommand::class, 'getDeleteCommand']);
+            $deleteCommandDefinition->setArgument('pluginCollection', new Reference($id));
+            $container->setDefinition($deleteCommandDefinitionId = 'command.delete.'.$id, $deleteCommandDefinition);
+            
+            $container->getDefinition(Application::class)
+                      ->addMethodCall('add', [new Reference($listCommandDefinitionId)])
+                      ->addMethodCall('add', [new Reference($addCommandDefinitionId)])
+                      ->addMethodCall('add', [new Reference($deleteCommandDefinitionId)]);
         }
     }
 }
