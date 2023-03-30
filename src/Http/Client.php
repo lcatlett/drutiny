@@ -2,6 +2,7 @@
 
 namespace Drutiny\Http;
 
+use Drutiny\Settings;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\HandlerStack;
@@ -12,19 +13,12 @@ use Kevinrob\GuzzleCache\Storage\Psr6CacheStorage;
 use Kevinrob\GuzzleCache\Strategy\PrivateCacheStrategy;
 use Psr\Http\Message\RequestInterface;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
-use Symfony\Component\DependencyInjection\ContainerAwareTrait;
-use Symfony\Component\DependencyInjection\TaggedContainerInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class Client
 {
-    use ContainerAwareTrait;
-
-    protected $cache;
-
-    public function __construct(TaggedContainerInterface $container, FilesystemAdapter $cache)
+    public function __construct(protected Settings $settings, protected FilesystemAdapter $cache, protected ContainerInterface $container)
     {
-        $this->setContainer($container);
-        $this->cache = $cache;
     }
 
     /**
@@ -36,7 +30,7 @@ class Client
             $config['handler'] = HandlerStack::create();
         }
 
-        foreach ($this->container->findTaggedServiceIds('http.middleware') as $id => $service) {
+        foreach ($this->settings->get('http.middleware.registry') as $id) {
             $service = $this->container->get($id);
             $config['handler']->push(Middleware::mapRequest(function (RequestInterface $request) use ($service) {
                 return $service->handle($request);
