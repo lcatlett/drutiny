@@ -6,7 +6,9 @@ use Drutiny\Attribute\Plugin as PluginAttribute;
 use Drutiny\Attribute\PluginField;
 use Drutiny\Config\ConfigInterface;
 use Drutiny\Plugin;
+use Drutiny\Settings;
 use Exception;
+use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -22,6 +24,8 @@ class PluginCollection implements PluginInterface {
         ConfigInterface $pluginState,
         protected InputInterface $input,
         protected OutputInterface $output,
+        protected LoggerInterface $logger,
+        protected Settings $settings,
     )
     {
         $this->stores = [
@@ -74,7 +78,9 @@ class PluginCollection implements PluginInterface {
             pluginConfig: $this->stores[FieldType::CONFIG->key()]->load($key),
             pluginState: $this->stores[FieldType::STATE->key()]->load($key),
             input: $this->input,
-            output: $this->output
+            output: $this->output,
+            logger: $this->logger,
+            settings: $this->settings
         );
     }
 
