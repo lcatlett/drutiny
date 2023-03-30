@@ -80,6 +80,13 @@ services:
       Drutiny\Http\MiddlewareInterface:
         tags: [http.middleware]
 
+      Drutiny\DomainList\DomainListInterface:
+        tags: [domain_list]
+
+      Drutiny\Report\FilesystemFormatInterface:
+        shared: false
+
+
     # Services
     Psr\Container\ContainerInterface:
       alias: service_container
