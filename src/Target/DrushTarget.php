@@ -4,6 +4,8 @@ namespace Drutiny\Target;
 
 use Drutiny\Attribute\AsTarget;
 use Drutiny\Helper\TextCleaner;
+use Drutiny\Target\Service\Drush;
+use Drutiny\Target\Service\ServiceInterface;
 use Drutiny\Target\Transport\SshTransport;
 use Psr\Cache\CacheItemInterface;
 use Symfony\Component\Process\Exception\ProcessFailedException;
@@ -61,17 +63,26 @@ class DrushTarget extends Target implements
     }
 
     /**
+     * Configure Drush service with a URL.
+     */
+    protected function configureService(ServiceInterface $service):void
+    {
+      if (!$url = $this->getUri()) {
+        return;
+      }
+      if ($service instanceof Drush) {
+        $service->setUrl($url);
+      }
+    }
+
+    /**
      * Decorate target with drush status and php information.
      */
     protected function buildAttributes():DrushTarget {
         $this->hasBuilt = true;
 
         /* @var Drutiny\Target\Service\Drush */
-        $service = $this->serviceFactory->get('drush', $this->transport);
-
-        if ($url = $this->getUri()) {
-          $service->setUrl($url);
-        }
+        $service = $this->getService('drush');
 
         try {
           $status = $service->status(['format' => 'json'])->run(function ($output) {
