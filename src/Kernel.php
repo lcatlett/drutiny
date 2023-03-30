@@ -3,6 +3,7 @@
 namespace Drutiny;
 
 use Drutiny\Attribute\AsSource;
+use Drutiny\Attribute\Name;
 use Drutiny\Console\Application;
 use Drutiny\DependencyInjection\AddConsoleCommandPass;
 use Drutiny\DependencyInjection\AddPluginCommandsPass;
@@ -25,10 +26,12 @@ use Symfony\Component\EventDispatcher\DependencyInjection\RegisterListenersPass;
 use Symfony\Component\EventDispatcher\GenericEvent;
 use Drutiny\DependencyInjection\TwigLoaderPass;
 use Drutiny\DependencyInjection\UseServiceAttributePass;
+use ProjectServiceContainer;
 use Psr\EventDispatcher\StoppableEventInterface;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
+use Symfony\Component\DependencyInjection\Dumper\PhpDumper;
 use Symfony\Component\Finder\Finder;
 
 class Kernel
@@ -79,7 +82,7 @@ class Kernel
     public function getContainer():ContainerInterface
     {
         if (!isset($this->container)) {
-            return $this->initializeContainer();
+            return $this->initializeContainer(true);
         }
         return $this->container;
     }
@@ -103,10 +106,10 @@ class Kernel
      * The cached version of the service container is used when fresh, otherwise the
      * container is built.
      */
-    protected function initializeContainer():ContainerInterface
+    protected function initializeContainer($rebuild = false):ContainerInterface
     {
         $file = DRUTINY_LIB . '/' . self::CACHED_CONTAINER;
-        if (file_exists($file)) {
+        if (file_exists($file) && !$rebuild) {
             require_once $file;
             $this->container = new ProjectServiceContainer();
         } else {
@@ -117,13 +120,12 @@ class Kernel
 
             // Ensure the Drutiny config directory is available.
             is_dir($this->container->getParameter('drutiny_config_dir')) or
-          mkdir($this->container->getParameter('drutiny_config_dir'), 0744, true);
+            mkdir($this->container->getParameter('drutiny_config_dir'), 0744, true);
 
-        // TODO: cache container. Need workaround for Twig.
-        //   if (is_writeable(dirname($file))) {
-        //       $dumper = new PhpDumper($this->container);
-        //       file_put_contents($file, $dumper->dump());
-        //   }
+            if (is_writeable(dirname($file))) {
+                $dumper = new PhpDumper($this->container);
+                file_put_contents($file, $dumper->dump());
+            }
         }
         $this->initialized = true;
         return $this->container;
@@ -147,12 +149,14 @@ class Kernel
         $container->addCompilerPass(new TwigLoaderPass);
         $container->addCompilerPass(new AddConsoleCommandPass);
         $container->addCompilerPass(new TagCollectionPass('cache', 'cache.registry'));
+        $container->addCompilerPass(new TagCollectionPass('http.middleware', 'http.middleware.registry'));
         $container->addCompilerPass(new TagCollectionPass('source.cache', 'source.cache.registry'));
         $container->addCompilerPass(new TagCollectionPass('format', 'format.registry'));
         $container->addCompilerPass(new TagCollectionPass('service', 'service.registry'));
         $container->addCompilerPass(new TagCollectionPass('target', 'target.registry'));
         $container->addCompilerPass(new TagCollectionPass('policy.source', 'policy.source.registry', AsSource::class));
         $container->addCompilerPass(new TagCollectionPass('profile.source', 'profile.source.registry', AsSource::class));
+        $container->addCompilerPass(new TagCollectionPass('domain_list', 'domain_list.registry', Name::class));
         $container->addCompilerPass(new PluginArgumentsPass());
         $container->addCompilerPass(new TwigEvaluatorPass());
         $container->addCompilerPass(new InstalledPluginPass(), PassConfig::TYPE_OPTIMIZE);
@@ -176,19 +180,21 @@ class Kernel
             $loader->load($loading_path, 'glob');
         };
 
-        foreach ($this->loadingPaths as $path) {
-            $load($path);
-        }
-
         // Load any available global configuration. This should really use
         // user_home_dir but since the container isn't compiled we can't.
         if (file_exists(getenv('HOME').'/.drutiny')) {
-            $load(getenv('HOME').'/.drutiny');
+            $this->addServicePath(getenv('HOME').'/.drutiny');
         }
 
         // If we're in a different working directory (e.g. executing from phar)
         // then there may be one last level of config we should inherit from.
-        $load($this->getWorkingDirectory());
+        $this->addServicePath($this->getWorkingDirectory());
+
+        foreach ($this->loadingPaths as $path) {
+            $load($path);
+        }
+
+        $container->setParameter('loading_paths', $this->loadingPaths);
 
         return $container;
     }
