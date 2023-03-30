@@ -164,11 +164,12 @@ class ProfileRunCommand extends DrutinyBaseCommand
     {
         // Get the URLs.
         $uris = $input->getOption('uri');
+        $target = $this->targetFactory->create($input->getArgument('target'));
 
         $domains = [];
         foreach ($this->parseDomainSourceOptions($input) as $source => $options) {
             $this->logger->debug("Loading domains from $source.");
-            $domains = array_merge($this->domainSource->getDomains($source, $options), $domains);
+            $domains = array_merge($this->domainSource->getDomains($target, $source, $options), $domains);
         }
 
         if (!empty($domains)) {
@@ -198,7 +199,7 @@ class ProfileRunCommand extends DrutinyBaseCommand
         // Reset the progress step tracker.
         $this->progressBar->setMaxSteps($this->progressBar->getMaxSteps() + count($profile->policies) + count($uris));
 
-        $this->forkManager->setAsync(count($uris) > 1);
+        $this->forkManager->setAsync($this->forkManager->isAsync() && (count($uris) > 1));
 
         $console = new SymfonyStyle($input, $output);
 
