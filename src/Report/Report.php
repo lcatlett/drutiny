@@ -34,7 +34,7 @@ class Report {
         // provided by the profile.
         $expected_results = count($type == ReportType::ASSESSMENT ? $profile->policies : $profile->dependencies);
         if (count($results) != $expected_results) {
-            throw new Exception('Incorrect number of report results: ' . count($results) . '. Expecting: ' . $expected_results);
+            throw new Exception('Incorrect number of ' . $this->type->value . ' report results: ' . count($results) . '. Expecting: ' . $expected_results);
         }
 
         $this->setReportingPeriod($profile->reportingPeriodStart, $profile->reportingPeriodEnd);
