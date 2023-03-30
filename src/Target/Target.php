@@ -90,7 +90,16 @@ abstract class Target implements \ArrayAccess, TargetInterface
      */
     final public function getService(string $id):ServiceInterface
     {
-        return $this->serviceFactory->get($id, $this->transport);
+        $service = $this->serviceFactory->get($id, $this->transport);
+        $this->configureService($service);
+        return $service;
+    }
+
+    /**
+     * Allow inheriting Target classes to configure services.
+     */
+    protected function configureService(ServiceInterface $service):void {
+        
     }
 
     /**
