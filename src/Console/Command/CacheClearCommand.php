@@ -63,6 +63,12 @@ class CacheClearCommand extends Command
         $registry = $input->getOption('include-source-cache') ? array_merge($registry, $this->settings->get('source.cache.registry')) : $registry;
         $registry = $input->getOption('twig-only') ? [] : $registry;
 
+        global $kernel;
+
+        register_shutdown_function(function () use ($kernel) {
+          $kernel->refresh();
+        });
+
         $cid = $input->getOption('cid');
 
         foreach ($registry as $id) {

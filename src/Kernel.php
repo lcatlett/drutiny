@@ -37,11 +37,13 @@ use Symfony\Component\Finder\Finder;
 class Kernel
 {
     private const CONFIG_EXTS = '.{php,yaml,yml}';
-    private const CACHED_CONTAINER = 'local.container.php';
+    private const CONTAINER_SUFFIX = '.container.php';
     private ContainerInterface $container;
     private array $loadingPaths = [];
     private bool $initialized = false;
     private array $compilers = [];
+    private string $containerFilepath;
+    private array $extensionFilepaths = [];
 
     public function __construct(private string $environment, private string $version)
     {
@@ -82,7 +84,7 @@ class Kernel
     public function getContainer():ContainerInterface
     {
         if (!isset($this->container)) {
-            return $this->initializeContainer(true);
+            return $this->initializeContainer();
         }
         return $this->container;
     }
@@ -108,9 +110,13 @@ class Kernel
      */
     protected function initializeContainer($rebuild = false):ContainerInterface
     {
-        $file = DRUTINY_LIB . '/' . self::CACHED_CONTAINER;
-        if (file_exists($file) && !$rebuild) {
-            require_once $file;
+        // Any change to the config files will generate a new container build.
+        $config_files = $this->findExtensionConfigFiles();
+        $id = hash('md5', implode('-', array_keys($config_files)));
+
+        $this->containerFilepath = $this->getProjectDir() . '/.' . $id . self::CONTAINER_SUFFIX;
+        if (file_exists($this->containerFilepath) && !$rebuild) {
+            require_once $this->containerFilepath;
             $this->container = new ProjectServiceContainer();
         } else {
             $this->container = $this->buildContainer();
@@ -122,13 +128,40 @@ class Kernel
             is_dir($this->container->getParameter('drutiny_config_dir')) or
             mkdir($this->container->getParameter('drutiny_config_dir'), 0744, true);
 
-            if (is_writeable(dirname($file))) {
+            if (is_writeable(dirname($this->containerFilepath))) {
                 $dumper = new PhpDumper($this->container);
-                file_put_contents($file, $dumper->dump());
+                file_put_contents($this->containerFilepath, $dumper->dump());
             }
         }
         $this->initialized = true;
+        $this->cleanOldContainers();
         return $this->container;
+    }
+
+    /**
+     * Clean up old generated containers.
+     */
+    protected function cleanOldContainers():void {
+        $files = glob($this->getProjectDir() .'/.*'.self::CONTAINER_SUFFIX);
+        foreach ($files as $file) {
+            $age = time() - filemtime($file);
+            // Delete files that are not the current container file and
+            // are older than 30 days old.
+            if ($file != $this->containerFilepath && $age > 2592000) {
+                unlink($file);
+            }
+        }
+    }
+
+    /**
+     * Clear the container and force a rebuild.
+     */
+    public function refresh():void
+    {
+        unlink($this->containerFilepath);
+        unlink($this->getProjectDir() . '/.container-extensions.json');
+        $this->initialized = false;
+        unset($this->container);
     }
 
     /**
@@ -171,6 +204,7 @@ class Kernel
         $container->setParameter('user_home_dir', getenv('HOME'));
         $container->setParameter('drutiny_core_dir', \dirname(__DIR__));
         $container->setParameter('project_dir', $this->getProjectDir());
+        $container->setParameter('extension.files', $this->findExtensionConfigFiles());
         $container->setParameter('extension.dirs', $this->findExtensionDirectories());
 
         // Create config loader.
@@ -182,8 +216,8 @@ class Kernel
 
         // Load any available global configuration. This should really use
         // user_home_dir but since the container isn't compiled we can't.
-        if (file_exists(getenv('HOME').'/.drutiny')) {
-            $this->addServicePath(getenv('HOME').'/.drutiny');
+        if (file_exists($this->getHomeDirectory())) {
+            $this->addServicePath($this->getHomeDirectory());
         }
 
         // If we're in a different working directory (e.g. executing from phar)
@@ -207,23 +241,59 @@ class Kernel
         return getcwd();
     }
 
+    protected function getHomeDirectory(): string
+    {
+        return getenv('HOME').'/.drutiny';
+    }
+
     /**
      * Locate where all drutiny extensions are in the project.
      */
     protected function findExtensionDirectories():array
     {
-        $finder = new Finder;
-        $finder
-            ->in($this->getProjectDir())
-            ->files()
-            ->name('drutiny.{yaml,yml,php}');
-            
-        $dirs = [];
-        foreach ($finder as $file) {
-            $dir = $file->getRelativePath();
-            $dirs[] = $dir ?: '.';
+        return array_values(array_unique(array_map(fn ($f) => dirname($f), $this->findExtensionConfigFiles())));
+    }
+
+    protected function findExtensionConfigFiles(): array
+    {
+        if (!empty($this->extensionFilepaths)) {
+            return $this->extensionFilepaths;
         }
-        return array_values(array_unique($dirs));
+
+        $cache_file = $this->getProjectDir() . '/.container-extensions.json';
+        if (file_exists($cache_file)) {
+            $files = json_decode(file_get_contents($cache_file), true);
+        }
+        else {
+            $files = array_merge(
+                $this->findExtensionConfigFilesIn($this->getWorkingDirectory(), 'vendor'),
+                $this->findExtensionConfigFilesIn($this->getHomeDirectory(), 'releases'),
+                $this->findExtensionConfigFilesIn($this->getProjectDir()),
+            );
+            file_put_contents($cache_file, json_encode($files));
+        }        
+
+        $hashes = array_map(fn ($f) => substr(hash('md5', file_get_contents($f)), 0, 8), $files);
+        
+        // Ensure array_unqiue choses latest duplicate as order priority.
+        $this->extensionFilepaths = array_combine($hashes, $files);
+
+        return $this->extensionFilepaths;
+    }
+
+    protected function findExtensionConfigFilesIn(string $dir, string|array $exclude = ''):array {
+        $finder = new Finder;
+        $finder->in($dir);
+        if (!empty($exclude)) {
+            $finder->exclude($exclude);
+        }
+        $finder->files()->name('drutiny.{yaml,yml,php}');
+            
+        $files = [];
+        foreach ($finder as $file) {
+            $files[(string) $file] = (string) $file;
+        }
+        return $files;
     }
 
     /**
