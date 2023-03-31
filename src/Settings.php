@@ -13,6 +13,11 @@ class Settings {
         $this->parameterBag = $container->getParameterBag();
     }
 
+    /**
+     * Get a single settings.
+     * 
+     * Returns null if the parameter does not exist.
+     */
     public function get($id)
     {
         if ($this->parameterBag->has($id)) {
@@ -20,11 +25,17 @@ class Settings {
         }
     }
 
+    /**
+     * Get all settings.
+     */
     public function getAll():array
     {
         return $this->parameterBag->all();
     }
 
+    /**
+     * Has a settings.
+     */
     public function has($id) {
         return $this->parameterBag->has($id);
     }
