@@ -40,8 +40,8 @@ class ProfileSourcesCommand extends DrutinyBaseCommand
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        foreach ($this->profileFactory->getSources() as $source) {
-          $rows[] = [$source->getName(), get_class($source), $source->getWeight()];
+        foreach ($this->profileFactory->sources as $source) {
+          $rows[] = [$source->name, get_class($this->profileFactory->getSource($source->name)), $source->weight];
         }
 
         $io = new SymfonyStyle($input, $output);

@@ -40,9 +40,10 @@ class PolicySourcesCommand extends DrutinyBaseCommand
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        foreach ($this->policyFactory->getSources() as $source) {
-          $pushable = ($source->getDriver() instanceof PushablePolicySourceInterface) ? 'Yes' : 'No';
-          $rows[] = [$source->getName(), get_class($source->getDriver()), $source->getWeight(), $pushable];
+        foreach ($this->policyFactory->sources as $source) {
+          $driver = $this->policyFactory->getSource($source->name);
+          $pushable = ($driver instanceof PushablePolicySourceInterface) ? 'Yes' : 'No';
+          $rows[] = [$source->name, get_class($driver), $source->weight, $pushable];
         }
 
         $io = new SymfonyStyle($input, $output);
