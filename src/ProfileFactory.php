@@ -15,7 +15,7 @@ use Symfony\Component\Console\Helper\ProgressBar;
 
 class ProfileFactory
 {
-    protected readonly array $sources;
+    public readonly array $sources;
 
     public function __construct(
       protected ContainerInterface $container, 
