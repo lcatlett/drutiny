@@ -47,23 +47,6 @@ class Kernel
 
     public function __construct(private string $environment, private string $version)
     {
-        // If Drutiny is located elsewhere, lets load her in.
-        if ($this->getProjectDir() != $this->getWorkingDirectory()) {
-            $this->addServicePath($this->getProjectDir());
-        }
-        $this->addServicePath($this->getProjectDir().'/vendor/*/*');
-    }
-
-    /**
-     * Add a service path to the loading paths array.
-     */
-    public function addServicePath($path)
-    {
-        if ($this->initialized) {
-            throw new \RuntimeException("Cannot add $path as service path. Container already initialized.");
-        }
-        $this->loadingPaths[] = $path;
-        return $this;
     }
 
     /**
@@ -119,7 +102,7 @@ class Kernel
             require_once $this->containerFilepath;
             $this->container = new ProjectServiceContainer();
         } else {
-            $this->container = $this->buildContainer();
+            $this->container = $this->buildContainer($config_files);
             $this->container->setParameter('environment', $this->environment);
             $this->container->setParameter('version', $this->version);
             $this->container->compile();
@@ -171,7 +154,7 @@ class Kernel
        *
        * @throws \RuntimeException
        */
-    protected function buildContainer():ContainerBuilder
+    protected function buildContainer(array $config_files):ContainerBuilder
     {
         $container = new ContainerBuilder();
         $container->addObjectResource($this);
@@ -204,31 +187,13 @@ class Kernel
         $container->setParameter('user_home_dir', getenv('HOME'));
         $container->setParameter('drutiny_core_dir', \dirname(__DIR__));
         $container->setParameter('project_dir', $this->getProjectDir());
-        $container->setParameter('extension.files', $this->findExtensionConfigFiles());
+        $container->setParameter('extension.files', $config_files);
         $container->setParameter('extension.dirs', $this->findExtensionDirectories());
 
         // Create config loader.
-        $load = function (...$args) use ($loader) {
-            $args[] = '{drutiny}'.self::CONFIG_EXTS;
-            $loading_path = implode('/', $args);
-            $loader->load($loading_path, 'glob');
-        };
-
-        // Load any available global configuration. This should really use
-        // user_home_dir but since the container isn't compiled we can't.
-        if (file_exists($this->getHomeDirectory())) {
-            $this->addServicePath($this->getHomeDirectory());
+        foreach ($config_files as $config_file) {
+            $loader->load($config_file);
         }
-
-        // If we're in a different working directory (e.g. executing from phar)
-        // then there may be one last level of config we should inherit from.
-        $this->addServicePath($this->getWorkingDirectory());
-
-        foreach ($this->loadingPaths as $path) {
-            $load($path);
-        }
-
-        $container->setParameter('loading_paths', $this->loadingPaths);
 
         return $container;
     }
@@ -260,18 +225,32 @@ class Kernel
             return $this->extensionFilepaths;
         }
 
+        // Load any drutiny config files from the working directory as highest priority, then the home directory.
+        $files = [];
+        foreach ([$this->getWorkingDirectory(), $this->getHomeDirectory()] as $directory) {
+            $files = array_merge($files, array_filter(
+                array_map(
+                    fn ($filename) => "$directory/$filename", 
+                    ['drutiny.yml', 'drutiny.yaml', 'drutiny.php']
+                ), 
+            'file_exists'));
+        }
+
         $cache_file = $this->getProjectDir() . '/.container-extensions.json';
         if (file_exists($cache_file)) {
-            $files = json_decode(file_get_contents($cache_file), true);
+            $cache_files = json_decode(file_get_contents($cache_file), true);
         }
         else {
-            $files = array_merge(
-                $this->findExtensionConfigFilesIn($this->getWorkingDirectory(), 'vendor'),
-                $this->findExtensionConfigFilesIn($this->getHomeDirectory(), 'releases'),
-                $this->findExtensionConfigFilesIn($this->getProjectDir()),
-            );
-            file_put_contents($cache_file, json_encode($files));
-        }        
+            $finder = new Finder;
+            $finder->in($this->getProjectDir())->files()->name('drutiny'.self::CONFIG_EXTS);
+
+            $cache_files = [];
+            foreach ($finder as $file) {
+                $cache_files[] = implode(DIRECTORY_SEPARATOR, array_filter([$file->getRelativePath(), $file->getFilename()]));
+            }
+            file_put_contents($cache_file, json_encode($cache_files));
+        }
+        $files = array_merge($files, array_map(fn($p) => $this->getProjectDir() . "/$p", $cache_files));
 
         $hashes = array_map(fn ($f) => substr(hash('md5', file_get_contents($f)), 0, 8), $files);
         
@@ -307,9 +286,6 @@ class Kernel
         $resolver = new LoaderResolver([
             new YamlFileLoader($container, $locator),
             new PhpFileLoader($container, $locator),
-            new GlobFileLoader($container, $locator),
-            new DirectoryLoader($container, $locator),
-            new ClosureLoader($container),
         ]);
 
         return new DelegatingLoader($resolver);
