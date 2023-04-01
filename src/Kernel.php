@@ -17,9 +17,6 @@ use Symfony\Component\Config\Loader\DelegatingLoader;
 use Symfony\Component\Config\Loader\LoaderResolver;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\DependencyInjection\Loader\ClosureLoader;
-use Symfony\Component\DependencyInjection\Loader\DirectoryLoader;
-use Symfony\Component\DependencyInjection\Loader\GlobFileLoader;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\EventDispatcher\DependencyInjection\RegisterListenersPass;
@@ -39,7 +36,6 @@ class Kernel
     private const CONFIG_EXTS = '.{php,yaml,yml}';
     private const CONTAINER_SUFFIX = '.container.php';
     private ContainerInterface $container;
-    private array $loadingPaths = [];
     private bool $initialized = false;
     private array $compilers = [];
     private string $containerFilepath;
@@ -67,7 +63,7 @@ class Kernel
     public function getContainer():ContainerInterface
     {
         if (!isset($this->container)) {
-            return $this->initializeContainer();
+            return $this->initializeContainer($this->environment != 'production');
         }
         return $this->container;
     }
@@ -107,18 +103,23 @@ class Kernel
             $this->container->setParameter('version', $this->version);
             $this->container->compile();
 
-            // Ensure the Drutiny config directory is available.
-            is_dir($this->container->getParameter('drutiny_config_dir')) or
-            mkdir($this->container->getParameter('drutiny_config_dir'), 0744, true);
-
-            if (is_writeable(dirname($this->containerFilepath))) {
-                $dumper = new PhpDumper($this->container);
-                file_put_contents($this->containerFilepath, $dumper->dump());
-            }
+            $this->writePhpContainer();
         }
         $this->initialized = true;
         $this->cleanOldContainers();
         return $this->container;
+    }
+
+    protected function writePhpContainer():void
+    {
+        // Ensure the Drutiny config directory is available.
+        is_dir($this->container->getParameter('drutiny_config_dir')) or
+        mkdir($this->container->getParameter('drutiny_config_dir'), 0744, true);
+
+        if (is_writeable(dirname($this->containerFilepath))) {
+            $dumper = new PhpDumper($this->container);
+            file_put_contents($this->containerFilepath, $dumper->dump());
+        }
     }
 
     /**
@@ -191,7 +192,7 @@ class Kernel
         $container->setParameter('extension.dirs', $this->findExtensionDirectories());
 
         // Create config loader.
-        foreach ($config_files as $config_file) {
+        foreach (array_reverse($config_files) as $config_file) {
             $loader->load($config_file);
         }
 
@@ -226,6 +227,8 @@ class Kernel
         }
 
         // Load any drutiny config files from the working directory as highest priority, then the home directory.
+        // These are not cached because they can change based on install environment. But the config file locations
+        // are fast to check so caching wouldn't have a large impact anyway.
         $files = [];
         foreach ([$this->getWorkingDirectory(), $this->getHomeDirectory()] as $directory) {
             $files = array_merge($files, array_filter(

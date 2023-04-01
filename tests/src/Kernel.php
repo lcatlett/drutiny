@@ -9,4 +9,9 @@ class Kernel extends DrutinyKernel {
     {
         return dirname(__DIR__);
     }
+
+    protected function writePhpContainer(): void
+    {
+       // Do not write during phpunit testing.
+    }
 }
