@@ -8,8 +8,9 @@ parameters:
   twig.debug: true
   twig.strict: true
   phpunit.testing: true
-  async.forks: false
+  async.enabled: false
   profile.allow_list: [ empty, test ]
+  log.name: phpunit
 
 services:
   _defaults:

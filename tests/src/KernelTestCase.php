@@ -3,7 +3,9 @@
 namespace DrutinyTests;
 
 use Drutiny\Audit\TwigEvaluator;
+use Drutiny\Console\Application;
 use Drutiny\LocalCommand;
+use Drutiny\Profile;
 use Drutiny\ProfileFactory;
 use Drutiny\Settings;
 use Drutiny\Target\TargetFactory;
@@ -16,21 +18,27 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\Cache\CacheInterface;
 
 abstract class KernelTestCase extends TestCase {
 
-    protected $application;
-    protected $output;
-    protected $container;
-    protected $profile;
+    protected Application $application;
+    protected BufferedOutput $output;
+    protected ContainerBuilder $container;
+    protected Profile $profile;
+    protected string $testTmpDir;
 
     protected function setUp(): void
     {
         global $kernel;
         $kernel = new Kernel('phpunit', 'x.y.z-dev');
-        // $kernel->addServicePath(str_replace(realpath($kernel->getProjectDir()).'/', '', dirname(__DIR__)));
+
+        $this->testTmpDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'phpunit-drutiny' . mt_rand(1000,9999);
+        $filesystem = new Filesystem;
+        $filesystem->mkdir($this->testTmpDir);
+
         $builder = $this->getMockBuilder(LocalCommand::class);
 
         // Mock the local command.
@@ -54,9 +62,16 @@ abstract class KernelTestCase extends TestCase {
         $this->container = $kernel->getContainer();
         $this->output = $this->container->get(OutputInterface::class);
 
+        // Ensure the phpunit drutiny.yml config has get the OutputInterface as buffered output.
         $this->assertInstanceOf(BufferedOutput::class, $this->output);
 
         $this->profile = $this->container->get(ProfileFactory::class)->loadProfileByName('empty');
+    }
+
+    protected function tearDown(): void
+    {
+        $filesystem = new Filesystem;
+        $filesystem->remove($this->testTmpDir);
     }
 
     protected function loadMockTarget($type = 'none', ...$exec_responses):TargetInterface {

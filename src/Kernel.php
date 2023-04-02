@@ -230,7 +230,7 @@ class Kernel
         // These are not cached because they can change based on install environment. But the config file locations
         // are fast to check so caching wouldn't have a large impact anyway.
         $files = [];
-        foreach ([$this->getWorkingDirectory(), $this->getHomeDirectory()] as $directory) {
+        foreach ([$this->getWorkingDirectory(), $this->getHomeDirectory(), $this->getProjectDir()] as $directory) {
             $files = array_merge($files, array_filter(
                 array_map(
                     fn ($filename) => "$directory/$filename", 
@@ -261,21 +261,6 @@ class Kernel
         $this->extensionFilepaths = array_combine($hashes, $files);
 
         return $this->extensionFilepaths;
-    }
-
-    protected function findExtensionConfigFilesIn(string $dir, string|array $exclude = ''):array {
-        $finder = new Finder;
-        $finder->in($dir);
-        if (!empty($exclude)) {
-            $finder->exclude($exclude);
-        }
-        $finder->files()->name('drutiny.{yaml,yml,php}');
-            
-        $files = [];
-        foreach ($finder as $file) {
-            $files[(string) $file] = (string) $file;
-        }
-        return $files;
     }
 
     /**

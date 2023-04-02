@@ -45,7 +45,8 @@ class TargetMetadataCommand extends DrutinyBaseCommand
             InputOption::VALUE_OPTIONAL,
             'Provide URLs to run against the target. Useful for multisite installs. Accepts multiple arguments.',
             false
-        );
+        )
+        ->addOption('format', 'f', InputOption::VALUE_OPTIONAL, 'Choose the output format (json or yaml)');
     }
 
   /**
@@ -66,10 +67,11 @@ class TargetMetadataCommand extends DrutinyBaseCommand
 
         $io = new SymfonyStyle($input, $output);
 
-        $rows = [];
+        $rows = $object = [];
 
         foreach ($target->getPropertyList() as $key) {
           $value = $target->getProperty($key);
+          $object[$key] = $value;
           $value = is_object($value) ? '<object> (' . get_class($value) . ')'  : '<'.gettype($value) . '> ' . Yaml::dump($value, 8, 2);
           if (strlen($value) > 1024) {
             $value = substr($value, 0, 1024) . '...';
@@ -78,7 +80,12 @@ class TargetMetadataCommand extends DrutinyBaseCommand
         }
 
         $this->progressBar->finish();
-        $io->table(['Property', 'Value'], $rows);
+
+        $output->write(match ($input->getOption('format')) {
+          'json' => json_encode($object, JSON_PRETTY_PRINT),
+          'yaml' => Yaml::dump($object),
+          default => $io->table(['Property', 'Value'], $rows) ?? '',
+        });
 
         return 0;
     }

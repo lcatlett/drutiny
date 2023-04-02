@@ -17,6 +17,8 @@ use Drutiny\Entity\Exception\DataNotFoundException;
 use Drutiny\Policy\Dependency;
 use Drutiny\Sandbox\ReportingPeriodTrait;
 use Drutiny\Target\TargetPropertyException;
+use Error;
+use Exception;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\Cache\CacheInterface;
@@ -207,7 +209,7 @@ abstract class Audit implements AuditInterface
             $helper = AuditUpgrade::fromAudit($this);
             $helper->addParameterFromException($e);
             $this->set('exception', $helper->getParamUpgradeMessage());
-        } catch (\Exception $e) {
+        } catch (Exception|Error $e) {
             $outcome = AuditInterface::ERROR;
             $message = $e->getMessage();
             if ($this->verbosity > OutputInterface::VERBOSITY_NORMAL) {
@@ -220,7 +222,8 @@ abstract class Audit implements AuditInterface
               'uri' => $this->target->getUri(),
               'policy' => $policy->name
             ]);
-        } finally {
+        } 
+        finally {
             // Log the parameters output.
             $tokens = $this->dataBag->export();
             $this->logger->debug("Tokens:\n".Yaml::dump($tokens, 4, 4, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK));

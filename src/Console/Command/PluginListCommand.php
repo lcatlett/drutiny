@@ -11,6 +11,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Drutiny\Plugin\PluginRequiredException;
 use Drutiny\Settings;
 use Psr\Container\ContainerInterface;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  *
@@ -31,7 +32,8 @@ class PluginListCommand extends Command
     {
         $this
         ->setName('plugin:list')
-        ->setDescription('List all available plugins.');
+        ->setDescription('List all available plugins.')
+        ->addOption('format', 'f', InputOption::VALUE_OPTIONAL, 'Choose the output format (json or yaml)');
     }
 
   /**
@@ -44,17 +46,22 @@ class PluginListCommand extends Command
         $rows = [];
         foreach ($this->settings->get('plugin.registry') as $name => $id) {
             $plugin = $this->container->get($id);
+            
             if ($plugin->isHidden()) {
               continue;
             }
-
 
             $state = $plugin->isInstalled() ? 'Installed' : 'Not Installed';
             $rows[$name] = [$name, $state];
         }
         ksort($rows);
 
-        $io->table(['Namespace', 'Status'], $rows);
+        $output->write(match ($input->getOption('format')) {
+          'json' => json_encode($rows),
+          'yaml' => Yaml::dump($rows),
+          default => $io->table(['Namespace', 'Status'], $rows) ?? ''
+        });
+
         return 0;
     }
 }

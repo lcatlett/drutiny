@@ -6,6 +6,7 @@ use Monolog\Handler\StreamHandler;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Process\Process;
 
 /**
  *
@@ -35,13 +36,19 @@ class LogsCommand extends DrutinyBaseCommand
   /**
    * @inheritdoc
    */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output):int
     {
         if ($input->getOption('tail')) {
-          passthru(sprintf('tail -f -n 20 %s', $this->logFile->getUrl()));
+          $process = Process::fromShellCommandline(sprintf('tail -f -n 20 %s', $this->logFile->getUrl()));
+          $process->run(function ($type, $buffer) use ($output) {
+            $output->write($buffer);
+          });
         }
         else {
-          passthru(sprintf('cat %s', $this->logFile->getUrl()));
+          $process = Process::fromShellCommandline(sprintf('cat %s', $this->logFile->getUrl()));
+          $process->run(function ($type, $buffer) use ($output) {
+            $output->write($buffer);
+          });
         }
         return 0;
     }
