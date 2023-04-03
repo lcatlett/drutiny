@@ -245,7 +245,7 @@ class Kernel
         }
         else {
             $finder = new Finder;
-            $finder->in($this->getProjectDir())->files()->name('drutiny'.self::CONFIG_EXTS);
+            $finder->in($this->getProjectDir().'/vendor')->exclude('tests')->files()->name('drutiny'.self::CONFIG_EXTS);
 
             $cache_files = [];
             foreach ($finder as $file) {
@@ -253,7 +253,7 @@ class Kernel
             }
             file_put_contents($cache_file, json_encode($cache_files));
         }
-        $files = array_merge($files, array_map(fn($p) => $this->getProjectDir() . "/$p", $cache_files));
+        $files = array_merge($files, array_map(fn($p) => $this->getProjectDir() . "/vendor/$p", $cache_files));
 
         $hashes = array_map(fn ($f) => substr(hash('md5', file_get_contents($f)), 0, 8), $files);
         
