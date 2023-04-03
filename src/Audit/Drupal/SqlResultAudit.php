@@ -4,6 +4,7 @@ namespace Drutiny\Audit\Drupal;
 
 use Drutiny\Audit\AbstractAnalysis;
 use Drutiny\Sandbox\Sandbox;
+use Psr\Cache\CacheItemInterface;
 
 /**
  * Audit the first row returned from a SQL query.
@@ -28,6 +29,12 @@ class SqlResultAudit extends AbstractAnalysis
             '',
             false
         );
+        $this->addParameter(
+          'ttl',
+          static::PARAMETER_OPTIONAL,
+          'Cache time-to-live where other policies may reuse the result.',
+          3600
+      );
     }
 
     /**
@@ -61,7 +68,8 @@ class SqlResultAudit extends AbstractAnalysis
         $this->logger->debug("Running SQL query '{query}'", ['query' => $query]);
         $result = $this->target->getService('drush')
           ->sqlq($query)
-          ->run(function ($output) {
+          ->run(function ($output, CacheItemInterface $item) {
+              $item->expiresAfter($this->get('ttl'));
               $data = explode(PHP_EOL, $output);
               array_walk($data, function (&$line) {
                   $line = array_map('trim', explode("\t", $line));
