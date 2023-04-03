@@ -40,6 +40,8 @@ class LogsCommand extends DrutinyBaseCommand
     {
         if ($input->getOption('tail')) {
           $process = Process::fromShellCommandline(sprintf('tail -f -n 20 %s', $this->logFile->getUrl()));
+          // Set timeout till log rotates (by day).
+          $process->setTimeout(strtotime('tomorrow') - time());
           $process->run(function ($type, $buffer) use ($output) {
             $output->write($buffer);
           });
