@@ -14,6 +14,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -144,6 +145,18 @@ class PolicyAuditCommand extends DrutinyBaseCommand
 
         $this->progressBar->finish();
         $this->progressBar->clear();
+
+        $style = new SymfonyStyle($input, $output);
+        if ($report->results[$name]->isIrrelevant()) {
+          $style->error("Policy $name was evaluated as irrelevant for the target " . $target->getId());
+          return 0;
+        }
+        elseif ($report->results[$name]->hasError()) {
+          $style->error("Policy $name has an error for the target " . $target->getId());
+          $tokens = $report->results[$name]->tokens;
+          $style->error($tokens['exception_type'] .': '.$tokens['exception']);
+          return 1;
+        }
 
         foreach ($this->getFormats($input, $profile, $this->formatFactory) as $format) {
             $format->setNamespace($this->getReportNamespace($input, $uri));
