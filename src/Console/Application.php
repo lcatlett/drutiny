@@ -10,8 +10,6 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\DependencyInjection\ContainerAwareInterface;
-use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\EventDispatcher\GenericEvent;
@@ -25,7 +23,7 @@ class Application extends BaseApplication
 
     public function __construct(
       string $name, 
-      string $version, 
+      string $version,
       protected EventDispatcher $eventDispatcher,
       protected LoggerInterface $logger,
       protected ContainerInterface $container
