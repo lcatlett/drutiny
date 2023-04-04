@@ -19,7 +19,10 @@ abstract class AbstractProfileSource implements ProfileSourceInterface
     final public function load(array $definition): Profile
     {
         $key = hash('md5', $this->source->name.json_encode($definition));
-        return $this->cache->get($key, fn() => $this->doLoad($definition));
+        if ($this->source->cacheable) {
+            return $this->cache->get($key, fn() => $this->doLoad($definition));
+        }
+        return $this->doLoad($definition);
     }
 
     protected function doLoad(array $definition): Profile
@@ -36,7 +39,10 @@ abstract class AbstractProfileSource implements ProfileSourceInterface
     final public function getList(LanguageManager $languageManager): array
     {
         $key = TextCleaner::machineValue($this->source->name.'.profile.list.'.$languageManager->getCurrentLanguage());
-        return $this->cache->get($key, fn() => $this->doGetList($languageManager));
+        if ($this->source->cacheable) {
+            return $this->cache->get($key, fn() => $this->doGetList($languageManager));
+        }
+        return $this->doGetList($languageManager);
     }
 
     final public function refresh(LanguageManager $languageManager): array

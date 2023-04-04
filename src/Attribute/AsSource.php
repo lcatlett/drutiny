@@ -12,7 +12,8 @@ use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 class AsSource extends Name {
     public function __construct(
         public readonly string $name, 
-        public readonly int $weight = 0
+        public readonly int $weight = 0,
+        public readonly bool $cacheable = true
     ) {}
 
     public static function fromClass(string $class_name):self {

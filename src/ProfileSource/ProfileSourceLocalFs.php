@@ -13,7 +13,7 @@ use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Finder\Exception\DirectoryNotFoundException;
 use Symfony\Contracts\Cache\CacheInterface;
 
-#[AsSource(name: 'localfs', weight: -10)]
+#[AsSource(name: 'localfs', weight: -10, cacheable: false)]
 #[Autoconfigure(tags: ['profile.source'])]
 class ProfileSourceLocalFs extends AbstractProfileSource
 {

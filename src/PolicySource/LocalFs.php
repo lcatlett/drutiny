@@ -11,7 +11,7 @@ use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Finder\Finder;
 use Symfony\Contracts\Cache\CacheInterface;
 
-#[AsSource(name: 'localfs', weight: -10)]
+#[AsSource(name: 'localfs', weight: -10, cacheable: false)]
 #[Autoconfigure(tags: ['policy.source'])]
 class LocalFs extends AbstractPolicySource
 {
@@ -27,7 +27,8 @@ class LocalFs extends AbstractPolicySource
 
         $dirs = $settings->get('extension.dirs');
         $dirs[] = $settings->get('policy.library.fs');
-        $dirs = array_unique($dirs);
+        $dirs = array_filter(array_unique($dirs), 'file_exists');
+
         // Ensure the policy directory is available.
 
         $this->finder
