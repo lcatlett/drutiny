@@ -12,7 +12,6 @@ use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use Symfony\Contracts\Cache\CacheInterface;
-use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
 
 class ProfileFactory
@@ -43,7 +42,7 @@ class ProfileFactory
               }
         }
         catch (ProfileNotFoundException $e) {
-            throw new ProfileCompilationException("Cannot create profile '{$profile->name}': " . $e->getMessage(), 0, $e);
+            throw new ProfileCompilationException("Cannot initialize profile '{$profile->name}' due to a profile include '$include' failing to load.", 0, $e);
         }
         return $profile;
      }
