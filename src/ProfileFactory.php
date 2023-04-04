@@ -5,6 +5,8 @@ namespace Drutiny;
 use Drutiny\Attribute\AsSource;
 use Drutiny\ProfileSource\ProfileSourceInterface;
 use Drutiny\LanguageManager;
+use Drutiny\Profile\ProfileNotFoundException;
+use Drutiny\ProfileSource\ProfileCompilationException;
 use Exception;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
@@ -35,8 +37,13 @@ class ProfileFactory
      {
         $includes = $values['include'] ?? []; unset($values['include']);
         $profile = new Profile(...$values);
-        foreach ($includes as $include) {
-          $profile = $profile->mergeWith($this->loadProfileByName($include));
+        try {
+            foreach ($includes as $include) {
+                $profile = $profile->mergeWith($this->loadProfileByName($include));
+              }
+        }
+        catch (ProfileNotFoundException $e) {
+            throw new ProfileCompilationException("Cannot create profile '{$profile->name}': " . $e->getMessage(), 0, $e);
         }
         return $profile;
      }
@@ -53,7 +60,7 @@ class ProfileFactory
         $list = $this->getProfileList();
 
         if (!isset($list[$name])) {
-            throw new \Exception("No such profile found: $name. Available: " . implode(', ', array_keys($list)));
+            throw new ProfileNotFoundException("No such profile found: '$name'. Available: " . implode(', ', array_keys($list)));
         }
         $definition = $list[$name];
         return $this->getSource($definition['source'])->load($definition);
