@@ -167,9 +167,9 @@ class ApplicationTest extends KernelTestCase {
   }
 
   /**
-   * @coverage Drutiny\Console\Command\PolicyListCommand
+   * @coverage Drutiny\Console\Command\PolicyDownloadCommand
    */
-  public function testPolicyListCommand()
+  public function testPolicyDownloadCommand()
   {
     $input = new ArrayInput([
       'command' => 'policy:list'
@@ -179,6 +179,30 @@ class ApplicationTest extends KernelTestCase {
     $this->assertStringContainsString('Always notice test policy', $this->output->fetch());
     $this->assertIsInt($code);
     $this->assertEquals(0, $code);
+
+  }
+
+  /**
+   * @coverage Drutiny\Console\Command\PolicyListCommand
+   */
+  public function testPolicyListCommand()
+  {
+    $policy_fs = $this->container->getParameter('policy.library.fs');
+    $filename = $policy_fs . '/Test-Pass.policy.yml';
+    $this->assertFileDoesNotExist($filename);
+    $input = new ArrayInput([
+      'command' => 'policy:download',
+      'policy' => 'Test:Pass'
+    ]);
+
+    $code = $this->application->run($input, $this->output);
+    $this->assertStringContainsString($filename, $this->output->fetch());
+    $this->assertIsInt($code);
+    $this->assertEquals(0, $code);
+
+    $this->assertFileExists($filename);
+
+    unlink($filename);
 
   }
 
