@@ -19,6 +19,7 @@ use Psr\Log\LoggerInterface;
  */
 class PolicyDownloadCommand extends DrutinyBaseCommand
 {
+  use LanguageCommandTrait;
 
   public function __construct(
     protected LoggerInterface $logger, 
@@ -48,6 +49,7 @@ class PolicyDownloadCommand extends DrutinyBaseCommand
             InputArgument::OPTIONAL,
             'The source to download the profile from.'
         );
+        $this->configureLanguage();
     }
 
   /**
@@ -55,34 +57,31 @@ class PolicyDownloadCommand extends DrutinyBaseCommand
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $this->initLanguage($input);
         $render = new SymfonyStyle($input, $output);
-        $list = $this->policyFactory->getPolicyList();
-        $keyword = strtolower($input->getArgument('policy'));
-        $directory = $this->settings->get('policy.library.fs');
+        $directory = (array) $this->settings->get('policy.library.fs');
+        $directory = array_shift($directory);
 
-        foreach ($list as $listedPolicy) {
-            if (strpos(strtolower($listedPolicy['name']), $keyword) === false) {
-              continue;
-            }
-            $policy = $this->policyFactory->loadPolicyByName($listedPolicy['name']);
-            $name = str_replace(':', '-', $policy->name);
-            $filename = $directory . "/$name.policy.yml";
+        $policy = $this->policyFactory->loadPolicyByName($input->getArgument('policy'));
 
-            if (!file_exists($directory) && !mkdir($directory)) {
-                $render->error("Cannot download into $directory: directory doesn't exist and can't be created.");
-                return 1;
-            }
-            if (file_exists($filename)) {
-                $render->error("$filename already exists. Please delete this file if you wish to download it from its source.");
-                continue;
-            }
+        $name = str_replace(':', '-', $policy->name);
+        $filename = $directory . "/$name.policy.yml";
 
-            $output = Yaml::dump($policy->export(), 6, 4, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
-
-            file_put_contents($filename, $output);
-            $render->success("$filename written.");
+        if (!file_exists($directory) && !mkdir($directory)) {
+            $render->error("Cannot download into $directory: directory doesn't exist and can't be created.");
+            return 1;
         }
-        $this->policyFactory->getSource('localfs')->refresh();
+        if (file_exists($filename)) {
+            $render->error("$filename already exists. Please delete this file if you wish to download it from its source.");
+            return 2;
+        }
+
+        $output = Yaml::dump($policy->export(), 6, 4, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
+
+        file_put_contents($filename, $output);
+        $render->success(realpath($filename) .      " written.");
+
+        $this->policyFactory->getSource('localfs')->refresh($this->languageManager);
         return 0;
     }
 }
