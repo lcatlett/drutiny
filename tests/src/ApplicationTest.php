@@ -14,6 +14,12 @@ class ApplicationTest extends KernelTestCase {
   public function testContainer()
   {
       $this->assertTrue($this->container->getParameter('phpunit.testing'));
+      $this->assertEquals(0, $this->container->getParameter('cache.ttl'));
+      $this->assertFalse($this->container->getParameter('async.enabled'));
+      $this->assertFalse($this->container->getParameter('twig.cache'));
+      $list = $this->container->getParameter('profile.allow_list');
+      $this->assertIsArray($list);
+      $this->assertContains('test', $list);
   }
 
   /**
@@ -167,9 +173,9 @@ class ApplicationTest extends KernelTestCase {
   }
 
   /**
-   * @coverage Drutiny\Console\Command\PolicyDownloadCommand
+   * @coverage Drutiny\Console\Command\PolicyListCommand
    */
-  public function testPolicyDownloadCommand()
+  public function testPolicyListCommand()
   {
     $input = new ArrayInput([
       'command' => 'policy:list'
@@ -177,15 +183,15 @@ class ApplicationTest extends KernelTestCase {
 
     $code = $this->application->run($input, $this->output);
     $this->assertStringContainsString('Always notice test policy', $this->output->fetch());
-    $this->assertIsInt($code);
+    $this->assertIsInt($code);  
     $this->assertEquals(0, $code);
 
   }
 
   /**
-   * @coverage Drutiny\Console\Command\PolicyListCommand
+   * @coverage Drutiny\Console\Command\PolicyDownloadCommand
    */
-  public function testPolicyListCommand()
+  public function testPolicyDownloadCommand()
   {
     $policy_fs = $this->container->getParameter('policy.library.fs');
     $filename = $policy_fs . '/Test-Pass.policy.yml';

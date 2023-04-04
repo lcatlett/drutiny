@@ -49,6 +49,12 @@ class PolicyListCommand extends DrutinyBaseCommand
             's',
             InputOption::VALUE_OPTIONAL,
             'Filter by source'
+        )
+        ->addOption(
+            'show-profile-usage',
+            'u',
+            InputOption::VALUE_NONE,
+            'Show the number of profiles a policy is used in.'
         );
         $this->configureLanguage();
     }
@@ -75,28 +81,32 @@ class PolicyListCommand extends DrutinyBaseCommand
         }
         $this->progressBar->advance();
 
-        $this->progressBar->setMessage("Mapping policy utilisation by profile.");
-        $profiles = array_map(function ($profile) {
-          return $this->profileFactory->loadProfileByName($profile['name']);
-        }, $this->profileFactory->getProfileList());
-
+        if ($input->getOption('show-profile-usage')) {
+            $this->progressBar->setMessage("Mapping policy utilisation by profile.");
+            $profiles = array_map(function ($profile) {
+              return $this->profileFactory->loadProfileByName($profile['name']);
+            }, $this->profileFactory->getProfileList());
+        }
+        
         $this->progressBar->advance();
-        $rows = array();
+        $rows = [];
         foreach ($list as $listedPolicy) {
-            $row = array(
-            'description' => '<options=bold>' . wordwrap($listedPolicy['title'], 50) . '</>',
-            'name' => $listedPolicy['name'],
-            'source' => implode(', ', $listedPolicy['sources']),
-            'profile_util' => count(array_filter($profiles, function (Profile $profile) use ($listedPolicy) {
-                return in_array($listedPolicy['name'], array_keys($profile->policies));
-              })),
-            );
+            $row = [
+                'description' => '<options=bold>' . wordwrap($listedPolicy['title'], 50) . '</>',
+                'name' => $listedPolicy['name'],
+                'source' => implode(', ', $listedPolicy['sources']),
+            ];
+            if ($input->getOption('show-profile-usage')) {
+                $row['profile_util'] = count(array_filter($profiles, function (Profile $profile) use ($listedPolicy) {
+                    return in_array($listedPolicy['name'], array_keys($profile->policies));
+                }));
+            }
             $rows[] = $row;
         }
 
         // Restrict visibility of policies to those in profile allow list.
         $allow_list = $this->settings->has('profile.allow_list') ? $this->settings->get('profile.allow_list') : [];
-        if (!empty($allow_list)) {
+        if (!empty($allow_list) && $input->getOption('show-profile-usage')) {
           $rows = array_filter($rows, fn($r) => $r['profile_util']);
         }
 
@@ -109,7 +119,10 @@ class PolicyListCommand extends DrutinyBaseCommand
         $this->progressBar->finish();
 
         $io = new SymfonyStyle($input, $output);
-        $headers = ['Title', 'Name', 'Source', 'Profile Utilization'];
+        $headers = ['Title', 'Name', 'Source'];
+        if ($input->getOption('show-profile-usage')) {
+            $headers[] = 'Profile Utilization';
+        }
         $io->table($headers, $rows);
 
         return 0;
