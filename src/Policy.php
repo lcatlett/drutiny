@@ -91,6 +91,9 @@ class Policy implements ExportableInterface
 
       #[Description('Content to communicate a policy warning (in a success).')]
       public readonly ?string $warning = '',
+
+      #[Description('The URI this policy can be referenced and located by.')]
+      public readonly ?string $uri = null
     )
     {
       $this->type = PolicyType::from($type);
@@ -146,6 +149,7 @@ class Policy implements ExportableInterface
             $data[$key] = str_replace("\r\n", "\n", $value);
           }
         }
+
         return $data;
     }
 }
