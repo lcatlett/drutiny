@@ -97,10 +97,12 @@ class Kernel
         if (file_exists($this->containerFilepath) && !$rebuild) {
             require_once $this->containerFilepath;
             $this->container = new ProjectServiceContainer();
+            $this->container->setParameter('cached_container', true);
         } else {
             $this->container = $this->buildContainer($config_files);
             $this->container->setParameter('environment', $this->environment);
             $this->container->setParameter('version', $this->version);
+            $this->container->setParameter('cached_container', false);
             $this->container->compile();
 
             $this->writePhpContainer();
@@ -226,6 +228,16 @@ class Kernel
             return $this->extensionFilepaths;
         }
 
+        // Load environment files as priority followed by env agnostic configuration.
+        $names = ['drutiny.' . $this->environment, 'drutiny'];
+        $types = ['.yml', '.yaml', '.php'];
+        $filenames = [];
+        foreach ($names as $name) {
+            foreach ($types as $type) {
+                $filenames[] = $name . $type;
+            }
+        }
+
         // Load any drutiny config files from the working directory as highest priority, then the home directory.
         // These are not cached because they can change based on install environment. But the config file locations
         // are fast to check so caching wouldn't have a large impact anyway.
@@ -234,7 +246,7 @@ class Kernel
             $files = array_merge($files, array_filter(
                 array_map(
                     fn ($filename) => "$directory/$filename", 
-                    ['drutiny.yml', 'drutiny.yaml', 'drutiny.php']
+                    $filenames
                 ), 
             'file_exists'));
         }
