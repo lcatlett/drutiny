@@ -8,6 +8,7 @@ use Drutiny\LanguageManager;
 use Drutiny\Profile;
 use Drutiny\ProfileFactory;
 use Symfony\Contracts\Cache\CacheInterface;
+use TypeError;
 
 abstract class AbstractProfileSource implements ProfileSourceInterface
 {
@@ -23,8 +24,13 @@ abstract class AbstractProfileSource implements ProfileSourceInterface
 
     protected function doLoad(array $definition): Profile
     {
-        $definition['source'] = $this->source->name;
-        return $this->profileFactory->create($definition);
+        try {
+            $definition['source'] = $this->source->name;
+            return $this->profileFactory->create($definition);
+        }
+        catch (TypeError $e) {
+            throw new ProfileCompilationException("Cannot create {$definition['name']} from {$this->source->name}: " . $e->getMessage());
+        }
     }
 
     final public function getList(LanguageManager $languageManager): array
