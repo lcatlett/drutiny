@@ -97,12 +97,10 @@ class Kernel
         if (file_exists($this->containerFilepath) && !$rebuild) {
             require_once $this->containerFilepath;
             $this->container = new ProjectServiceContainer();
-            $this->container->setParameter('cached_container', true);
         } else {
             $this->container = $this->buildContainer($config_files);
             $this->container->setParameter('environment', $this->environment);
             $this->container->setParameter('version', $this->version);
-            $this->container->setParameter('cached_container', false);
             $this->container->compile();
 
             $this->writePhpContainer();
