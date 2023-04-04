@@ -6,8 +6,10 @@ use Drutiny\Attribute\AsSource;
 use Drutiny\Helper\TextCleaner;
 use Drutiny\LanguageManager;
 use Drutiny\Policy;
+use Drutiny\PolicySource\Exception\UnknownPolicyException;
 use Generator;
 use Symfony\Contracts\Cache\CacheInterface;
+use TypeError;
 
 abstract class AbstractPolicySource implements PolicySourceInterface {
     public readonly string $name;
@@ -27,8 +29,13 @@ abstract class AbstractPolicySource implements PolicySourceInterface {
 
     protected function doLoad(array $definition): Policy
     {
+      try {
         $definition['source'] = $this->source->name;
         return new Policy(...$definition);
+      }
+      catch (TypeError $e) {
+        throw new UnknownPolicyException("Cannot load policy '{$definition['name']}' from '{$this->source->name}': " . $e->getMessage(), 0, $e);
+      }
     }
 
     final public function getList(LanguageManager $languageManager): array
