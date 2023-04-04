@@ -50,7 +50,10 @@ if (file_exists(DRUTINY_LIB.'/BUILD_DATETIME')) {
   $suffix = $date->format(' (Y-m-d H:i:s T)');
 }
 
-$kernel = new Kernel('production', reset($versions).$suffix);
+$installed = require DRUTINY_LIB . '/vendor/composer/installed.php';
+$environment = $installed['root']['dev'] ? 'dev' : 'production';
+
+$kernel = new Kernel($environment, reset($versions).$suffix);
 
 $kernel->getApplication()->run(
   // If this is a phar file, then run the extraction command. Otherwise behave as normal.
