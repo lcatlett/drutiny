@@ -71,22 +71,26 @@ class PluginSetupCommand extends Command
      */
     protected function setupField(PluginField $field, Plugin $plugin, SymfonyStyle $io)
     {
-        $extra = ' ';
+        $extra = '';
         $default_value = $field->default;
         if (isset($plugin->{$field->name})) {
             $default_value = $plugin->{$field->name};
-            $extra = "\n<comment>An existing credential exists.\n";
+            $extra = "<comment>";
             if ($field->type == FieldType::CONFIG) {
-                $extra .= "Existing value: {$default_value}\n";
+                $extra .= "Existing value: ".json_encode($default_value);
+                if ($field->ask != Question::CONFIRMATION) {
+                    $extra .= "\nLeave blank to use existing value.";
+                }
             }
-            $extra .= "Leave blank to use existing value.</comment>\n";
+
+            $extra .= "</comment>\n";
         }
-        $ask = sprintf("%s%s\n<info>[%s]</info>:     ", $extra, ucfirst($field->description), $field->name);
+        $ask = sprintf("%s<info>[%s] </info>%s: ", $extra, $field->name, ucfirst($field->description));
         do {
 
             $value = match ($field->ask) {
                 Question::CHOICE => $io->choice($ask, $field->choices, $default_value),
-                Question::CONFIRMATION => $io->confirm("$ask (y/n)?", $default_value ?? true),
+                Question::CONFIRMATION => $io->confirm($ask, $default_value ?? true),
                 Question::DEFAULT => $io->ask($ask, $default_value)
             };
             if (!call_user_func($field->validation, $value)) {
