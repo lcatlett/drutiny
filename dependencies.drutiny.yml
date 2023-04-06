@@ -39,7 +39,7 @@ Drupal:
   
   isVersion10orLater:
     description: Drupal version is version 10 or later
-    expression: semver_satisfies(attribute(drush, 'drupal-version'), '^10')
+    expression: semver_satisfies(attribute(drush, 'drupal-version'), '>=10')
 
   isVersion10:
     description: Drupal version is version 10 with any minor or patch version.
@@ -47,7 +47,7 @@ Drupal:
   
   isVersion9orLater:
     description: Drupal version is version 9 or later
-    expression: semver_satisfies(attribute(drush, 'drupal-version'), '^9')
+    expression: semver_satisfies(attribute(drush, 'drupal-version'), '>=9')
   
   isVersion9:
     description: Drupal version is version 9 with any minor or patch version.
@@ -55,7 +55,7 @@ Drupal:
   
   isVersion8orLater:
     description: Drupal version is version 8 or later
-    expression: semver_satisfies(attribute(drush, 'drupal-version'), '^8')
+    expression: semver_satisfies(attribute(drush, 'drupal-version'), '>=8')
 
   isVersion8:
     description: Drupal version is version 8 with any minor or patch version.
