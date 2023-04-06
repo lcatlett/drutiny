@@ -51,9 +51,7 @@ class PolicyPushCommand extends DrutinyBaseCommand
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $source = $this->policyFactory
-          ->getSource($input->getArgument('source'))
-          ->getDriver();
+        $source = $this->policyFactory->getSource($input->getArgument('source'));
 
         $io = new SymfonyStyle($input, $output);
 
@@ -64,7 +62,7 @@ class PolicyPushCommand extends DrutinyBaseCommand
         $policy = $this->policyFactory->loadPolicyByName($input->getArgument('policy'));
 
         try {
-          $url = $source->push($policy);
+          $policy = $source->push($policy);
         }
         catch (IdentityProviderException $e)
         {
@@ -76,7 +74,7 @@ class PolicyPushCommand extends DrutinyBaseCommand
         $io->success(sprintf('Policy %s successfully pushed to %s. Visit %s',
           $input->getArgument('policy'),
           $input->getArgument('source'),
-          $url
+          $policy->uri
         ));
 
         return 0;
