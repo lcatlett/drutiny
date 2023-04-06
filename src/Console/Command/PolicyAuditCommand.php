@@ -106,6 +106,8 @@ class PolicyAuditCommand extends DrutinyBaseCommand
           'parameters' => $parameters
         ]];
 
+        $this->progressBar->setMessage("Loading profile...");
+
         $profile = $this->profileFactory->create([
           'title' => 'Policy audit: ' . $name,
           'name' => '_policy_audit',
@@ -122,6 +124,8 @@ class PolicyAuditCommand extends DrutinyBaseCommand
             ]
           ]
         ]);
+
+        $this->progressBar->setMessage("Loading target...");
 
         // Setup the target.
         $target = $this->targetFactory->create($input->getArgument('target'), $input->getOption('uri'));
@@ -148,7 +152,10 @@ class PolicyAuditCommand extends DrutinyBaseCommand
 
         $style = new SymfonyStyle($input, $output);
         if ($report->results[$name]->isIrrelevant()) {
-          $style->error("Policy $name was evaluated as irrelevant for the target " . $target->getId());
+          $style->warning("Policy $name was evaluated as irrelevant for the target " . $target->getId());
+          if (isset($report->results[$name]->tokens['exception'])) {
+            $style->error($report->results[$name]->tokens['exception']);
+          }
           return 0;
         }
         elseif ($report->results[$name]->hasError()) {
