@@ -93,7 +93,9 @@ class Kernel
         $config_files = $this->findExtensionConfigFiles();
         $id = hash('md5', implode('-', array_keys($config_files)));
 
-        $this->containerFilepath = $this->getProjectDir() . '/.' . $id . self::CONTAINER_SUFFIX;
+        $this->containerFilepath = $this->getProjectDir() . '/.cache/' . $id . self::CONTAINER_SUFFIX;
+        is_dir(dirname($this->containerFilepath)) || mkdir($this->containerFilepath);
+
         if (file_exists($this->containerFilepath) && !$rebuild) {
             require_once $this->containerFilepath;
             $this->container = new ProjectServiceContainer();
