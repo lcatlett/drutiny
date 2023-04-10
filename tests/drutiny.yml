@@ -28,3 +28,7 @@ services:
 
   Symfony\Component\Console\Output\OutputInterface:
       alias: Symfony\Component\Console\Output\BufferedOutput
+  
+  DrutinyTests\PolicySource\FakePushablePolicySource:
+    tags: [ policy.source ]
+

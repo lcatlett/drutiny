@@ -247,6 +247,23 @@ class ApplicationTest extends KernelTestCase {
   }
 
   /**
+   * @coverage Drutiny\Console\Command\PolicyPushCommand
+   */
+  public function testPolicyPushCommand()
+  {
+    $input = new ArrayInput([
+      'command' => 'policy:push',
+      'policy' => 'Test:Pass',
+      'source' => 'test'
+    ]);
+
+    $code = $this->application->run($input, $this->output);
+    $this->assertStringContainsString('Policy Test:Pass successfully pushed to test', $this->output->fetch());
+    $this->assertIsInt($code);
+    $this->assertEquals(0, $code);
+  }
+
+  /**
    * @coverage Drutiny\Console\Command\AuditInfoCommand
    */
   public function testAuditInfoCommand()
