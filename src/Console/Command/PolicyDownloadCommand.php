@@ -72,7 +72,11 @@ class PolicyDownloadCommand extends DrutinyBaseCommand
 
         $choices = array_keys(array_filter($sources));
 
-        if (count($choices) > 1) {
+        if (empty($choices)) {
+            $render->error($input->getArgument('policy') . ' could not be found.');
+            return 1;
+        }
+        elseif (count($choices) > 1) {
             $choice = $render->choice("Which source would you like to download the policy from?", $choices);
         }
         elseif (!$render->confirm("Download ".$input->getArgument('policy')." from {$choices[0]}?")) {
