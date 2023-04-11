@@ -62,7 +62,28 @@ class PolicyDownloadCommand extends DrutinyBaseCommand
         $directory = (array) $this->settings->get('policy.library.fs');
         $directory = array_shift($directory);
 
-        $policy = $this->policyFactory->loadPolicyByName($input->getArgument('policy'));
+        $sources = [];
+        foreach ($this->policyFactory->sources as $source) {
+            $source = $this->policyFactory->getSource($source->name);
+            $list = $source->getList($this->languageManager);
+            
+            $sources[$source->name] = $list[$input->getArgument('policy')] ?? false;
+        }
+
+        $choices = array_keys(array_filter($sources));
+
+        if (count($choices) > 1) {
+            $choice = $render->choice("Which source would you like to download the policy from?", $choices);
+        }
+        elseif (!$render->confirm("Download ".$input->getArgument('policy')." from {$choices[0]}?")) {
+            return 0;
+        }
+        else {
+            $choice = 0;
+        }
+
+        $source = $choices[$choice];
+        $policy = $this->policyFactory->getSource($source)->load($sources[$source]);
 
         $name = str_replace(':', '-', $policy->name);
         $filename = $directory . "/$name.policy.yml";
@@ -76,9 +97,41 @@ class PolicyDownloadCommand extends DrutinyBaseCommand
             return 2;
         }
 
-        $output = Yaml::dump($policy->export(), 6, 4, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
+        $export = $policy->export();
 
-        file_put_contents($filename, $output);
+        $remove_keys = ['uri', 'weight', 'source'];
+        $commentary = ['This policy was downloaded using policy:download command.'];
+        foreach ($export as $key => $value) {
+            if (in_array($key, $remove_keys) || empty($value)) {
+                if (in_array($key, $remove_keys)) $commentary[] = "Original $key: $value";
+                unset($export[$key]);
+            }
+        }
+
+        $key_order = [
+            'title', 'name', 'uuid', 'class', 'description', 'language',
+            'tags', 'severity', 'type',
+            'depends', 'build_parameters', 'parameters',
+            'success', 'failure', 'remediation', 'warning',
+            'chart'
+        ];
+
+        $yaml = [];
+        // Set the YAML file in a given order.
+        foreach ($key_order as $key) {
+            if (isset($export[$key])) {
+                $yaml[$key] = $export[$key];
+            }
+        }
+
+        // Catch all, add any missed fields.
+        foreach ($export as $key => $value) {
+            $yaml[$key] ??= $export[$key];
+        }
+
+        $output = Yaml::dump($yaml, 6, 4, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK);
+        $commentary = '# ' . implode("\n# ", $commentary) . "\n";
+        file_put_contents($filename, $commentary.$output);
         $render->success(realpath($filename) .      " written.");
 
         $this->policyFactory->getSource('localfs')->refresh($this->languageManager);
