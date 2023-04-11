@@ -83,6 +83,14 @@ Drupal:
       # Map the order of arguments in the twig function to tokens server in the 'expression'.
       - $module
 
+  hasModule:
+    description: Ensures a given Drupal module resides in the codebase.
+    use_audit: Drutiny\Audit\Drupal\ModuleAnalysis
+    expression: Drupal.isBootstrapped and modules[$module] is defined
+    arguments:
+      # Map the order of arguments in the twig function to tokens server in the 'expression'.
+      - $module
+
   moduleVersionSatisfies:
     description: Ensures a given Drupal module is enabled and its version meets a given version constraint.
     use_audit: Drutiny\Audit\Drupal\ModuleAnalysis
