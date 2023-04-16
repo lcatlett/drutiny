@@ -9,6 +9,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Finder\Finder;
+use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Contracts\Cache\CacheInterface;
 
 #[AsSource(name: 'localfs', weight: -10, cacheable: false)]
@@ -45,7 +46,13 @@ class LocalFs extends AbstractPolicySource
     {
         $list = [];
         foreach ($this->finder as $file) {
-            $policy = Yaml::parse($file->getContents());
+            try {
+                $policy = Yaml::parse($file->getContents());
+            }
+            catch (ParseException $e) {
+                $this->logger->error("YAML Parse error in " . $file . ": " . $e->getMessage());
+                continue;
+            }
             $policy['uuid'] = md5($file->getPathname());
             $policy['uri'] = (string) $file;
             $policy['language'] = $policy['language'] ?? $languageManager->getDefaultLanguage();
