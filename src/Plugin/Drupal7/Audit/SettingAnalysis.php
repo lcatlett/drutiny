@@ -16,7 +16,7 @@ class SettingAnalysis extends AbstractAnalysis
     public function gather(Sandbox $sandbox)
     {
 
-      $drush = $this->getTarget()->getService('drush');
+      $drush = $this->target->getService('drush');
       $settings = $drush->runtime(function () {
           global $conf;
           return $conf;
