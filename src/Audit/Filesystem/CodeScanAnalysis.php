@@ -53,10 +53,7 @@ class CodeScanAnalysis extends AbstractAnalysis
     public function gather(Sandbox $sandbox)
     {
         $directory = $this->getParameter('directory', '%root');
-        $stat = $this->target->getService('drush')->status(['format' => 'json'])->run(function ($output) {
-          return json_decode($output, true);
-        });
-        //$stat = $sandbox->drush(['format' => 'json'])->status();
+        $stat = $this->target['drush']->all();
 
         // Backwards compatibility. %paths is no longer present since Drush 8.
         if (!isset($stat['%paths'])) {
