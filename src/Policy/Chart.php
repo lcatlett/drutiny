@@ -60,4 +60,38 @@ class Chart {
         }
         return new static(...$params);
     }
+
+    /**
+     * Create a new Chart object modified from the existing.
+     */
+    public function with(...$props):self {
+        $args = array_merge(get_object_vars($this), $props);
+        return new static(...$args);
+    }
+
+    /**
+     * Add a series to the existing chart as a new object.
+     */
+    public function addSeries(string $css_selector):self
+    {
+        if (!is_array($this->series)) {
+            throw new InvalidArgumentException("Cannot add Series to chart with a single string selector for series: " . $this->series);
+        }
+        $series = $this->series;
+        $series[] = $css_selector;
+        return $this->with(series: $series);
+    }
+
+    /**
+     * Add a series to the existing chart as a new object.
+     */
+    public function addSeriesLabel(string $css_selector):self
+    {
+        if (!is_array($this->seriesLabels)) {
+            throw new InvalidArgumentException("Cannot add Series Label to chart with a single string selector for series label: " . $this->seriesLabels);
+        }
+        $seriesLabels = $this->seriesLabels;
+        $seriesLabels[] = $css_selector;
+        return $this->with(seriesLabels: $seriesLabels);
+    }
 }

@@ -43,6 +43,23 @@ class Helper {
     return $element . '></div>';
   }
 
+  public static function filterChartTable(array $headers, array $rows, Chart|array $chart) {
+    if (is_array($chart)) {
+      $chart = Chart::fromArray($chart);
+    }
+
+    for ($i=2; $i < (count($headers) + 1); $i++) {
+      $chart = $chart->addSeriesLabel("tr th:nth-child($i)")->addSeries("tr td:nth-child($i)");
+    }
+
+    $element = [implode(' | ', $headers)];
+    $element[] = implode(' | ', array_map(fn($h) => str_pad('', strlen($h), '-'), $headers));
+    foreach ($rows as $row) {
+      $element[] = implode(' | ', $row);
+    }
+    return self::filterChart($chart) . "\n\n" . implode(PHP_EOL, $element);
+  }
+
   public static function renderAuditReponse(Environment $twig, AuditResponse $response, AssessmentInterface $assessment):string
   {
       // Irrelevant responses should be omitted from rendering.

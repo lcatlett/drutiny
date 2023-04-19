@@ -266,6 +266,7 @@ services:
         - [addFilter, ['@twig.filters.array_merge']]
         - [addFilter, ['@twig.filters.format_bytes']]
         - [addFilter, ['@twig.filters.yaml_dump']]
+        - [addFunction, ['@twig.functions.chartTable']]
         - [addFunction, ['@twig.functions.policy_result']]
         - [addFunction, ['@twig.functions.parse_url']]
         - [addFunction, ['@twig.functions.semver_satisfies']]
@@ -360,6 +361,13 @@ services:
       arguments:
         - 'chart'
         - ['Drutiny\Report\Twig\Helper', 'filterChart']
+        - is_safe: ['html']
+
+    twig.functions.chartTable:
+      class: Twig\TwigFunction
+      arguments:
+        - 'chart_and_table'
+        - ['Drutiny\Report\Twig\Helper', 'filterChartTable']
         - is_safe: ['html']
 
     # makes classes in src/ available to be used as services
