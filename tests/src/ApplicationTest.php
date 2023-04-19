@@ -198,7 +198,9 @@ class ApplicationTest extends KernelTestCase {
     $this->assertFileDoesNotExist($filename);
     $input = new ArrayInput([
       'command' => 'policy:download',
-      'policy' => 'Test:Pass'
+      'policy' => 'Test:Pass',
+      'source' => 'localfs',
+      '--no-interaction' => null
     ]);
 
     $code = $this->application->run($input, $this->output);

@@ -12,7 +12,10 @@ use Drutiny\PolicyFactory;
 use Drutiny\Profile;
 use Drutiny\LanguageManager;
 use Drutiny\Settings;
+use Exception;
+use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Console\Input\InputOption;
 
 /**
  *
@@ -62,32 +65,15 @@ class PolicyDownloadCommand extends DrutinyBaseCommand
         $directory = (array) $this->settings->get('policy.library.fs');
         $directory = array_shift($directory);
 
-        $sources = [];
-        foreach ($this->policyFactory->sources as $source) {
-            $source = $this->policyFactory->getSource($source->name);
-            $list = $source->getList($this->languageManager);
-            
-            $sources[$source->name] = $list[$input->getArgument('policy')] ?? false;
-        }
+        $source = $this->policyFactory->getSource($this->getSource($input, $output));
+        $policyList = $source->getList($this->languageManager);
 
-        $choices = array_keys(array_filter($sources));
-
-        if (empty($choices)) {
-            $render->error($input->getArgument('policy') . ' could not be found.');
+        if (!isset($policyList[$input->getArgument('policy')])) {
+            $render->error("Policy does not exist in source.");
             return 1;
         }
-        elseif (count($choices) > 1) {
-            $choice = $render->choice("Which source would you like to download the policy from?", $choices);
-        }
-        elseif (!$render->confirm("Download ".$input->getArgument('policy')." from {$choices[0]}?")) {
-            return 0;
-        }
-        else {
-            $choice = 0;
-        }
 
-        $source = $choices[$choice];
-        $policy = $this->policyFactory->getSource($source)->load($sources[$source]);
+        $policy = $source->load($policyList[$input->getArgument('policy')]);
 
         $name = str_replace(':', '-', $policy->name);
         $filename = $directory . "/$name.policy.yml";
@@ -140,5 +126,37 @@ class PolicyDownloadCommand extends DrutinyBaseCommand
 
         $this->policyFactory->getSource('localfs')->refresh($this->languageManager);
         return 0;
+    }
+
+    protected function getSource(InputInterface $input, OutputInterface $output) {
+        $source = $input->getArgument('source');
+        if (!empty($source)) {
+            return $source;
+        }
+        $render = new SymfonyStyle($input, $output);
+        
+        $sources = [];
+        foreach ($this->policyFactory->sources as $source) {
+            $source = $this->policyFactory->getSource($source->name);
+            $list = $source->getList($this->languageManager);    
+            $sources[$source->name] = $list[$input->getArgument('policy')] ?? false;
+        }
+
+        $choices = array_keys(array_filter($sources));
+
+        if (empty($choices)) {
+            throw new InvalidArgumentException($input->getArgument('policy') . ' could not be found.');
+        }
+        elseif (count($choices) > 1) {
+            $choice = $render->choice("Which source would you like to download the policy from?", $choices);
+        }
+        elseif (!$render->confirm("Download ".$input->getArgument('policy')." from {$choices[0]}?")) {
+            throw new Exception("Opted not to download policy.");
+        }
+        else {
+            $choice = 0;
+        }
+
+        return $choices[$choice];
     }
 }
