@@ -6,6 +6,7 @@
  * Build a phar of this repository.
  */
 
+use Drutiny\Kernel;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Console\Output\ConsoleOutput;
@@ -40,6 +41,16 @@ define('BUILD_DIRECTORY', getcwd() . '/.build');
         $package = Yaml::parseFile($package_yaml);
         $version = $input->getArgument('version') ?: $package['version'];
 
+        // Generate compiled container artifacts from the kernel.
+        $kernel = new Kernel('production', $version);
+        $kernel->getContainer();
+
+        // The container extensions file won't need to be rebuilt if it already exists.
+        if (!file_exists(Kernel::CONTAINER_EXTENSIONS)) {
+            $console->error(Kernel::CONTAINER_EXTENSIONS . ' does not exist. Please run drutiny to generate this file.');
+            return 1;
+        }
+
         $fs = new Filesystem();
 
         if ($fs->exists(BUILD_DIRECTORY)) {
@@ -56,6 +67,8 @@ define('BUILD_DIRECTORY', getcwd() . '/.build');
         passthru("cd ".BUILD_DIRECTORY." && composer install --prefer-dist --no-dev");
         exec("cd ".BUILD_DIRECTORY." && find . -type l ! -exec test -e {} \; -delete");
         file_put_contents(BUILD_DIRECTORY."/VERSION", $version);
+
+        copy(Kernel::CONTAINER_EXTENSIONS, BUILD_DIRECTORY . DIRECTORY_SEPARATOR . Kernel::CONTAINER_EXTENSIONS);
 
         $docs = new Finder();
         $docs

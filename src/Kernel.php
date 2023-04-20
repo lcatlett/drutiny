@@ -35,6 +35,7 @@ class Kernel
 {
     private const CONFIG_EXTS = '.{php,yaml,yml}';
     private const CONTAINER_SUFFIX = '.container.php';
+    public  const CONTAINER_EXTENSIONS = '.container-extensions.json';
     private ContainerInterface $container;
     private bool $initialized = false;
     private array $compilers = [];
@@ -145,7 +146,7 @@ class Kernel
     public function refresh():void
     {
         unlink($this->containerFilepath);
-        unlink($this->getProjectDir() . '/.container-extensions.json');
+        unlink($this->getProjectDir() . '/' . self::CONTAINER_EXTENSIONS);
         $this->initialized = false;
         unset($this->container);
     }
@@ -251,7 +252,7 @@ class Kernel
             'file_exists'));
         }
 
-        $cache_file = $this->getProjectDir() . '/.container-extensions.json';
+        $cache_file = $this->getProjectDir() . '/' . self::CONTAINER_EXTENSIONS;
         if (file_exists($cache_file)) {
             $cache_files = json_decode(file_get_contents($cache_file), true);
         }
