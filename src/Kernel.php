@@ -94,7 +94,7 @@ class Kernel
         $id = hash('md5', implode('-', array_keys($config_files)));
 
         $this->containerFilepath = $this->getProjectDir() . '/.cache/' . $id . self::CONTAINER_SUFFIX;
-        is_dir(dirname($this->containerFilepath)) || mkdir($this->containerFilepath);
+        is_dir(dirname($this->containerFilepath)) || mkdir(dirname($this->containerFilepath));
 
         if (file_exists($this->containerFilepath) && !$rebuild) {
             require_once $this->containerFilepath;
