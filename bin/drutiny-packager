@@ -21,6 +21,7 @@ use Symfony\Component\Console\SingleCommandApplication;
 require 'vendor/autoload.php';
 
 define('BUILD_DIRECTORY', getcwd() . '/.build');
+define('DRUTINY_LIB', getcwd());
 
 (new SingleCommandApplication())
     ->setName('Build Phar')
