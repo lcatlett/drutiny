@@ -29,6 +29,7 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
         protected Report $report
     )
     {
+        $this->setReportingPeriod($report->reportingPeriodStart, $report->reportingPeriodEnd);
         array_map(fn($r) => $this->captureStats($r), $report->results);
     }
 
