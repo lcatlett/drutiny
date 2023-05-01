@@ -157,6 +157,6 @@ class PolicyDownloadCommand extends DrutinyBaseCommand
             $choice = 0;
         }
 
-        return $choices[$choice];
+        return is_string($choice) ? $choice : $choices[$choice];
     }
 }
