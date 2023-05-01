@@ -11,6 +11,11 @@
 URI: {{ uri }}
 {% endif %}
 
+{% if notes is defined and notes is not empty %}
+## Notes
+{{ notes|raw }}
+{% endif %}
+
 ## Use this policy
 
 ```
@@ -23,7 +28,7 @@ drutiny policy:audit {{ name }} <target>
 Parameter | Default Value
 --------- | -----------
 {% for key in parameters|keys %}
-{{ key }} | {% if parameters[key] is iterable %}<array>{% else %}{{ parameters[key] }}{% endif %}
+{{ key }} | {% if parameters[key] is iterable %}<array>{% else %}{{ parameters[key]|raw }}{% endif %}
 
 {% endfor %}
 {% endif %}
@@ -33,4 +38,6 @@ See `drutiny audit:info {{ class }}` for more information.
 {% if tags %}
 ## Tags
 {% for tag in tags %}- {{ tag }}{% endfor %}
+
+
 {% endif %}

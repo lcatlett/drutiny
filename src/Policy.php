@@ -17,8 +17,6 @@ use Symfony\Component\DependencyInjection\ParameterBag\FrozenParameterBag;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 
-use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
-
 #[Autoconfigure(autowire: false)]
 class Policy implements ExportableInterface
 {
@@ -62,7 +60,8 @@ class Policy implements ExportableInterface
       #[Description('Where the policy is sourced from.')]
       public readonly string $source,
 
-      // Arrays and Enums are declared in the class.
+      // Arrays and Enums are declared in the class and don't require Description attributes
+      // in the constructor.
       string $type = 'audit',
       array $tags = [],
       string $severity = 'normal',
@@ -93,7 +92,10 @@ class Policy implements ExportableInterface
       public readonly ?string $warning = '',
 
       #[Description('The URI this policy can be referenced and located by.')]
-      public readonly ?string $uri = null
+      public readonly ?string $uri = null,
+
+      #[Description('Notes and commentary on policy configuration and prescribed usage.')]
+      public readonly string $notes = '',
     )
     {
       $this->type = PolicyType::from($type);
