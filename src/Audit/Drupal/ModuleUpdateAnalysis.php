@@ -96,19 +96,25 @@ class ModuleUpdateAnalysis extends ModuleAnalysis
         if (count($parent_modules)) {
           $modules[$module]['type'] = 'sub-module';
           $modules[$module]['parent'] = reset($parent_modules)['name'];
+          // List this module as a sub-module under the parent-module's definition.
           $modules[$modules[$module]['parent']]['sub-modules'][] = $modules[$module]['name'];
         }
 
+        // Flag indicating there are supported releases avaliable (e.g. project is not EOL, abandoned, etc)
         $modules[$module]['supported'] = false;
 
         if ($modules[$module]['type'] == 'contrib') {
           $modules[$module]['available_releases'] = $this->getRecentVersions($info['type'] == 'core' ? 'drupal' : $module, $info['version'] ?? '');
 
+          // If we could not find any available releases from Drupal.org then
+          // this module likely isn't a project on Drupal.org and is custom rather than contrib.
           if (!$modules[$module]['available_releases']) {
             $modules[$module]['type'] = 'custom';
             unset($modules[$module]['available_releases']);
+            continue;
           }
 
+          // Indicate if the version of the module we're using is apart of the supported_branches.
           $supported = array_filter($modules[$module]['available_releases']['supported_branches'] ?? [], function ($branch) use ($info) {
             return strpos($info['version'], $branch) === 0;
           });
@@ -118,7 +124,10 @@ class ModuleUpdateAnalysis extends ModuleAnalysis
       return $modules;
     }
 
-    protected function getRecentVersions(string $project, string $version)
+    /**
+     * Get release information from Drupal.org.
+     */
+    protected function getRecentVersions(string $project, string $version):array|false
     {
       static $responses;
 
@@ -158,7 +167,7 @@ class ModuleUpdateAnalysis extends ModuleAnalysis
 
       // Only include newer releases. This keeps memory usage down.
       $semantic_version = $this->getSemanticVersion($version);
-      $history['releases'] = array_filter($history['releases'], function ($release) use ($semantic_version, $core_major_version) {
+      $history['releases'] = array_filter($history['releases'], function ($release) use ($semantic_version) {
         if (isset($release['terms'])) {
           $tags = array_map(function ($term) {
             return $term['value'];
