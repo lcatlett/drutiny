@@ -8,6 +8,8 @@ use Drutiny\LanguageManager;
 use Drutiny\Policy;
 use Drutiny\PolicySource\Exception\UnknownPolicyException;
 use Generator;
+use ReflectionClass;
+use Symfony\Component\Yaml\Yaml;
 use Symfony\Contracts\Cache\CacheInterface;
 use TypeError;
 
@@ -34,10 +36,24 @@ abstract class AbstractPolicySource implements PolicySourceInterface {
     {
       try {
         $definition['source'] = $this->source->name;
-        return new Policy(...$definition);
+
+        $reflection = new ReflectionClass(Policy::class);
+        $args = [];
+
+        // Only pass in arguments that the Policy constructor is expecting.
+        // This creates backwards compatibility with other drutiny clients
+        // reading in newer policy definitions.
+        foreach ($reflection->getConstructor()->getParameters() as $arg) {
+            if (isset($definition[$arg->name])) {
+                $args[$arg->name] = $definition[$arg->name];
+            }
+        }
+
+        return new Policy(...$args);
       }
       catch (TypeError $e) {
-        throw new UnknownPolicyException("Cannot load policy '{$definition['name']}' from '{$this->source->name}': " . $e->getMessage(), 0, $e);
+        $code = Yaml::dump($args);
+        throw new UnknownPolicyException("Cannot load policy '{$definition['name']}' from '{$this->source->name}': " . $e->getMessage() . PHP_EOL . $code, 0, $e);
       }
     }
 
