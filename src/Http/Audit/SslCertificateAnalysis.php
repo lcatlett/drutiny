@@ -2,15 +2,11 @@
 
 namespace Drutiny\Http\Audit;
 
+use DateTime;
 use Drutiny\Sandbox\Sandbox;
 use Drutiny\Audit\AbstractAnalysis;
 use Drutiny\Audit\AuditInterface;
-use Drutiny\Audit\AuditValidationException;
 use Exception;
-use React\EventLoop\Loop;
-use React\EventLoop\LoopInterface;
-use React\Socket\ConnectionInterface;
-use React\Socket\Connector;
 
 /**
  *
@@ -58,9 +54,9 @@ class SslCertificateAnalysis extends AbstractAnalysis
         if (!isset($certinfo)) {
             return;
         }
-
-        $this->set('valid_from', date('Y-m-d H:i:s', $certinfo['validFrom_time_t']));
-        $this->set('valid_till', date('Y-m-d H:i:s', $certinfo['validTo_time_t']));
+        
+        $this->set('valid_from', new DateTime(date('Y-m-d H:i:s', $certinfo['validFrom_time_t'])));
+        $this->set('valid_till', new DateTime(date('Y-m-d H:i:s', $certinfo['validTo_time_t'])));
     }
 
     /**
