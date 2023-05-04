@@ -3,6 +3,8 @@
 namespace Drutiny;
 
 use DateTime;
+use DateTimeImmutable;
+use DateTimeInterface;
 use Drutiny\Audit\AuditInterface;
 use Drutiny\Audit\AuditValidationException;
 use Drutiny\Audit\SyntaxProcessor;
@@ -44,6 +46,7 @@ abstract class Audit implements AuditInterface
     protected DataBag $dataBag;
     protected Policy $policy;
     protected InputDefinition $definition;
+    public readonly DateTimeInterface $dateTime;
     protected bool $deprecated = false;
     protected string $deprecationMessage = '';
     protected int $verbosity;
@@ -108,6 +111,7 @@ abstract class Audit implements AuditInterface
      */
     final public function execute(Policy $policy, $remediate = false): AuditResponse
     {
+        $this->dateTime = new DateTimeImmutable();
         if ($this->deprecated) {
             $this->logger->warning(sprintf("Policy '%s' is using '%s' which is a deprecated class. This may fail in the future.", $policy->name, get_class($this)));
             if (!empty($this->deprecationMessage)) {
@@ -118,7 +122,6 @@ abstract class Audit implements AuditInterface
             }
         }
         $this->policy = $policy;
-        $execution_start_time = new DateTime();
         $this->logger->info('Auditing '.$policy->name.' with '.get_class($this));
         $outcome = AuditInterface::ERROR;
         try {
@@ -243,8 +246,7 @@ abstract class Audit implements AuditInterface
               'uri' => $this->target->getUri(),
             ]), 'audit');
         }
-        $execution_end_time = new DateTime();
-        $total_execution_time = $execution_start_time->diff($execution_end_time);
+        $total_execution_time = $this->dateTime->diff(new DateTime());
         $this->logger->info($total_execution_time->format('Execution completed for policy "' . $policy->name . '" in %m month(s) %d day(s) %H hour(s) %i minute(s) %s second(s)'));
         return $response;
     }
