@@ -46,7 +46,7 @@ abstract class Audit implements AuditInterface
     protected DataBag $dataBag;
     protected Policy $policy;
     protected InputDefinition $definition;
-    public readonly DateTimeInterface $dateTime;
+    public DateTimeInterface $dateTime;
     protected bool $deprecated = false;
     protected string $deprecationMessage = '';
     protected int $verbosity;
