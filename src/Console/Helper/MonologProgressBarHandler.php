@@ -6,6 +6,7 @@ use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Formatter\FormatterInterface;
 use Monolog\Logger;
+use Monolog\LogRecord;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Terminal;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -40,9 +41,9 @@ Class MonologProgressBarHandler extends AbstractProcessingHandler {
   /**
    * {@inheritdoc}
    */
-  protected function write(array $record): void
+  protected function write(LogRecord $record): void
   {
-      $message = substr($record['formatted'], 0, min($this->terminal->getWidth(), strlen($record['formatted'])));
+      $message = substr($record->formatted, 0, min($this->terminal->getWidth(), strlen($record->formatted)));
       $this->progressBar->setMessage($message);
 
       if ($record['level'] >=  Logger::NOTICE) {
