@@ -5,7 +5,6 @@ namespace Drutiny;
 use Drutiny\Attribute\ArrayType;
 use Drutiny\Attribute\Description;
 use Drutiny\Helper\MergeUtility;
-use Drutiny\Policy\Dependency;
 use Drutiny\Profile\FormatDefinition;
 use Drutiny\Profile\PolicyDefinition;
 use Drutiny\Sandbox\ReportingPeriodTrait;
@@ -131,7 +130,7 @@ class Profile
     {
         $data = get_object_vars($this);
         $data['policies'] = array_map(fn($p) => $p->export(), $data['policies']);
-        $data['dependencies'] = array_map(fn($d) => get_object_vars($d), $data['dependencies']);
+        $data['dependencies'] = array_map(fn($d) => $d->export(), $data['dependencies']);
         $data['format'] = array_map(fn($f) => get_object_vars($f), $data['format']);
 
         // Fix Yaml::dump bug where it doesn't correctly split \r\n to multiple
