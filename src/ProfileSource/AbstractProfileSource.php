@@ -32,7 +32,7 @@ abstract class AbstractProfileSource implements ProfileSourceInterface
             return $this->profileFactory->create($definition);
         }
         catch (TypeError $e) {
-            throw new ProfileCompilationException("Cannot create {$definition['name']} from {$this->source->name}: " . $e->getMessage());
+            throw new ProfileCompilationException("Cannot create {$definition['name']} from {$this->source->name}: " . $e->getMessage(), 0, $e);
         }
     }
 
