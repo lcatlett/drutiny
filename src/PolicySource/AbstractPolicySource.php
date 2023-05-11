@@ -26,7 +26,7 @@ abstract class AbstractPolicySource implements PolicySourceInterface {
     final public function load(array $definition): Policy
     {
         $key = hash('md5', $this->source->name.json_encode($definition));
-        if ($this->source->cacheable ){
+        if ($this->source->cacheable) {
             return $this->cache->get($key, fn() => $this->doLoad($definition));
         }
         return $this->doLoad($definition);
@@ -60,7 +60,7 @@ abstract class AbstractPolicySource implements PolicySourceInterface {
     final public function getList(LanguageManager $languageManager): array
     {
         $key = TextCleaner::machineValue($this->source->name.'.policy.list.'.$languageManager->getCurrentLanguage());
-        if ($this->source->cacheable ){
+        if ($this->source->cacheable) {
             return $this->cache->get($key, fn() => $this->doGetList($languageManager));
         }
         return $this->doGetList($languageManager);
