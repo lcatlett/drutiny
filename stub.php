@@ -51,7 +51,7 @@ if (file_exists(DRUTINY_LIB.'/BUILD_DATETIME')) {
 }
 
 $installed = require DRUTINY_LIB . '/vendor/composer/installed.php';
-$environment = $installed['root']['dev'] ? 'dev' : 'production';
+$environment = $installed['root']['dev'] || Phar::running() ? 'dev' : 'production';
 
 $kernel = new Kernel($environment, reset($versions).$suffix);
 
