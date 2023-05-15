@@ -3,8 +3,12 @@
 namespace Drutiny\Target;
 
 use Drutiny\Attribute\AsTarget;
+use Drutiny\Target\Exception\TargetLoadingException;
+use Drutiny\Target\Exception\TargetNotFoundException;
+use Drutiny\Target\Exception\TargetSourceFailureException;
 use Drutiny\Target\Transport\DockerTransport;
 use Psr\Cache\CacheItemInterface;
+use Symfony\Component\Process\Exception\ProcessFailedException;
 
 /**
  * Target for parsing Drush aliases.
@@ -29,16 +33,25 @@ class LandoTarget extends DrushTarget implements TargetInterface, TargetSourceIn
 
         $this['lando.name'] = $alias;
 
-        $lando = $this->localCommand->run('lando list --format=json', function ($output) {
-          return json_decode($output, true);
-        });
+        try {
+          $lando = $this->localCommand->run('lando list --format=json', function ($output) {
+            $data = json_decode($output, true);
+            if ($data === null) {
+              throw new TargetSourceFailureException(message: "Could not decode output from `lando list`. Perhaps an update to lando is required?");
+            }
+            return $data;
+          });
+        }
+        catch (ProcessFailedException $e) {
+          throw new TargetSourceFailureException(message: "Lando `list` command failed unexpectedly.", previous: $e);
+        }       
 
         $apps = array_filter($lando, function ($instance) use ($alias) {
           return ($instance['service'] == 'appserver') && ($instance['app'] == $alias);
         });
 
         if (empty($apps)) {
-          throw new InvalidTargetException("Lando site '$alias' either doesn't exist or is not currently active.");
+          throw new TargetNotFoundException(message: "Lando site '$alias' either doesn't exist or is not currently active.");
         }
 
         $this['lando.app'] = array_shift($apps);
@@ -48,9 +61,15 @@ class LandoTarget extends DrushTarget implements TargetInterface, TargetSourceIn
         $this['drush.root'] = '/app';
 
         $dir = dirname($this['lando.app']['src'][0]);
-        $info = $this->localCommand->run(sprintf('cd %s && lando info --format=json', $dir), function ($output) {
-          return json_decode($output, true);
-        });
+
+        try {
+          $info = $this->localCommand->run(sprintf('cd %s && lando info --format=json', $dir), function ($output) {
+            return json_decode($output, true);
+          });
+        }
+        catch (ProcessFailedException $e) {
+          throw new TargetLoadingException(message: "failed to run `lando info` command in $dir.", previous: $e);
+        }
 
         $urls = [];
         foreach ($info as $service) {

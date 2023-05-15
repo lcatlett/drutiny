@@ -3,8 +3,11 @@
 namespace Drutiny\Target;
 
 use Drutiny\Attribute\AsTarget;
+use Drutiny\Target\Exception\TargetLoadingException;
+use Drutiny\Target\Exception\TargetSourceFailureException;
 use Drutiny\Target\Transport\DockerTransport;
 use Psr\Cache\CacheItemInterface;
+use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -90,17 +93,22 @@ class DocksalTarget extends DrushTarget implements TargetInterface, TargetSource
 
     protected function findTargets()
     {
-        return $this->localCommand->run('fin alias list', function ($output, CacheItemInterface $cache) {
-            $cache->expiresAfter(1);
-            $lines = array_filter(array_map('trim', explode(PHP_EOL, $output)));
-            // Remove headers
-            array_shift($lines);
-            $a = [];
-            foreach ($lines as $line) {
-                list($alias, $location) = array_values(array_filter(explode(" ", $line), 'trim'));
-                $a[$alias] = $location;
-            }
-            return $a;
-        });
+        try {
+            return $this->localCommand->run('fin alias list', function ($output, CacheItemInterface $cache) {
+                $cache->expiresAfter(1);
+                $lines = array_filter(array_map('trim', explode(PHP_EOL, $output)));
+                // Remove headers
+                array_shift($lines);
+                $a = [];
+                foreach ($lines as $line) {
+                    list($alias, $location) = array_values(array_filter(explode(" ", $line), 'trim'));
+                    $a[$alias] = $location;
+                }
+                return $a;
+            });
+        }
+        catch (ProcessFailedException $e) {
+            throw new TargetSourceFailureException(message: "`fin alias list` command failed.", previous: $e);
+        }
     }
 }

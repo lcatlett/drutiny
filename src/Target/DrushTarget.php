@@ -4,6 +4,9 @@ namespace Drutiny\Target;
 
 use Drutiny\Attribute\AsTarget;
 use Drutiny\Helper\TextCleaner;
+use Drutiny\Target\Exception\TargetLoadingException;
+use Drutiny\Target\Exception\TargetNotFoundException;
+use Drutiny\Target\Exception\TargetSourceFailureException;
 use Drutiny\Target\Service\Drush;
 use Drutiny\Target\Service\ServiceInterface;
 use Drutiny\Target\Transport\SshTransport;
@@ -38,13 +41,21 @@ class DrushTarget extends Target implements
     {
         $this['drush.alias'] = $alias;
 
-        $status_cmd = Process::fromShellCommandline('drush site:alias $DRUSH_ALIAS --format=json');
-        $drush_properties = $this->localCommand->run($status_cmd, function ($output, CacheItemInterface $cache) use ($alias) {
-          $cache->expiresAfter(1);
-          $json = TextCleaner::decodeDirtyJson($output);
-          $index = substr($alias, 1);
-          return $json[$index] ?? $json[$alias] ?? array_shift($json);
-        });
+        try {
+          $status_cmd = Process::fromShellCommandline('drush site:alias $DRUSH_ALIAS --format=json');
+          $drush_properties = $this->localCommand->run($status_cmd, function ($output, CacheItemInterface $cache) use ($alias) {
+            $cache->expiresAfter(1);
+            $json = TextCleaner::decodeDirtyJson($output);
+            $index = substr($alias, 1);
+            return $json[$index] ?? $json[$alias] ?? array_shift($json);
+          });
+        }
+        catch  (ProcessFailedException $e) {
+          throw match ($e->getProcess()->getExitCode()) {
+            130 => new TargetNotFoundException(message: "Drush alias $alias not found.", previous: $e),
+            default => new TargetSourceFailureException(message: $e->getMessage(), previous: $e)
+          };
+        }
 
         $this['drush']->add($drush_properties);
 
@@ -99,7 +110,7 @@ class DrushTarget extends Target implements
           return $this;
         }
         catch (ProcessFailedException $e) {
-          throw new InvalidTargetException($e->getMessage());
+          throw new TargetLoadingException(message: $e->getMessage(), previous: $e);
         }
         return $this;
     }

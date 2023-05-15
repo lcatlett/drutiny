@@ -3,8 +3,12 @@
 namespace Drutiny\Target;
 
 use Drutiny\Attribute\AsTarget;
+use Drutiny\Target\Exception\TargetLoadingException;
+use Drutiny\Target\Exception\TargetNotFoundException;
+use Drutiny\Target\Exception\TargetSourceFailureException;
 use Drutiny\Target\Transport\DockerTransport;
 use Psr\Cache\CacheItemInterface;
+use Symfony\Component\Process\Exception\ProcessFailedException;
 
 /**
  * Target for parsing Drush aliases.
@@ -27,16 +31,22 @@ class DdevTarget extends DrushTarget implements TargetInterface, TargetSourceInt
     public function parse(string $alias, ?string $uri = null): TargetInterface
     {
         $status_cmd = sprintf('ddev describe %s -j', $alias);
-        $ddev = $this->localCommand->run($status_cmd, function ($output) {
-            $json = json_decode(trim($output), true);
-            return $json['raw'];
-        });
+
+        try {
+            $ddev = $this->localCommand->run($status_cmd, function ($output) {
+                $json = json_decode(trim($output), true);
+                return $json['raw'];
+            });
+        }
+        catch (ProcessFailedException $e) {
+            throw new TargetSourceFailureException(message: "DDEV describe command failed to execute: $status_cmd.", previous: $e);
+        }
 
         if (empty($ddev)) {
-            throw new InvalidTargetException("DDEV site '$alias' either doesn't exist or is not currently active.");
+            throw new TargetNotFoundException(message: "DDEV site '$alias' either doesn't exist or is not currently active.");
         }
         if ($ddev['status'] == 'stopped') {
-            throw new InvalidTargetException("DDEV site '$alias' is currently stopped. Please start this service and try again.");
+            throw new TargetLoadingException(message: "DDEV site '$alias' is currently stopped. Please start this service and try again.");
         }
 
         $ddev['name'] = $alias;
