@@ -287,7 +287,7 @@ class ProfileRunCommand extends DrutinyBaseCommand
             $format->setNamespace($this->getReportNamespace($input, $report->uri));
             $format->render($report);
             foreach ($format->write() as $written_location) {
-                $console->success("Writen $written_location");
+                $console->success("Written $written_location");
             }
         }
     }
