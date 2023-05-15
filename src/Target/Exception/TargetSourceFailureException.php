@@ -4,13 +4,10 @@ namespace Drutiny\Target\Exception;
 
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 
-/**
- * Use when a target was found but encounterd errors when loading.
- */
 #[Autoconfigure(autowire: false)]
-class TargetLoadingException extends \Exception
+class TargetSourceFailureException extends \Exception
 {
-    const ERROR_CODE = 221;
+    const ERROR_CODE = 219;
 
     public function __construct(string $message, \Throwable|null $previous = null)
     {
