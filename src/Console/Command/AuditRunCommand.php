@@ -12,6 +12,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -125,11 +126,35 @@ class AuditRunCommand extends DrutinyBaseCommand
           'description' => 'Wrapper profile for audit:run',
           'policies' => [
             $policy->name => $policy->getDefinition()
+          ],
+          'format' => [
+            'terminal' => [
+              'content' => "
+              {% block audit %}
+                {{ policy_result(assessment.getPolicyResult('{$policy->name}'), assessment) }}
+              {% endblock %}"
+            ]
           ]
         ]);
+
         $profile->setReportingPeriod($start, $end);
 
         $report = $this->reportFactory->create($profile, $target);
+
+        $style = new SymfonyStyle($input, $output);
+        if ($report->results[$policy->name]->isIrrelevant()) {
+          $style->warning("Policy {$policy->name} was evaluated as irrelevant for the target " . $target->getId());
+          if (isset($report->results[$policy->name]->tokens['exception'])) {
+            $style->error($report->results[$policy->name]->tokens['exception']);
+          }
+          return 0;
+        }
+        elseif ($report->results[$policy->name]->hasError()) {
+          $style->error("Policy $policy->name has an error for the target " . $target->getId());
+          $tokens = $report->results[$policy->name]->tokens;
+          $style->error($tokens['exception_type'] .': '.$tokens['exception']);
+          return 1;
+        }
 
         foreach ($this->getFormats($input, $profile, $this->formatFactory) as $format) {
             $format->setNamespace($this->getReportNamespace($input, $uri));
