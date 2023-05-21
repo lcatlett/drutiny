@@ -6,29 +6,47 @@ Policy:
       - policy
     use_audit: Drutiny\Audit\AuditResponseAnalysis
     expression: response.isSuccessful
+    return: bool
   fails:
     description: A given policy fails an audit against the given target.
     arguments:
       $policy_name: policy
     use_audit: Drutiny\Audit\AuditResponseAnalysis
     expression: response.isFailure
+    return: bool
   errors:
     description: A given policy errors an audit against the given target.
     arguments:
       $policy_name: policy
     use_audit: Drutiny\Audit\AuditResponseAnalysis
     expression: response.hasError
+    return: bool
   warns:
     description: A given policy warns an audit against the given target.
     arguments:
       $policy_name: policy
     use_audit: Drutiny\Audit\AuditResponseAnalysis
     expression: response.hasWarning
-
+    return: bool
+  result:
+    description: Render a policy result.
+    expression: policy_result(response, assessment)
+    arguments:
+      - response
+      - assessment
+    return: string
+Target:
+  typeOf:
+    description: Ensure a target is of a given source or extends a given source. See `target:sources`.
+    arguments:
+      - source
+    expression: is_target(target, source)
+    return: bool
 Drupal:
   isBootstrapped: 
     description: Drupal is bootstrapped
     expression: drush.bootstrap is defined and drush.bootstrap == 'Successful'
+    return: bool
 
   versionSatisfies:
     description: The core version of Drupal statisfies a given version constraint.
@@ -36,44 +54,54 @@ Drupal:
       # Map the order of inputs in the twig function to twig variables for the 'expression'
       - constraint
     expression: semver_satisfies(attribute(drush, 'drupal-version'), constraint)
+    return: bool
   
   isVersion10orLater:
     description: Drupal version is version 10 or later
     expression: semver_satisfies(attribute(drush, 'drupal-version'), '>=10')
+    return: bool
 
   isVersion10:
     description: Drupal version is version 10 with any minor or patch version.
     expression: semver_satisfies(attribute(drush, 'drupal-version'), '^10.0')
+    return: bool
   
   isVersion9orLater:
     description: Drupal version is version 9 or later
     expression: semver_satisfies(attribute(drush, 'drupal-version'), '>=9')
+    return: bool
   
   isVersion9:
     description: Drupal version is version 9 with any minor or patch version.
     expression: semver_satisfies(attribute(drush, 'drupal-version'), '^9.0')
+    return: bool
   
   isVersion8orLater:
     description: Drupal version is version 8 or later
     expression: semver_satisfies(attribute(drush, 'drupal-version'), '>=8')
+    return: bool
 
   isVersion8:
     description: Drupal version is version 8 with any minor or patch version.
     expression: semver_satisfies(attribute(drush, 'drupal-version'), '^8.0')
+    return: bool
   
   isVersion7:
     description: Drupal version is version 7 with any minor or patch version.
     expression: semver_satisfies(attribute(drush, 'drupal-version'), '^7.0')
+    return: bool
 
   isVersion6:
     description: Drupal version is version 6 with any minor or patch version.
     expression: semver_satisfies(attribute(drush, 'drupal-version'), '^6.0')
+    return: bool
 
   installProfileIs:
     description: Ensures Drupal is using a given install profile
     arguments:
       - profile
     expression: attribute(drush, 'install-profile') == profile
+    return: bool
 
   moduleIsEnabled:
     description: Ensures a given Drupal module is enabled.
@@ -82,6 +110,7 @@ Drupal:
     arguments:
       # Map the order of arguments in the twig function to tokens server in the 'expression'.
       - $module
+    return: bool
 
   hasModule:
     description: Ensures a given Drupal module resides in the codebase.
@@ -90,6 +119,7 @@ Drupal:
     arguments:
       # Map the order of arguments in the twig function to tokens server in the 'expression'.
       - $module
+    return: bool
 
   moduleVersionSatisfies:
     description: Ensures a given Drupal module is enabled and its version meets a given version constraint.
@@ -98,3 +128,90 @@ Drupal:
       - $module
       - $constraint
     expression: Drupal.modulesIsEnabled($module) and semver_satisfies(modules[$module].version, $constraint)
+    return: bool
+SemVer:
+  satisfies:
+    description: Determines if a semantic version satisfies a given constraint.
+    expression: semver_satisfies(version, constraint)
+    arguments:
+      - version
+      - constraint
+    return: bool
+Util:
+  parse_url:
+    description: Use the parse_url function in PHP.
+    expression: parse_url(url)
+    arguments:
+      - url
+    return: array
+  explode:
+    description: Use the `explode` function in PHP.
+    expression: explode(delimiter, string)
+    arguments:
+      - delimiter
+      - string
+    return: array
+  array_sum:
+    description: Use the `array_sum` function in PHP.
+    expression: array|sum
+    arguments:
+      - array
+    return: int
+  array_values:
+    description: Use the `array_values` function in PHP.
+    expression: array|values
+    arguments:
+      - array
+    return: array
+  array_merge:
+    description: Use the `array_merge` function in PHP.
+    expression: array|array_merge
+    arguments:
+      - array
+    return: array
+  array_unique:
+    description: Use the `array_unique` function in PHP.
+    expression: array|unique
+    arguments:
+      - array
+    return: array
+JSON:
+  decode:
+    description: Use the `json_decode` function in PHP.
+    expression: json|json_decode
+    arguments:
+      - json
+    return: mixed
+Format:
+  bytes:
+    description: Format a number into bytes.
+    expression: int|format_bytes
+    arguments:
+      - int
+    return: string
+  heading:
+    description: Format a section heading.
+    expression: title|heading
+    arguments: 
+      - title
+    return: string
+  yaml:
+    description: Format data array or object into a YAML output.
+    expression: data|yaml_dump
+    arguments:
+      - data
+    return: string
+  chart:
+    description: Render the HTML for an HTML chart.
+    expression: chartObj|chart
+    arguments:
+      - chartObj
+    return: string
+  chart_and_table:
+    description: Render Chart HTML and the table that will provide the tabular data.
+    expression: chart_and_table(headers, rows, chartObj)
+    arguments:
+      - headers
+      - rows
+      - chartObj
+    return: string

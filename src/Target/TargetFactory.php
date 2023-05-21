@@ -4,6 +4,7 @@ namespace Drutiny\Target;
 
 use Drutiny\Audit\TwigEvaluator;
 use Drutiny\Settings;
+use Drutiny\Target\Exception\InvalidTargetException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class TargetFactory
@@ -55,5 +56,13 @@ class TargetFactory
     public function getTypes():array
     {
       return $this->targetMap;
+    }
+
+    /**
+     * Test if a target is of a given type by its source name.
+     */
+    public function typeOf(TargetInterface $target, string $name = 'target'): bool
+    {
+      return $target instanceof ($this->targetMap[$name] ?? TargetInterface::class);
     }
 }

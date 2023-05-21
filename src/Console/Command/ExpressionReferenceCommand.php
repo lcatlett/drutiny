@@ -47,7 +47,7 @@ class ExpressionReferenceCommand extends DrutinyBaseCommand
                 if (isset($meta['arguments'])) {
                     $definition .= '('.implode(', ', $meta['arguments']).')';
                 }
-                $rows[] = [$definition, $meta['description']];
+                $rows[] = [$definition, $meta['return'] ?? 'unknown', $meta['description']];
             }
             $rows[] = new TableSeparator();
         }
@@ -55,7 +55,7 @@ class ExpressionReferenceCommand extends DrutinyBaseCommand
 
         $io = new SymfonyStyle($input, $output);
         $io->title('Expression reference');
-        $io->table(['Function/Flag', 'Description'], $rows);
+        $io->table(['Function/Flag', 'Return type', 'Description'], $rows);
         return 0;
     }
 }

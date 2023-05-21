@@ -271,9 +271,10 @@ services:
         - [addFunction, ['@twig.functions.parse_url']]
         - [addFunction, ['@twig.functions.semver_satisfies']]
         - [addFunction, ['@twig.functions.explode']]
+        - [addFunction, ['@twig.functions.is_target']]
         - [addTest, ['@twig.test.is_numeric']]
         - [addTest, ['@twig.test.keyed']]
-        - [addRuntimeLoader, ['@Drutiny\Report\TwigExtraMarkdownRuntimeLoader']]
+        - [addRuntimeLoader, ['@Drutiny\Report\TwigRuntimeLoader']]
         - [addGlobal, ['logger', '@logger']]
         - [addGlobal, ['ext', 'md']]
 
@@ -306,6 +307,12 @@ services:
       arguments:
         - explode
         - explode
+
+    twig.functions.is_target:
+      class: Twig\TwigFunction
+      arguments:
+        - is_target
+        - ['@Drutiny\Target\TargetFactory', 'typeOf']
 
     twig.filters.array_sum:
       class: Twig\TwigFilter
