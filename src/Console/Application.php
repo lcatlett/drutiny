@@ -46,6 +46,8 @@ class Application extends BaseApplication
       $event = new GenericEvent('application.run', [
         'input' => $input,
         'output' => $output,
+        'name' => $this->getName(),
+        'version' => $this->getVersion(),
       ]);
       $this->eventDispatcher->dispatch($event, $event->getSubject());
       return parent::doRun($input, $output);
