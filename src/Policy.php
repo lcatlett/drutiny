@@ -124,8 +124,11 @@ class Policy implements ExportableInterface
       return new PolicyDefinition(
         name: $this->name,
         parameters: $this->parameters->all(),
+        build_parameters: $this->build_parameters->all(),
         weight: $this->weight,
         severity: $this->severity->value,
+        // This allows the definition to be loaded without
+        // the need for the PolicyFactory.
         policy: $this
       );
     }
