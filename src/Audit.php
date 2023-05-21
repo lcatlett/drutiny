@@ -23,6 +23,7 @@ use Error;
 use Exception;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface;
+use ReflectionClass;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Component\Console\Exception\InvalidArgumentException;
 use Symfony\Component\Console\Input\ArrayInput;
@@ -92,6 +93,8 @@ abstract class Audit implements AuditInterface
 
     /**
      * Validate the contexts of the audit and target,
+     * 
+     * @deprecated use Drutiny\Policy\Dependency attributes instead.
      */
     protected function validate(): bool
     {
@@ -127,6 +130,12 @@ abstract class Audit implements AuditInterface
         try {
             if (!$this->validate()) {
                 throw new AuditValidationException("Target of type ".get_class($this->target)." is not suitable for audit class ".get_class($this). " with policy: ".$policy->name);
+            }
+            
+            $reflection = new ReflectionClass($this);
+            // Ensure audit dependencies are met.
+            foreach ($reflection->getAttributes(Dependency::class) as $attr) {
+                $this->executeDependency($attr->newInstance());
             }
 
             $this->progressBar->setMaxSteps(count($policy->depends) + $this->progressBar->getMaxSteps());

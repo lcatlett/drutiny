@@ -2,10 +2,12 @@
 
 namespace Drutiny\Policy;
 
+use Attribute;
 use Drutiny\Helper\ExpressionLanguageTranslation;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 
 #[Autoconfigure(autowire: false)]
+#[Attribute]
 class Dependency
 {
 
