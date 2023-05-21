@@ -2,10 +2,12 @@
 
 namespace Drutiny\Audit;
 
+use DateTimeZone;
 use Error;
 use Exception;
 use Psr\Log\LoggerInterface;
 use Twig\Environment;
+use Twig\Extension\CoreExtension;
 use TypeError;
 
 /**
@@ -20,6 +22,11 @@ class TwigEvaluator {
     )
     {
         
+    }
+
+    public function setTimezone(DateTimeZone $timezone):void
+    {
+        $this->twig->getExtension(CoreExtension::class)->setTimezone($timezone);
     }
 
     public function setContext($key, $value):self

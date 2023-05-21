@@ -2,6 +2,7 @@
 
 namespace Drutiny\Audit;
 
+use DateTimeZone;
 use Drutiny\Helper\ExpressionLanguageTranslation;
 use Psr\Log\LoggerInterface;
 
@@ -41,6 +42,11 @@ class SyntaxProcessor {
     public function interpolate(string $string, array $contexts = []): string
     {
         return $this->_interpolate($string, $contexts);
+    }
+
+    public function setTimezone(DateTimeZone $timezone):void
+    {
+        $this->twigEvaluator->setTimezone($timezone);
     }
 
     /**

@@ -3,7 +3,6 @@
 namespace Drutiny\Report\Format;
 
 use Drutiny\Assessment;
-use Drutiny\Profile;
 use Drutiny\Report\FilesystemFormatInterface;
 use Drutiny\Report\FormatInterface;
 use Drutiny\Report\Report;
@@ -12,7 +11,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Output\StreamOutput;
 use Twig\Environment;
 use Twig\Error\Error;
-
+use Twig\Extension\CoreExtension;
 
 abstract class TwigFormat extends FilesystemFormat implements FilesystemFormatInterface
 {
@@ -31,6 +30,8 @@ abstract class TwigFormat extends FilesystemFormat implements FilesystemFormatIn
 
     public function render(Report $report):FormatInterface
     {
+        // Ensure Twig's timezone reflects that of the report.
+        $this->twig->getExtension(CoreExtension::class)->setTimezone($report->reportingPeriodStart->getTimezone());
         try {
           $template = $this->definition->template;
           // 2.x backwards compatibility.
