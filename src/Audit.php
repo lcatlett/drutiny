@@ -115,7 +115,9 @@ abstract class Audit implements AuditInterface
     final public function execute(Policy $policy, $remediate = false): AuditResponse
     {
         // Ensure the syntax evaluator uses the right Timezone.
-        $this->syntaxProcessor->setTimezone($this->reportingPeriodStart->getTimezone());
+        if (isset($this->reportingPeriodStart)) {
+            $this->syntaxProcessor->setTimezone($this->reportingPeriodStart->getTimezone());
+        }
         
         $this->dateTime = new DateTimeImmutable();
         if ($this->deprecated) {
