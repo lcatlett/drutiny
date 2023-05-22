@@ -77,7 +77,10 @@ class SqlResultAudit extends AbstractAnalysis
                       $line = false;
                   }
               });
-              return array_filter($data);
+              // Filter out $line = false.
+              // Filter out empty lines.
+              // Filter out PHP deprecation messages.
+              return array_filter($data, fn ($line) => is_string($line) && !empty($line) && strpos($line, 'Deprecated: ') !== 0);
           });
 
         $fields = $this->getFieldsFromSql($query);
