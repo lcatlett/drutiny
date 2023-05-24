@@ -2,7 +2,8 @@
 
 namespace Drutiny\Sandbox;
 
-use Drutiny\Audit\AuditInterface;
+use DateTime;
+use Drutiny\Audit;
 
 /**
  * Run check in an isolated environment.
@@ -16,9 +17,9 @@ class Sandbox
     protected $target;
     protected $audit;
 
-    public function __construct(AuditInterface $audit)
+    public function __construct(Audit $audit)
     {
         $this->audit = $audit;
-        $this->setReportingPeriod($audit->getParameter('reporting_period_start', new \DateTime()), $audit->getParameter('reporting_period_end', new \DateTime()));
+        $this->setReportingPeriod($audit->reportingPeriodStart ??  new DateTime('-24 hours'), $audit->reportingPeriodEnd ?? new DateTime());
     }
 }
