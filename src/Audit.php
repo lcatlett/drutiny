@@ -5,8 +5,10 @@ namespace Drutiny;
 use DateTime;
 use DateTimeImmutable;
 use DateTimeInterface;
+use Drutiny\Attribute\Parameter;
 use Drutiny\Audit\AuditInterface;
 use Drutiny\Audit\AuditValidationException;
+use Drutiny\Audit\InputDefinition;
 use Drutiny\Audit\SyntaxProcessor;
 use Drutiny\AuditResponse\AuditResponse;
 use Drutiny\AuditResponse\State;
@@ -26,9 +28,6 @@ use Psr\Log\LoggerInterface;
 use ReflectionClass;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Component\Console\Exception\InvalidArgumentException;
-use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -46,7 +45,7 @@ abstract class Audit implements AuditInterface
     
     protected DataBag $dataBag;
     protected Policy $policy;
-    protected InputDefinition $definition;
+    private InputDefinition $definition;
     public DateTimeInterface $dateTime;
     protected bool $deprecated = false;
     protected string $deprecationMessage = '';
@@ -70,8 +69,28 @@ abstract class Audit implements AuditInterface
         $this->dataBag->add([
             'parameters' => new DataBag(),
         ]);
+        $this->registerParameters();
         $this->configure();
         $this->verbosity = $output->getVerbosity();
+    }
+
+    /**
+     * Load parameters from PHP attributes on this class and parent classes.
+     */
+    private function registerParameters(): void
+    {
+        $reflection = new ReflectionClass($this);
+        do {
+            foreach ($reflection->getAttributes(Parameter::class) as $attr) {
+                $parameter = $attr->newInstance();
+                // Don't let parent classes override parameters from child classes.
+                if ($this->definition->hasParameter($parameter->name)) {
+                    continue;
+                }
+                $this->definition->addParameter($parameter);
+            }
+        }
+        while ($reflection = $reflection->getParentClass());
     }
 
     /**
@@ -162,7 +181,7 @@ abstract class Audit implements AuditInterface
                     $this->set($key, $value);
 
                     // Set the parameter to be available in the audit().
-                    if ($this->definition->hasArgument($key)) {
+                    if ($this->definition->hasParameter($key)) {
                         $parameters = $policy->parameters->all();
                         $parameters[$key] = $value;
                         $policy = $policy->with(parameters: $parameters);
@@ -172,9 +191,9 @@ abstract class Audit implements AuditInterface
                 }
             }
 
-            $input = new ArrayInput($policy->parameters->all(), $this->definition);
-            $this->dataBag->get('parameters')->add($input->getArguments());
-            $this->dataBag->add($input->getArguments());
+            $values = $this->definition->fromValues($policy->parameters->all());
+            $this->dataBag->get('parameters')->add($values);
+            $this->dataBag->add($values);
 
             // Run the audit over the policy.
             $outcome = $this->audit(new Sandbox($this));
@@ -352,7 +371,6 @@ abstract class Audit implements AuditInterface
     public function setParameter(string $name, $value): AuditInterface
     {
         $this->dataBag->get('parameters')->set($name, $value);
-
         return $this;
     }
 
@@ -364,8 +382,16 @@ abstract class Audit implements AuditInterface
         try {
             return $this->dataBag->get('parameters')->get($name) ?? $default_value;
         } catch (DataNotFoundException $e) {
-            return $default_value;
+            return $this->definition->getParameter($name)->default ?? $default_value;
         }
+    }
+
+    /**
+     * Get all available parameters.
+     */
+    public function getAllParameters():array
+    {
+        return $this->dataBag->get('parameters')->all();
     }
 
     /**
@@ -382,6 +408,9 @@ abstract class Audit implements AuditInterface
         return $this;
     }
 
+    /**
+     * Get a token value.
+     */
     public function get(string $name)
     {
         return $this->dataBag->get($name);
@@ -389,10 +418,12 @@ abstract class Audit implements AuditInterface
 
     /**
      * Check if an Audit has a given argument.
+     * 
+     * @deprecated use getDefinition()->hasParameter($name) instead.
      */
     public function hasArgument(string $name): bool
     {
-        return $this->definition->hasArgument($name);
+        return $this->definition->hasParameter($name);
     }
 
     /**
@@ -428,20 +459,12 @@ abstract class Audit implements AuditInterface
      */
     protected function addParameter(string $name, int $mode = null, string $description = '', $default = null): self
     {
-        if (!isset($this->definition)) {
-            $this->definition = new InputDefinition();
-        }
-        $args = $this->definition->getArguments();
-        $input = new InputArgument($name, $mode, $description, $default);
-
-        if ($mode == self::PARAMETER_REQUIRED) {
-            array_unshift($args, $input);
-        } else {
-            $args[] = $input;
-        }
-
-        $this->definition->setArguments($args);
-
+        $this->definition->addParameter(new Parameter(
+            name: $name, 
+            mode: $mode, 
+            description: $description, 
+            default: $default
+        ));
         return $this;
     }
 

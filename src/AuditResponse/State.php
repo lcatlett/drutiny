@@ -14,6 +14,16 @@ enum State: int
     case IRRELEVANT = -2;
 
     /**
+     * Get the state from int or boolean values.
+     */
+    public static function fromValue(int|bool|string $value) {
+        if (is_string($value)) {
+            $value = is_numeric($value) ? (int) $value : (bool) $value;
+        }
+        return is_bool($value) ? ($value ? static::SUCCESS : static::FAILURE) : static::from($value);
+    }
+
+    /**
      * Get the description of the AuditResponse state.
      */
     public function getDescription():string
@@ -28,6 +38,17 @@ enum State: int
             State::ERROR => 'The audit did not complete and returned an error',
             State::IRRELEVANT => 'The audit that is irrelevant to the assessment and should be omitted',
         };
+    }
+
+    /**
+     * Add a warning to an existing pass or fail state.
+     */
+    public function withWarning():static
+    {
+        if (!$this->isSuccessful() && !$this->isFailure()) {
+            throw new AuditResponseException("Warnings can only be added to success and failure states. State not supported: " . $this->value);
+        }
+        return $this->isSuccessful() ? State::WARNING : State::WARNING_FAIL;
     }
 
     /**

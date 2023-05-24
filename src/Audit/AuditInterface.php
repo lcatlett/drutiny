@@ -6,7 +6,6 @@ use DateTimeInterface;
 use Drutiny\AuditResponse\AuditResponse;
 use Drutiny\Sandbox\Sandbox;
 use Drutiny\Policy;
-use Symfony\Component\Console\Input\InputDefinition;
 
 /**
  * Audit interface.
@@ -63,8 +62,19 @@ interface AuditInterface
    */
     const IRRELEVANT = -2;
 
+    /**
+     * @deprecated Use Attribute\Parameter::REQUIRED.
+     */
     const PARAMETER_REQUIRED = 1;
+    
+    /**
+     * @deprecated Use Attribute\Parameter::OPTIONAL.
+     */
     const PARAMETER_OPTIONAL = 2;
+    
+    /**
+     * @deprecated Use Attribute\Parameter::IS_ARRAY.
+     */
     const PARAMETER_IS_ARRAY = 4;
 
     /**
