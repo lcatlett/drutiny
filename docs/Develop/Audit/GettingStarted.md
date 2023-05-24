@@ -42,11 +42,10 @@ Lets create an audit class called `ProjectDataGatherer` located in `src/Audit/Pr
 namespace Demo\CustomDrutinyProject\Audit;
 
 use Drutiny\Audit\AbstractAnalysis;
-use Drutiny\Sandbox\Sandbox;
 
 class ProjectDataGatherer extends AbstractAnalysis {
 
-    protected function gather(Sandbox $sandbox) {
+    protected function gather() {
         $this->set('foo', 'bar');
     }
 }
@@ -104,7 +103,7 @@ Lets update our `ProjectDataGatherer` class to set `foo` to a different value:
 
 ```php
 <?php
-    protected function gather(Sandbox $sandbox) {
+    protected function gather() {
         $this->set('foo', 'baz');
     }
 ```
@@ -117,6 +116,39 @@ The token 'foo' does not contain the value 'bar'. Found "baz" instead.
 
 Here you can see Twig templating in action where the token `foo` was rendered in the `failure`
 message using the Twig syntax: `{{ foo }}`.
+
+## Dependency Injection
+
+The `gather` method is a special method in the class called to gather data. Sometimes data gathering requires
+use of other service objects that can be injected into the method by declaring them as parameters in the method
+definition.
+
+```php
+<?php
+
+namespace Demo\CustomDrutinyProject\Audit;
+
+use Drutiny\Audit\AbstractAnalysis;
+use Demo\CustomDrutinyProject\MyCustomService;
+
+class ProjectDataGatherer extends AbstractAnalysis {
+
+    protected function gather(MyCustomService $service) {
+        $this->set('value', $service->getValue());
+    }
+}
+```
+
+Here the service instance of `Demo\CustomDrutinyProject\MyCustomService` will be provided to the `gather`
+method so the object can be used to gather data.
+
+**Note**: The service class does need to be registered in the Service Container. This can be done by declaring
+it in your `drutiny.yml` file:
+
+```yaml
+services:
+    Demo\CustomDrutinyProject\MyCustomService: ~
+```
 
 ## Next Steps
 * [Learn more about Parameters](Parameters.md)

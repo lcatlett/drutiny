@@ -9,8 +9,6 @@ namespace Demo\CustomDrutinyProject\Audit;
 
 use Drutiny\Audit\AbstractAnalysis;
 use Drutiny\Policy\Dependency;
-use Drutiny\Sandbox\Sandbox;
-
 
 #[Dependency(
     expression: 'Drupal.isVersion10orLater',
@@ -18,7 +16,7 @@ use Drutiny\Sandbox\Sandbox;
 )]
 class ProjectDataGatherer extends AbstractAnalysis {
 
-    protected function gather(Sandbox $sandbox) {
+    protected function gather() {
         $this->set('foo', 'bar');
     }
 }

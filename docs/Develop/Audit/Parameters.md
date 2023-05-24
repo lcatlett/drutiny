@@ -16,7 +16,6 @@ namespace Demo\CustomDrutinyProject\Audit;
 use Drutiny\Attribute\Parameter;
 use Drutiny\Attribute\Type;
 use Drutiny\Audit\AbstractAnalysis;
-use Drutiny\Sandbox\Sandbox;
 
 #[Parameter(
     name: 'multiplier', 
@@ -28,7 +27,7 @@ use Drutiny\Sandbox\Sandbox;
 )]
 class ProjectDataGatherer extends AbstractAnalysis {
 
-    protected function gather(Sandbox $sandbox) {
+    protected function gather() {
         $this->set('value', 4 * $this->getParameter('multiplier'));
     }
 }
@@ -119,7 +118,6 @@ namespace Demo\CustomDrutinyProject\Audit;
 use Drutiny\Attribute\Parameter;
 use Drutiny\Attribute\Type;
 use Drutiny\Audit\AbstractAnalysis;
-use Drutiny\Sandbox\Sandbox;
 
 #[Parameter(
     name: 'format',
@@ -128,7 +126,7 @@ use Drutiny\Sandbox\Sandbox;
 )]
 class ProjectDataGatherer extends AbstractAnalysis {
 
-    protected function gather(Sandbox $sandbox) {
+    protected function gather() {
         //...
         // Use the format defined by the policy or 'json' if none is provided.
         $format = $this->getParameter('format', 'json');
