@@ -127,7 +127,7 @@ syntax and preceeding variables can be used in proceeding variable renders.
 
 ⚠️ Symfony ExpressionLanguage is no longer supported.
 
-
+### Example 
 ```yaml
 parameters:
   variables:
@@ -150,21 +150,21 @@ parameters:
 precedence. If the `failIf` parameter is declared in the policy, then the `expression` parameter will not
 be acted on.
 
-## parameters.warnIf
+## parameters.warningIf
 
-For audit classes that extend `Drutiny\Audit\AbstractAnalysis`, you can provide a `warnIf` key under
+For audit classes that extend `Drutiny\Audit\AbstractAnalysis`, you can provide a `warningIf` key under
 the `parameters` declaration that when evaluated will add a warning to the audit outcome if the expression returns true. 
 
 When a warning is added to an outcome, the `warning` messaging from the policy is added to policy response messaging.
 
 ⚠️ This only applies to audit outcomes that fail or pass. Error and not applicable outcome states do not support warnings.
 
-`warnIf` uses Twig syntax.
+`warningIf` uses Twig syntax.
 
 ```yaml
 parameters:
   # Raise a warning if results were successfully obtained, but errors were too.
-  warnIf: response.errors|length > 0
+  warningIf: response.errors|length > 0
   failIf: response.results|length == 0
 ```
 
@@ -180,6 +180,8 @@ This can be used instead of `failIf` when determining the audit outcome is more 
 than satisfying a single condition as a failure.
 
 The expression should return a predefined variable that represents the outcome.
+
+### Return types
 
 Variable         | Value | Description
 ---------------- | ----- | -----------
@@ -223,8 +225,68 @@ parameters:
 In the example above, if a output token called `error` contains a property called `message` and
 that message contains the word "incompatible", then the policy outcome will become not applicable.
 
-⚠️ This directive is evaluated before `expression`, `failIf` and `warnIf` expressions. If `not_applicable`
+⚠️ This directive is evaluated before `expression`, `failIf` and `warningIf` expressions. If `not_applicable`
 is satisfied (evaluates to `true`), this these other directives will not be evaluated.
+
+## parameters.severityCriticalIf
+
+For audit classes that extend `Drutiny\Audit\AbstractAnalysis`, you can provide a `severityCriticalIf` parameter 
+that when evaluated as true will increase the policy severity to critical.
+
+```yaml
+severity: 'high'
+parameters:
+  failIf: errors|length > 5
+  severityCriticalIf: errors|length > 30
+```
+
+In the example above, the policy has a severity level of "high" and will fail when the error count goes above 5.
+When the error count goes above 30, then the severity will go from "high" to "critical".
+
+💡 Note: `severityCriticalIf` can only raise the severity and not decrease it. Policies should be written with the
+lowest severity statically defined and then use `severityCriticalIf` to conditionally raise the severity to critical.
+
+## parameters.severityHighIf
+
+For audit classes that extend `Drutiny\Audit\AbstractAnalysis`, you can provide a `severityHighIf` parameter 
+that when evaluated as true will increase the policy severity to high.
+
+```yaml
+severity: 'normal'
+parameters:
+  failIf: errors|length > 5
+  severityHighIf: errors|length > 10
+  severityCriticalIf: errors|length > 30
+```
+
+In the example above, the policy has a severity level of "normal" and will fail when the error count goes above 5.
+When the error count goes above 10, then the severity will go from "normal" to "high". When the error count goes above
+30, then the severity will go from "high" to "critical".
+
+💡 Note: `severityHighIf` can only raise the severity and not decrease it. Policies should be written with the
+lowest severity statically defined and then use `severityHighIf` to conditionally raise the severity to high.
+
+## parameters.severityNormalIf
+
+For audit classes that extend `Drutiny\Audit\AbstractAnalysis`, you can provide a `severityNormalIf` parameter 
+that when evaluated as true will increase the policy severity to normal.
+
+```yaml
+severity: 'low'
+parameters:
+  failIf: errors|length > 1
+  severityNormalIf: errors|length > 5
+  severityHighIf: errors|length > 10
+  severityCriticalIf: errors|length > 30
+```
+
+In the example above, the policy has a severity level of "low" and will fail when the error count goes above 1.
+When the error count goes above 5, then the severity will go from "low" to "normal". When the error count goes
+above 10, then the severity will go from "normal" to "high". When the error count goes above 30, then the 
+severity will go from "high" to "critical".
+
+💡 Note: `severityNormalIf` can only raise the severity and not decrease it. Policies should be written with the
+lowest severity statically defined and then use `severityNormalIf` to conditionally raise the severity to normal.
 
 ## build_parameters
 
@@ -238,6 +300,10 @@ and the result is set as a parameter for the provided key.
 build_parameters:
   domain: 'parse_url(target.url, 1)'
 ```
+
+In the example above, the `domain` is dynamically provided based on the url of the target object. Since that data comes
+from the target, it cannot be statically defined in the `parameters` section of the policy. So we use the `build_parameters`
+feature to set parameters based on their evaluated value rather than their static value.
 
 ## depends
 

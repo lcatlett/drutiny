@@ -12,4 +12,4 @@ description: |
 success: policy succeeded
 failure: policy failed. This means there is a problem with the Drutiny framework.
 parameters:
-  expression: true
+  expression: 'true'

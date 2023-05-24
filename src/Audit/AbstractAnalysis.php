@@ -6,6 +6,7 @@ use Drutiny\Attribute\Parameter;
 use Drutiny\Attribute\Type;
 use Drutiny\Audit;
 use Drutiny\AuditResponse\State;
+use Drutiny\Policy\Severity;
 use Drutiny\Sandbox\Sandbox;
 use ReflectionClass;
 use Twig\Error\RuntimeError;
@@ -20,6 +21,12 @@ use Twig\Error\RuntimeError;
 #[Parameter(name: 'fail_on_error', type: Type::BOOLEAN, default: false, description: 'Set to true if you want an error during data gathering to result in a failure.')]
 #[Parameter(name: 'failIf', type: Type::STRING, description: 'Fail policy if twig expression returns true')]
 #[Parameter(name: 'warningIf', type: Type::STRING, description: 'Add warning to outcome if expression return true')]
+#[Parameter(name: 'severityCriticalIf', type: Type::STRING, 
+  description: 'Change the policy severity to Critical if policy outcome is a failure and this expression is true.')]
+#[Parameter(name: 'severityHighIf', type: Type::STRING, 
+  description: 'Change the policy severity to High if policy outcome is a failure and this expression is true. Cannot lower severity if severity is higher.')]
+#[Parameter(name: 'severityNormalIf', type: Type::STRING, 
+  description: 'Change the policy severity to Normal if policy outcome is a failure and this expression is true. Cannot lower severity if severity is higher.')]
 class AbstractAnalysis extends Audit
 {
     /**
@@ -113,6 +120,32 @@ class AbstractAnalysis extends Audit
             $outcome = $this->evaluate($warningIf, 'twig') ? $outcome->withWarning() : $outcome;
           }
         }
+
+        // Manipulate policy severity.
+        if ($outcome->isFailure()) {
+          $this->setPolicySeverity();
+        }
+
         return $outcome->value;
+    }
+
+    /**
+     * Increase the severity of a policy based on an expression provided in the policy.
+     */
+    private function setPolicySeverity():void
+    {
+      $weight = $this->policy->severity->getWeight();
+      $expression = $this->getParameter('severityNormalIf');
+      if ($weight < Severity::NORMAL->getWeight() && $expression !== null && $this->evaluate($expression, 'twig')) {
+        $this->policy = $this->policy->with(severity: Severity::NORMAL);
+      }
+      $expression = $this->getParameter('severityHighIf');
+      if ($weight < Severity::HIGH->getWeight() && $expression !== null && $this->evaluate($expression, 'twig')) {
+        $this->policy = $this->policy->with(severity: Severity::HIGH);
+      }
+      $expression = $this->getParameter('severityCriticalIf');
+      if ($weight < Severity::CRITICAL->getWeight() && $expression !== null && $this->evaluate($expression, 'twig')) {
+        $this->policy = $this->policy->with(severity: Severity::CRITICAL);
+      }
     }
 }
