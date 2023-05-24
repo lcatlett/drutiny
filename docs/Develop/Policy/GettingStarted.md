@@ -125,7 +125,7 @@ the `parameters` declaration that will be evaluated after the audit to help proc
 formats that are easier to render policy messaging. `variables` are sequentially rendered using Twig
 syntax and preceeding variables can be used in proceeding variable renders.
 
-Symfony ExpressionLanguage is no longer supported.
+⚠️ Symfony ExpressionLanguage is no longer supported.
 
 
 ```yaml
@@ -154,14 +154,13 @@ meet such as an enabled module or the value of a target environmental variable (
 
 Dependencies can be evaluated in [Twig](https://twig.symfony.com/) syntax.
 
-ExpressionLanguage is no longer supported.
+⚠️ ExpressionLanguage is no longer supported.
 
 ```yaml
 depends:
-  - expression: Policy('fs:largeFiles') == 'success'
+  - expression: Policy.succeeds('fs:largeFiles')'
     on_fail: 'error'
-    syntax: expression_language
-  - expression: drupal_module_enabled('syslog') && semver_gt(target('php_version'), '5.5')
+  - expression: Drupal.moduleIsEnabled('syslog') && Drupal.moduleVersionSatisfies('purge', '^4.0')
 ```
 
 Each depends item must have an associated `expression` key with the expression to evaluate.
