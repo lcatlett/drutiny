@@ -64,7 +64,7 @@ class Policy implements ExportableInterface
       // in the constructor.
       string $type = 'audit',
       array $tags = [],
-      string $severity = 'normal',
+      string|Severity $severity = 'normal',
       array $parameters = [],
       array $build_parameters = [],
       array $depends = [],
@@ -99,7 +99,7 @@ class Policy implements ExportableInterface
     )
     {
       $this->type = PolicyType::from($type);
-      $this->severity = Severity::from($severity);
+      $this->severity = is_string($severity) ? Severity::from($severity) : $severity;
       $this->tags = array_map(fn(string $t) => new Tag($t), $tags);
       $this->parameters = new FrozenParameterBag($parameters);
       $this->build_parameters = new FrozenParameterBag($build_parameters);
