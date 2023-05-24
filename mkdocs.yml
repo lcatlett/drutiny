@@ -10,8 +10,11 @@ nav:
     - Using a policy: Usage/Policy.md
     - Using a profile: Usage/Profile.md
   - Develop:
-      - Policy Reference: Develop/Policy/GettingStarted.md
-      - Profile Reference: Develop/Profile/GettingStarted.md
+    - Policy reference: Develop/Policy/GettingStarted.md
+    - Profile reference: Develop/Profile/GettingStarted.md
+    - Audit reference:
+      - Getting started: Develop/Audit/GettingStarted.md
+      - Parameters: Develop/Audit/Parameters.md
 
 theme:
   name: material

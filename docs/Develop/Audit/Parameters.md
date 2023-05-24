@@ -1,7 +1,8 @@
 # Parameters
 Parameters allow you to delcare inputs that a policy can provide to
-your audit class. These inputs are typically was to instruct data gathering.
+your audit class. These inputs are typically to instruct data gathering.
 For example:
+
 - A query string for gathering data from queriable locations (e.g. APIs, Databases, etc)
 - Limits and other flags to conduct the audit behaviour.
 
@@ -59,10 +60,28 @@ Type             | Example               | Description
 
 Note: In PHP terminology, a hash can be an associative array or an object.
 
+Types are set using the `type` argument in the Parameter declaration.
+
+```php
+<?php
+
+use Drutiny\Attribute\Type;
+use Drutiny\Attribute\Parameter;
+
+#[Parameter(
+    name: 'format',
+    description: 'Which format to return a result in.',
+    type: Type::STRING
+)]
+```
+
+Note: the Type enum comes from `Drutiny\Attribute\Type`.
+
 ## Enums
 Enums are a way to restrain parameter inputs to a specified list of items
 
 ```php
+<?php
 #[Parameter(
     name: 'format',
     description: 'Which format to return a result in.',
@@ -77,6 +96,7 @@ If the policy provides a value outside the enum list, a parameter validation err
 Parameters can provide default values when a value is not provided.
 
 ```php
+<?php
 #[Parameter(
     name: 'format',
     description: 'Which format to return a result in.',
@@ -121,6 +141,7 @@ class ProjectDataGatherer extends AbstractAnalysis {
 By default a parameter is optional. However, you can set it as required by setting the parameter `mode`.
 
 ```php
+<?php
 #[Parameter(
     name: 'format',
     description: 'Which format to return a result in.',
