@@ -2,48 +2,41 @@
 
 namespace Drutiny\Audit\Drupal;
 
+use Drutiny\Attribute\Parameter;
+use Drutiny\Attribute\Type;
 use Drutiny\Audit\AbstractAnalysis;
-use Drutiny\Sandbox\Sandbox;
 use Psr\Cache\CacheItemInterface;
 
 /**
  * Audit the first row returned from a SQL query.
  */
+#[Parameter(
+  name: 'query',
+  mode: Parameter::REQUIRED, 
+  description: 'The SQL query to run. Can use the audit context for variable replace. E.g. {drush.db-name}.',
+  type: Type::STRING
+)]
+#[Parameter(
+  name: 'db_level_query', 
+  type: Type::BOOLEAN, 
+  default: false,
+  description: 'When true, this will cause an error if the SQL query cannot successfully extract field names from the SELECT query.',
+)]
+#[Parameter(
+  name: 'ttl', 
+  type: Type::INTEGER, 
+  default: 3600,
+  description: 'Cache time-to-live where other policies may reuse the result.',
+)]
 class SqlResultAudit extends AbstractAnalysis
 {
-
     /**
      * {@inheritdoc}
      */
-    public function configure():void
+    protected function gather():void
     {
-        parent::configure();
-        $this->addParameter(
-            'query',
-            static::PARAMETER_REQUIRED,
-            'The SQL query to run. Can use the audit context for variable replace. E.g. {drush.db-name}.',
-        );
-        $this->addParameter(
-            'db_level_query',
-            static::PARAMETER_OPTIONAL,
-            '',
-            false
-        );
-        $this->addParameter(
-          'ttl',
-          static::PARAMETER_OPTIONAL,
-          'Cache time-to-live where other policies may reuse the result.',
-          3600
-      );
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function gather(Sandbox $sandbox)
-    {
-        $query = $sandbox->getParameter('query');
-        $db_level_query = $sandbox->getParameter('db_level_query');
+        $query = $this->getParameter('query');
+        $db_level_query = $this->getParameter('db_level_query');
         if (!$db_level_query) {
           if (!preg_match_all('/^SELECT( DISTINCT)? (.*) FROM/', $query, $fields)) {
             throw new \Exception("Could not parse fields from SQL query: $query.");
@@ -69,7 +62,7 @@ class SqlResultAudit extends AbstractAnalysis
         $result = $this->target->getService('drush')
           ->sqlq($query)
           ->run(function ($output, CacheItemInterface $item) {
-              $item->expiresAfter($this->get('ttl'));
+              $item->expiresAfter($this->getParameter('ttl'));
               $data = explode(PHP_EOL, $output);
               array_walk($data, function (&$line) {
                   $line = array_map('trim', explode("\t", $line));
@@ -108,7 +101,7 @@ class SqlResultAudit extends AbstractAnalysis
     protected function getFieldsFromSql(string $query):array
     {
       // If we can parse fields out of the SQL query, we can make the result set
-      // become and associative array.
+      // become an associative array.
         if (!preg_match_all('/^SELECT( DISTINCT)? (.*) FROM/', $query, $fields)) {
             return [];
         }
