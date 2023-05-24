@@ -46,6 +46,12 @@ class TwigEvaluator {
     public function execute(string $expression, array $contexts = []):mixed
     {
         try {
+            // Remove line breaks from expression. These are only to make them easier to read
+            // in YAML files and the like.
+            if (strpos($expression, "\n") !== false) {
+                $expression = preg_replace('/(\n(\s*)?)/', ' ', $expression);
+            }
+
             $code = '{{ ('.$expression.')|json_encode()|raw }}';
             $template = $this->twig->createTemplate($code);
             $contexts = array_merge($this->globalContexts, $contexts);
