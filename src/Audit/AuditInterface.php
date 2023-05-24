@@ -106,7 +106,28 @@ interface AuditInterface
 
     public function getDefinition():InputDefinition;
 
+    /**
+     * @deprecated use getDefinition()->hasParameter($name).
+     */
     public function hasArgument(string $name): bool;
+
+    /**
+     * Know if a parameter exists in the databag.
+     * 
+     * To know if the parameter exists in the audit definition,
+     * use Audit::getDefinition()->hasParameter($name).
+     */
+    public function hasParameter(string $name): bool;
+
+    /**
+     * Set a parameter. Typically provided by a policy.
+     */
+    public function setParameter(string $name, $value): AuditInterface;
+
+    /**
+     * Get a set parameter or provide the default value.
+     */
+    public function getParameter(string $name, $default_value = null);
 
     /**
      * Pass a policy to an audit class to prepare it for bulk auditing.

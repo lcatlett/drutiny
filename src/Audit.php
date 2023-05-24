@@ -366,6 +366,17 @@ abstract class Audit implements AuditInterface
     }
 
     /**
+     * Know if a parameter exists in the databag.
+     * 
+     * To know if the parameter exists in the audit definition,
+     * use Audit::getDefinition()->hasParameter($name).
+     */
+    public function hasParameter(string $name): bool
+    {
+        return $this->dataBag->get('parameters')->has($name);
+    }
+
+    /**
      * Set a parameter. Typically provided by a policy.
      */
     public function setParameter(string $name, $value): AuditInterface
