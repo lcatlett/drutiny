@@ -55,25 +55,27 @@ class AuditInfoCommand extends Command
 
         $info = [];
 
-        $info[] = ['Namespace', new TableCell($audit, ['colspan' => 4])];
-        $info[] = ['Extends', new TableCell($reflection->getParentClass()->name, ['colspan' => 4])];
+        $info[] = ['<info>Class</info>', new TableCell($audit, ['colspan' => 4])];
+        $info[] = ['<info>Extends</info>', new TableCell($reflection->getParentClass()->name, ['colspan' => 4])];
 
         $info[] = new TableSeparator();
 
         $info[] = [
            '<info>Parameters</info>',
            '<fg=yellow>Name</>',
-           '<fg=yellow>Required</>',
+           '<fg=yellow>Type</>',
+           '<fg=yellow>Input mode</>',
            '<fg=yellow>Description</>',
            '<fg=yellow>Default value</>'
         ];
-        foreach ($audit_instance->getDefinition()->getArguments() as $param) {
+        foreach ($audit_instance->getDefinition()->getParameters() as $param) {
           $info[] = [
             '',
-            $param->getName(),
-            $param->isRequired() ? 'Required' : 'Optional',
-            $param->getDescription(),
-            Yaml::dump($param->getDefault()),
+            $param->name,
+            $param->type->value,
+            $param->isRequired() ? '<fg=red>Required</>' : 'Optional',
+            $param->description,
+            Yaml::dump($param->default),
           ];
         }
 
@@ -83,33 +85,13 @@ class AuditInfoCommand extends Command
             return $policy['class'] == $audit;
         });
 
-        $info[] = ['Policies', new TableCell($this->listing(array_map(function ($policy) {
+        $info[] = ['<info>Policies</info>', new TableCell($this->listing(array_map(function ($policy) {
           return $policy['name'];
         }, $policy_list)), ['colspan' => 4])];
 
         $info[] = new TableSeparator();
 
-        $info[] = ['Filename', new TableCell($reflection->getFilename(), ['colspan' => 4])];
-
-        $info[] = new TableSeparator();
-
-        $info[] = ['Methods', $this->listing(array_map(function ($method) use ($audit) {
-          if ($method->getDeclaringClass()->name !== $audit) {
-            return false;
-          }
-          $function = $method->name . '(';
-          foreach ($method->getParameters() as $parameter) {
-            $function .= '$' . $parameter->name . ', ';
-          }
-
-          if (count($method->getParameters())) {
-            $function = substr($function, 0, -2);
-          }
-          $function .= ')';
-
-          return $function;
-        }, $reflection->getMethods()))];
-
+        $info[] = ['<info>Filename</info>', new TableCell($reflection->getFilename(), ['colspan' => 4])];
 
         $io = new SymfonyStyle($input, $output);
         $io->title('Audit Info');
