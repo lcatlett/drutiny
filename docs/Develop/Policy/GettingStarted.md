@@ -134,6 +134,98 @@ parameters:
       core_needs_update: 'not ((core.releases|first).version = core.version)'
 ```
 
+## parameters.failIf
+
+For audit classes that extend `Drutiny\Audit\AbstractAnalysis`, you can provide a `failIf` key under
+the `parameters` declaration that when evaluated will fail the audit if the expression returns true. 
+`failIf` uses Twig syntax.
+
+```yaml
+parameters:
+  # Fail the policy if any alerts are detected.
+  failIf: alerts|length > 0
+```
+
+💡 Note: The `failIf` directive and the `expression` directive are mutually exclusive with `failIf` taking
+precedence. If the `failIf` parameter is declared in the policy, then the `expression` parameter will not
+be acted on.
+
+## parameters.warnIf
+
+For audit classes that extend `Drutiny\Audit\AbstractAnalysis`, you can provide a `warnIf` key under
+the `parameters` declaration that when evaluated will add a warning to the audit outcome if the expression returns true. 
+
+When a warning is added to an outcome, the `warning` messaging from the policy is added to policy response messaging.
+
+⚠️ This only applies to audit outcomes that fail or pass. Error and not applicable outcome states do not support warnings.
+
+`warnIf` uses Twig syntax.
+
+```yaml
+parameters:
+  # Raise a warning if results were successfully obtained, but errors were too.
+  warnIf: response.errors|length > 0
+  failIf: response.results|length == 0
+```
+
+In the example above, irrespective of whether the policy passes or fails a warning can be raised if errors were found
+while obtaining the results.
+
+## parameters.expression
+
+For audit classes that extend `Drutiny\Audit\AbstractAnalysis`, you can provide a `expression` key under
+the `parameters` declaration that when evaluated should return the audit outcome.
+
+This can be used instead of `failIf` when determining the audit outcome is more complicated
+than satisfying a single condition as a failure.
+
+The expression should return a predefined variable that represents the outcome.
+
+Variable         | Value | Description
+---------------- | ----- | -----------
+`SUCCESS`        | true  | The policy successfully passed the audit.
+`PASS`           | 1     | The same outcome as `SUCCESS`
+`FAIL`           | false | The same outcome as `FAILURE`
+`FAILURE`        | 0     | The policy failed to pass the audit.
+`NOTICE`         | 2     | An audit returned non-assertive information.
+`WARNING`        | 4     | An audit returned success with a warning.
+`WARNING_FAIL`   | 8     | An audit returned failure with a warning.
+`ERROR`          | 16    | An audit did not complete and returned an error.
+`NOT_APPLICABLE` | -1    | An audit was not applicable to the target.
+`IRRELEVANT`     | -2    | An audit that is irrelevant to the assessment and should be omitted.
+
+### Example
+
+```yaml
+parameters:
+  expression: |
+    response.results is defined 
+    ? ( response.results|length > 0 ? SUCCESS : FAILURE ) 
+    : IRRELEVANT
+```
+
+In the above example, we use shorthand twig syntax (`condition ? thisIfTrue : elseThis`) twice to determine 
+one of three outcomes (`SUCCESS`, `FAILURE` or `IRRELEVANT`).
+
+💡 Note: You can use the `parameters.not_applicable` expression to predetermine if results make the policy not applicable.
+This maybe preferable in combination with the `failIf` expression.
+
+## parameters.not_applicable
+
+For audit classes that extend `Drutiny\Audit\AbstractAnalysis`, you can provide a `not_applicable` key under
+the `parameters` declaration that when evaluated as true should return the audit outcome as not applicable.
+
+```yaml
+parameters:
+  not_applicable: error.message is defined and "incompatible" in error.message
+```
+
+In the example above, if a output token called `error` contains a property called `message` and
+that message contains the word "incompatible", then the policy outcome will become not applicable.
+
+⚠️ This directive is evaluated before `expression`, `failIf` and `warnIf` expressions. If `not_applicable`
+is satisfied (evaluates to `true`), this these other directives will not be evaluated.
+
 ## build_parameters
 
 If you need to dynamically produce your parameters inside the policy you can do so with `build_parameters`.
