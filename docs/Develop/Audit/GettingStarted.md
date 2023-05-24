@@ -103,6 +103,7 @@ Now that the policy is passing, lets test what happens when the data outputs are
 Lets update our `ProjectDataGatherer` class to set `foo` to a different value:
 
 ```php
+<?php
     protected function gather(Sandbox $sandbox) {
         $this->set('foo', 'baz');
     }
@@ -116,3 +117,7 @@ The token 'foo' does not contain the value 'bar'. Found "baz" instead.
 
 Here you can see Twig templating in action where the token `foo` was rendered in the `failure`
 message using the Twig syntax: `{{ foo }}`.
+
+## Next Steps
+* [Learn more about Parameters](Parameters.md)
+* [Learn more about Dependencies](Dependencies.md)
