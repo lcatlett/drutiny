@@ -266,6 +266,7 @@ services:
         - [addFilter, ['@twig.filters.array_merge']]
         - [addFilter, ['@twig.filters.format_bytes']]
         - [addFilter, ['@twig.filters.yaml_dump']]
+        - [addFunction, ['@twig.functions.combine']]
         - [addFunction, ['@twig.functions.chartTable']]
         - [addFunction, ['@twig.functions.policy_result']]
         - [addFunction, ['@twig.functions.parse_url']]
@@ -307,6 +308,12 @@ services:
       arguments:
         - explode
         - explode
+
+    twig.functions.combine:
+      class: Twig\TwigFunction
+      arguments:
+        - combine
+        - array_combine
 
     twig.functions.is_target:
       class: Twig\TwigFunction
