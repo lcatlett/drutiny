@@ -7,6 +7,7 @@ use Drutiny\Attribute\Type;
 use Drutiny\Audit;
 use Drutiny\AuditResponse\State;
 use Drutiny\Sandbox\Sandbox;
+use ReflectionClass;
 use Twig\Error\RuntimeError;
 
 /**
@@ -21,15 +22,44 @@ use Twig\Error\RuntimeError;
 #[Parameter(name: 'warningIf', type: Type::STRING, description: 'Add warning to outcome if expression return true')]
 class AbstractAnalysis extends Audit
 {
-  /**
-   * Gather analysis data to audit.
-   */
-    protected function gather(Sandbox $sandbox) {}
+    /**
+     * Call the 'gather' method with injected arguments.
+     */
+    private function doGather(Sandbox $sandbox):void
+    {
+      $reflection = new ReflectionClass($this);
+      if (!$reflection->hasMethod('gather')) {
+        return;
+      }
 
+      $method = $reflection->getMethod('gather');
+      $args = [];
+      foreach ($method->getParameters() as $parameter) {
+        $name = $parameter->getName();
+        if (!$parameter->hasType()) {
+            throw new AuditValidationException("method 'gather' argument '$name' requires type-hinting to have value injected.");
+        }
+        $type = (string) $parameter->getType();
+
+        // Backwards compatibilty. Support gather methods that
+        // define the Sandbox argument.
+        if ($type == Sandbox::class) {
+          $args[$name] = $sandbox;
+        }
+        else {
+          $args[$name] = $this->container->get($type);
+        }
+      }
+      $method->invoke($this, ...$args);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     final public function audit(Sandbox $sandbox)
     {
         try {
-          $this->gather($sandbox);
+          $this->doGather($sandbox);
         }
         catch (\Exception $e) {
           if ($this->getParameter('fail_on_error')) {
