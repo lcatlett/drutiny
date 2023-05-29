@@ -2,74 +2,73 @@
 
 namespace Drutiny\Audit\Filesystem;
 
-use Drutiny\Audit;
+use Drutiny\Attribute\Type;
 use Drutiny\Sandbox\Sandbox;
 use Drutiny\Audit\AbstractAnalysis;
+use Drutiny\Policy\Dependency;
 use Drutiny\Target\DrushTargetInterface;
 use Drutiny\Target\FilesystemInterface;
 
 /**
  * Checks for existence of requested file/directory on specified path.
  */
+#[Dependency(expression: 'Target.typeOf("' . FilesystemInterface::class . '")')]
 class FilesExistenceAnalysis extends AbstractAnalysis {
 
   public function configure():void {
     parent::configure();
     $dir = $this->target instanceof FilesystemInterface ? $this->target->getDirectory() : "";
     $this->addParameter(
-      'directories',
-      static::PARAMETER_OPTIONAL,
-      'List of absolute filepath to directory to scan',
-      [$dir]
+      name: 'directories',
+      description: 'List of absolute filepath to directory to scan',
+      default: [$dir],
+      type: Type::ARRAY
     );
     $this->addParameter(
-      'filenames',
-      static::PARAMETER_OPTIONAL,
-      'File names to include in the scan',
+      name: 'filenames',
+      description: 'File names to include in the scan',
+      type: Type::ARRAY,
+      default: []
     );
     $this->addParameter(
-      'types',
-      static::PARAMETER_OPTIONAL,
-      'File type as per file system. Allowed values are b for block special, c for character special, d for directory, f for regular file, l for symbolic link, p for FIFO and s for socket files.',
+      name: 'types',
+      description: 'File type as per file system. Allowed values are b for block special, c for character special, d for directory, f for regular file, l for symbolic link, p for FIFO and s for socket files.',
+      default: ['f'],
+      type: Type::ARRAY
     );
     $this->addParameter(
-      'groups',
-      static::PARAMETER_OPTIONAL,
-      'File owned group.',
+      name: 'groups',
+      description: 'File owned group.',
+      type: Type::ARRAY,
+      default: []
     );
     $this->addParameter(
-      'users',
-      static::PARAMETER_OPTIONAL,
-      'File owned user.',
+      name: 'users',
+      description: 'File owned user.',
+      default: [],
+      type: Type::ARRAY,
     );
     $this->addParameter(
-      'smaller_than',
-      static::PARAMETER_OPTIONAL,
-      'File size smaller than x size. Use k for Kilobytes, M Megabytes and G for Gigabytes. E.g. 100k or 100M or 1G.',
+      name: 'smaller_than',
+      description: 'File size smaller than x size. Use k for Kilobytes, M Megabytes and G for Gigabytes. E.g. 100k or 100M or 1G.',
+      type: Type::STRING,
     );
     $this->addParameter(
-      'larger_than',
-      static::PARAMETER_OPTIONAL,
-      'File size larger than x size. Use k for Kilobytes, M Megabytes and G for Gigabytes. E.g. 100k or 100M or 1G.',
+      name: 'larger_than',
+      description: 'File size larger than x size. Use k for Kilobytes, M Megabytes and G for Gigabytes. E.g. 100k or 100M or 1G.',
+      type: Type::STRING,
     );
     $this->addParameter(
-      'exclude',
-      static::PARAMETER_OPTIONAL,
-      'Absolute file-paths to directories omit from scanning',
+      name: 'exclude',
+      description: 'Absolute file-paths to directories omit from scanning',
+      default: [],
+      type: Type::ARRAY,
     );
     $this->addParameter(
-      'maxdepth',
-      static::PARAMETER_OPTIONAL,
-      'An optional max depth for the scan.',
+      name: 'maxdepth',
+      description: 'An optional max depth for the scan.',
+      type: Type::INTEGER,
     );
-  }
-
-  /**
-   * @inheritdoc
-   */
-  protected function validate():bool
-  {
-    return $this->target instanceof FilesystemInterface;
   }
 
   /**
