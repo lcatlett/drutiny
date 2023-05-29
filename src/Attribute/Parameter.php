@@ -3,6 +3,7 @@
 namespace Drutiny\Attribute;
 
 use Attribute;
+use Drutiny\Audit\DynamicParameterType;
 use InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 
@@ -22,10 +23,7 @@ class Parameter {
         public readonly mixed $default = null,
         public readonly ?Type $type = null,
         public readonly ?array $enums = null,
-        /**
-         * Set to true to use SyntaxProcessor::processParameter() before parameter is passed to the audit/gather functions.
-         */
-        public readonly bool $preprocess = true,
+        public readonly DynamicParameterType $preprocess = DynamicParameterType::NONE,
     ) {}
 
     public function isRequired():bool
