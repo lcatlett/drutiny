@@ -64,16 +64,19 @@ class SqlResultAudit extends AbstractAnalysis
           ->run(function ($output, CacheItemInterface $item) {
               $item->expiresAfter($this->getParameter('ttl'));
               $data = explode(PHP_EOL, $output);
+              
+              // Convert each line into cells by exploding on tab seperated values (tsv).
               array_walk($data, function (&$line) {
                   $line = array_map('trim', explode("\t", $line));
                   if (empty($line) || count(array_filter($line)) == 0) {
                       $line = false;
                   }
               });
+
               // Filter out $line = false.
               // Filter out empty lines.
               // Filter out PHP deprecation messages.
-              return array_filter($data, fn ($line) => is_string($line) && !empty($line) && strpos($line, 'Deprecated: ') !== 0);
+              return array_filter($data, fn ($line) => !is_bool($line) && !empty($line) && strpos($line[0], 'Deprecated: ') !== 0);
           });
 
         $fields = $this->getFieldsFromSql($query);
