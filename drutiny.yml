@@ -257,22 +257,23 @@ services:
         - [addExtension, ['@Twig\Extension\StringLoaderExtension']]
         - [addExtension, ['@Twig\Extra\Markdown\MarkdownExtension']]
         - [addExtension, ['@Twig\Extra\String\StringExtension']]
+        - [addFilter, ['@twig.filters.array_merge']]
         - [addFilter, ['@twig.filters.array_sum']]
         - [addFilter, ['@twig.filters.array_unique']]
         - [addFilter, ['@twig.filters.array_values']]
+        - [addFilter, ['@twig.filters.chart']]
+        - [addFilter, ['@twig.filters.extract']]
+        - [addFilter, ['@twig.filters.format_bytes']]
         - [addFilter, ['@twig.filters.json_decode']]
         - [addFilter, ['@twig.filters.sectionHeading']]
-        - [addFilter, ['@twig.filters.chart']]
-        - [addFilter, ['@twig.filters.array_merge']]
-        - [addFilter, ['@twig.filters.format_bytes']]
         - [addFilter, ['@twig.filters.yaml_dump']]
-        - [addFunction, ['@twig.functions.combine']]
         - [addFunction, ['@twig.functions.chartTable']]
-        - [addFunction, ['@twig.functions.policy_result']]
-        - [addFunction, ['@twig.functions.parse_url']]
-        - [addFunction, ['@twig.functions.semver_satisfies']]
+        - [addFunction, ['@twig.functions.combine']]
         - [addFunction, ['@twig.functions.explode']]
         - [addFunction, ['@twig.functions.is_target']]
+        - [addFunction, ['@twig.functions.parse_url']]
+        - [addFunction, ['@twig.functions.policy_result']]
+        - [addFunction, ['@twig.functions.semver_satisfies']]
         - [addTest, ['@twig.test.is_numeric']]
         - [addTest, ['@twig.test.keyed']]
         - [addRuntimeLoader, ['@Drutiny\Report\TwigRuntimeLoader']]
@@ -336,6 +337,10 @@ services:
     twig.filters.array_unique:
       class: Twig\TwigFilter
       arguments: ['unique', 'array_unique']
+
+    twig.filters.extract:
+      class: Twig\TwigFilter
+      arguments: ['extract', ['Drutiny\Report\Twig\Helper', 'filterExtract']]
 
     twig.filters.json_decode:
       class: Twig\TwigFilter

@@ -20,6 +20,14 @@ class Helper {
   }
 
   /**
+   * Extract a value out of a string using a regex.
+   */
+  public static function filterExtract(string $text, string $regex, int $match = 0): string {
+    preg_match($regex, $text, $matches);
+    return $matches[$match] ?? '';
+  }
+
+  /**
    * Registered as a Twig filter to be used as: chart.foo|chart.
    */
   public static function filterChart(Chart|null|array $chart):string
