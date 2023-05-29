@@ -2,32 +2,28 @@
 
 namespace Drutiny\Audit\Html;
 
+use Drutiny\Attribute\Parameter;
+use Drutiny\Attribute\Type;
 use Drutiny\Audit\AbstractAnalysis;
-use Drutiny\Audit\AuditValidationException;
 use Drutiny\Sandbox\Sandbox;
 
 /**
  * Run a local command and analyse the output.
  */
+#[Parameter(
+  name: 'url',
+  type: Type::STRING,
+  mode: Parameter::REQUIRED,
+  description: 'Path to local command. Absolute or in user PATH.',
+)]
+#[Parameter(
+  name: 'xpath',
+  type: Type::STRING,
+  mode: Parameter::REQUIRED,
+  description: 'An XPath query to run against the downloaded HTML document.'
+)]
 class XPathAnalysis extends AbstractAnalysis
 {
-
-    public function configure():void
-    {
-        parent::configure();
-        $this->addParameter(
-            'url',
-            static::PARAMETER_REQUIRED,
-            'Path to local command. Absolute or in user PATH.',
-        );
-        $this->addParameter(
-            'xpath',
-            static::PARAMETER_REQUIRED,
-            'An XPath query to run against the downloaded HTML document.',
-        );
-    }
-
-
   /**
    * @inheritdoc
    */
@@ -48,5 +44,6 @@ class XPathAnalysis extends AbstractAnalysis
       }
 
       $this->set('html', $html);
+      $this->set('text', $text);
     }
 }
