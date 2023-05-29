@@ -6,6 +6,7 @@ use DateTime;
 use DateTimeImmutable;
 use DateTimeInterface;
 use Drutiny\Attribute\Parameter;
+use Drutiny\Attribute\Type;
 use Drutiny\Audit\AuditInterface;
 use Drutiny\Audit\AuditValidationException;
 use Drutiny\Audit\Exception\AuditException;
@@ -493,13 +494,14 @@ abstract class Audit implements AuditInterface
      * This is used exclusively when the configure() method is called.
      * This allows the audit to specify and validate inputs from a policy.
      */
-    protected function addParameter(string $name, int $mode = null, string $description = '', $default = null): self
+    protected function addParameter(string $name, int $mode = null, string $description = '', $default = null, ?Type $type = null): self
     {
         $this->definition->addParameter(new Parameter(
             name: $name, 
-            mode: $mode, 
+            mode: $mode ?? Parameter::OPTIONAL, 
             description: $description, 
-            default: $default
+            default: $default,
+            type: $type
         ));
         return $this;
     }

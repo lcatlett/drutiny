@@ -6,6 +6,7 @@ use Drutiny\AuditFactory;
 use Drutiny\PolicyFactory;
 use Drutiny\Target\TargetFactory;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -65,6 +66,7 @@ class AuditInfoCommand extends Command
            '<fg=yellow>Name</>',
            '<fg=yellow>Type</>',
            '<fg=yellow>Input mode</>',
+           '<fg=yellow>Preprocessing</>',
            '<fg=yellow>Description</>',
            '<fg=yellow>Default value</>'
         ];
@@ -72,8 +74,9 @@ class AuditInfoCommand extends Command
           $info[] = [
             '',
             $param->name,
-            $param->type->value,
+            $param->type?->value,
             $param->isRequired() ? '<fg=red>Required</>' : 'Optional',
+            $param->preprocess->getTitle(),
             $param->description,
             Yaml::dump($param->default),
           ];
@@ -95,7 +98,19 @@ class AuditInfoCommand extends Command
 
         $io = new SymfonyStyle($input, $output);
         $io->title('Audit Info');
-        $io->table([], $info);
+
+        $style = clone Table::getStyleDefinition('symfony-style-guide');
+        $style->setCellHeaderFormat('<info>%s</info>');
+
+        $table = new Table($output);
+        $table->setColumnMaxWidth(2, 7);
+        $table->setColumnMaxWidth(3, 10);
+        $table->setColumnMaxWidth(5, 50);
+        $table->setRows($info);
+        $table->setStyle($style);
+
+        $table->render();
+        // $io->table([], $info);
         return 0;
     }
 

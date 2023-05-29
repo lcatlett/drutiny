@@ -100,13 +100,14 @@ class AbstractAnalysis extends Audit
       foreach ($this->getParameter('variables',[]) as $key => $value) {
         try {
           // Allow variables to be processed with process indicators on keys.
-          if (($processed_key = $this->syntaxProcessor->processParameterName($key)) != $key) {
-            $value = $this->syntaxProcessor->processParameter($key, $value, $this->getContexts());
-            $key = $processed_key;
+          if (DynamicParameterType::fromParameterName($key) != DynamicParameterType::NONE) {
+            $this->set(
+              name: DynamicParameterType::fromParameterName($key)->stripParameterName($key),
+              value: $this->syntaxProcessor->processParameter($key, $value, $this->getContexts())
+            );
           }
           // Otherwise use fallback method of processing with twig.
           else {
-            $this->logger->debug(__CLASS__ . ':VARIABLE('.$key.'): ' . $value);
             $this->set($key, $this->evaluate($value, 'twig'));
           }
         }

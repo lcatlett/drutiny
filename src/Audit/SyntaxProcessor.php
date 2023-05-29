@@ -5,32 +5,15 @@ namespace Drutiny\Audit;
 use DateTimeZone;
 use Drutiny\Helper\ExpressionLanguageTranslation;
 use InvalidArgumentException;
-use League\Csv\InvalidArgument;
 use Psr\Log\LoggerInterface;
 
 class SyntaxProcessor {
-
-    const PROCESS_REPLACE = '^';
-    const PROCESS_EVALUATE = '$';
-    const PROCESS_STATIC = '!';
 
     public function __construct(
         protected TwigEvaluator $twigEvaluator,
         protected LoggerInterface $logger
     )
     {}
-
-    /**
-     * Get the process type of a parameter.
-     */
-    protected function getProcessType(string $name): string|false {
-        return match(substr($name, 0, 1)) {
-            self::PROCESS_REPLACE => self::PROCESS_REPLACE,
-            self::PROCESS_EVALUATE => self::PROCESS_EVALUATE,
-            self::PROCESS_STATIC => self::PROCESS_STATIC,
-            default => false
-        };
-    }
 
     /**
      * Process a named parameter.
@@ -42,8 +25,10 @@ class SyntaxProcessor {
      */
     public function processParameter(string $name, mixed $value, array $contexts = []): mixed
     {
+        $type = DynamicParameterType::fromParameterName($name);
+
         // Do not process unspecified types.
-        if (!$process_type = $this->getProcessType($name)) {
+        if ($type == DynamicParameterType::NONE) {
             // Traverse arrays for dynamic parameters.
             if (is_array($value)) {
                 $new_values = [];
@@ -56,7 +41,7 @@ class SyntaxProcessor {
         }
 
         // Reprocess without the ! prefix. This will traverse arrays but leave strings alone.
-        if ($process_type == self::PROCESS_STATIC) {
+        if ($type == DynamicParameterType::STATIC) {
             return $this->processParameter($this->processParameterName($name), $value, $contexts);
         }
 
@@ -65,9 +50,9 @@ class SyntaxProcessor {
             throw new InvalidArgumentException("$name must be a string to use dynamic parameter processing: " . gettype($value));
         }
         
-        $processed_value = match ($process_type) {
-            self::PROCESS_REPLACE => $this->interpolate($value, $contexts),
-            self::PROCESS_EVALUATE => $this->evaluate($value, 'twig', $contexts),
+        $processed_value = match ($type) {
+            DynamicParameterType::REPLACE => $this->interpolate($value, $contexts),
+            DynamicParameterType::EVALUATE => $this->evaluate($value, 'twig', $contexts),
             default => $value
         };
         // $log_value = json_encode($processed_value);
@@ -81,7 +66,7 @@ class SyntaxProcessor {
      * @see static::processParameter().
      */
     public function processParameterName(string $name): string {
-        return in_array(substr($name, 0, 1), ['^', '$', '!']) ? substr($name, 1) : $name;
+        return DynamicParameterType::fromParameterName($name)->stripParameterName($name);
     }
 
     /**
@@ -90,12 +75,20 @@ class SyntaxProcessor {
     public function processParameters(array $parameters, array $contexts = [], InputDefinition $definition = null):array {
         $processed_parameters = [];
         foreach ($parameters as $key => $value) {
-            // Don't process parameters that are explicitly set not to be traversed by preprocessors.
-            if (($definition !== null) && $definition->hasParameter($key) && !$definition->getParameter($key)->preprocess) {
-                $processed_parameters[$key] = $value;
-                continue;
+
+            $preprocess = DynamicParameterType::fromParameterName($key);
+
+            // If no preprocessing is set, inherit a processor from the parameter definition.
+            if (($definition !== null) && $definition->hasParameter($key) && ($preprocess == DynamicParameterType::NONE)) {
+                $preprocess = $definition->getParameter($key)->preprocess;
             }
-            $processed_parameters[$this->processParameterName($key)] = $this->processParameter($key, $value, $contexts);
+
+            $name = $this->processParameterName($key);
+            $processed_parameters[$name] = $this->processParameter(
+                name: $preprocess->decorateParameterName($name),
+                value: $value, 
+                contexts: $contexts
+            );
         }
         return $processed_parameters;
     }

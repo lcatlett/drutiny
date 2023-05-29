@@ -2,6 +2,7 @@
 
 namespace DrutinyTests;
 
+use Drutiny\Audit\DynamicParameterType;
 use Drutiny\Audit\SyntaxProcessor;
 use Drutiny\AuditFactory;
 use Drutiny\Policy;
@@ -118,5 +119,28 @@ class PolicyTest extends KernelTestCase {
     $this->assertArrayHasKey('array', $values);
     $this->assertIsArray($values['array']);
     $this->assertContains('bar', $values['array']);
+  }
+
+  public function testDynamicParameterType() {
+    $this->assertEquals('foo', DynamicParameterType::EVALUATE->stripParameterName('$foo'));
+    $this->assertEquals('$foo', DynamicParameterType::REPLACE->stripParameterName('$foo'));
+    $this->assertEquals('$foo', DynamicParameterType::STATIC->stripParameterName('$foo'));
+
+    $this->assertEquals('^foo', DynamicParameterType::EVALUATE->stripParameterName('^foo'));
+    $this->assertEquals('foo', DynamicParameterType::REPLACE->stripParameterName('^foo'));
+    $this->assertEquals('^foo', DynamicParameterType::STATIC->stripParameterName('^foo'));
+
+    $this->assertEquals('!foo', DynamicParameterType::EVALUATE->stripParameterName('!foo'));
+    $this->assertEquals('!foo', DynamicParameterType::REPLACE->stripParameterName('!foo'));
+    $this->assertEquals('foo', DynamicParameterType::STATIC->stripParameterName('!foo'));
+
+    $this->assertEquals('foo', DynamicParameterType::EVALUATE->stripParameterName('foo'));
+    $this->assertEquals('foo', DynamicParameterType::REPLACE->stripParameterName('foo'));
+    $this->assertEquals('foo', DynamicParameterType::STATIC->stripParameterName('foo'));
+
+    $this->assertEquals(DynamicParameterType::EVALUATE, DynamicParameterType::fromParameterName('$foo'));
+    $this->assertEquals(DynamicParameterType::REPLACE, DynamicParameterType::fromParameterName('^foo'));
+    $this->assertEquals(DynamicParameterType::STATIC, DynamicParameterType::fromParameterName('!foo'));
+    $this->assertEquals(DynamicParameterType::NONE, DynamicParameterType::fromParameterName('foo'));
   }
 }

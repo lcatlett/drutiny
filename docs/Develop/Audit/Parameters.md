@@ -16,6 +16,7 @@ namespace Demo\CustomDrutinyProject\Audit;
 use Drutiny\Attribute\Parameter;
 use Drutiny\Attribute\Type;
 use Drutiny\Audit\AbstractAnalysis;
+use Drutiny\Audit\DynamicParameterType;
 
 #[Parameter(
     name: 'multiplier', 
@@ -24,6 +25,7 @@ use Drutiny\Audit\AbstractAnalysis;
     enums: [1,2,3,4,5,6,7,8,9,10],
     description: 'A multiplier between 1 and 10.',
     mode: Parameter::REQUIRED,
+    preprocess: DynamicParameterType::EVALUATE,
 )]
 class ProjectDataGatherer extends AbstractAnalysis {
 
@@ -149,3 +151,36 @@ By default a parameter is optional. However, you can set it as required by setti
 
 Using the `Parameter::REQUIRED` constant as the `mode` value will ensure the policy provides this parameter beforce the audit
 data gathering can take place by the audit class.
+
+## Dynamic Parameters
+Dynamic parameters allow policies to use various syntax forms to evaluate and replace 
+parameter data on-the-fly. [Read more about Dynamic Parameters in policies](../Policy/DynamicParameters.md).
+
+In Audit class declarations, you can specify a `preprocess` property in the `Parameter` attribute
+which provides a default processing method.
+
+```php
+<?php
+
+use Drutiny\Audit\DynamicParameterType;
+
+#[Parameter(
+    name: 'url',
+    description: 'The URL to make an HTTP request too.',
+    default: '{target.uri}',
+    preprocess: DynamicParameterType::REPLACE
+)]
+```
+
+The `preprocess` property requires an Enum called `Drutiny\Audit\DynamicParameterType`. It comes with 4 different types:
+
+Value                                          | Purpose
+---------------------------------------------- | -------------------------------------------------------
+`Drutiny\Audit\DynamicParameterType::REPLACE`  | Replaces tokens found tightly wrapped in curly braces. 
+`Drutiny\Audit\DynamicParameterType::EVALUATE` | Evaluates the string through twig syntax.
+`Drutiny\Audit\DynamicParameterType::STATIC`   | Explicitly bypasses the value from dynamic processing.
+`Drutiny\Audit\DynamicParameterType::NONE`     | Has no set processing (default).
+
+The preprocess property specifies the default preprocessing behaviour. However policies can still
+override the processing behaviour by specifying a process type with a syntax symbol at the begining
+of the parameter name. [Read more about Dynamic Parameters in policies](../Policy/DynamicParameters.md).
