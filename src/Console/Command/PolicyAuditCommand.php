@@ -162,6 +162,7 @@ class PolicyAuditCommand extends DrutinyBaseCommand
           $style->error("Policy $name has an error for the target " . $target->getId());
           $tokens = $report->results[$name]->tokens;
           $style->error($tokens['exception_type'] .': '.$tokens['exception'] . ' in ' . $tokens['file'] . ' on line ' . $tokens['line']);
+          $style->error(implode(PHP_EOL, $tokens['trace']));
           return 1;
         }
 

@@ -255,6 +255,12 @@ abstract class Audit implements AuditInterface
             $this->set('exception_type', get_class($e));
             $this->set('file', $e->getFile());
             $this->set('line', $e->getLine());
+            $trace = [];
+            do {
+                $trace[] = $e->getTraceAsString();
+            }
+            while ($e = $e->getPrevious());
+            $this->set('trace', $trace);
             $this->logger->error("'{policy}' {class} ({uri}): $message", [
               'class' => get_class($this),
               'uri' => $this->target->getUri(),
