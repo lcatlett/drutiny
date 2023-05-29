@@ -2,10 +2,12 @@
 
 namespace Drutiny\Audit;
 
+use Drutiny\Attribute\DataProvider;
 use Drutiny\Attribute\Parameter;
 use Drutiny\Attribute\Type;
 use Drutiny\Audit;
 use Drutiny\AuditResponse\State;
+use Drutiny\Entity\DataBag;
 use Drutiny\Policy\Severity;
 use Drutiny\Sandbox\Sandbox;
 use ReflectionClass;
@@ -19,6 +21,7 @@ use Twig\Error\RuntimeError;
 #[Parameter(name: 'syntax', type: Type::STRING, enums: ['twig', 'expression_language'], default: 'expression_language', description: 'Which syntax to use. Options: twig or expression_language.')]
 #[Parameter(name: 'not_applicable', type: Type::STRING, default: 'false', description: 'An expression that if returns true, will render the policy as not applicable.')]
 #[Parameter(name: 'fail_on_error', type: Type::BOOLEAN, default: false, description: 'Set to true if you want an error during data gathering to result in a failure.')]
+#[Parameter(name: 'omitIf', type: Type::STRING, description: 'Omit policy if twig expression returns true after data is gathered but before the variables parameter is rendered.')]
 #[Parameter(name: 'failIf', type: Type::STRING, description: 'Fail policy if twig expression returns true')]
 #[Parameter(name: 'warningIf', type: Type::STRING, description: 'Add warning to outcome if expression return true')]
 #[Parameter(name: 'severityCriticalIf', type: Type::STRING, 
@@ -35,29 +38,84 @@ class AbstractAnalysis extends Audit
     private function doGather(Sandbox $sandbox):void
     {
       $reflection = new ReflectionClass($this);
-      if (!$reflection->hasMethod('gather')) {
+
+      // Collect methods with the DataProvider attribute.
+      $methods = [];
+      foreach ($reflection->getMethods() as $method) {
+        foreach ($method->getAttributes(DataProvider::class) as $attr) {
+          $methods[] = $method;
+          break;
+        }
+      }
+
+      // Backwards compatibility. Use the gather method if DataProvider attributes
+      // were not provided.
+      if (empty($methods) && !$reflection->hasMethod('gather')) {
         return;
       }
+      elseif (empty($methods)) {
+        $methods[] = $reflection->getMethod('gather');
+      }
 
-      $method = $reflection->getMethod('gather');
-      $args = [];
-      foreach ($method->getParameters() as $parameter) {
-        $name = $parameter->getName();
-        if (!$parameter->hasType()) {
-            throw new AuditValidationException("method 'gather' argument '$name' requires type-hinting to have value injected.");
+      foreach ($methods as $method) {
+        $args = [];
+        foreach ($method->getParameters() as $parameter) {
+          $name = $parameter->getName();
+          if (!$parameter->hasType()) {
+              throw new AuditValidationException("method 'gather' argument '$name' requires type-hinting to have value injected.");
+          }
+          $type = (string) $parameter->getType();
+  
+          // Backwards compatibilty. Support gather methods that
+          // define the Sandbox argument.
+          if ($type == Sandbox::class) {
+            $args[$name] = $sandbox;
+          }
+          else {
+            $args[$name] = $this->container->get($type);
+          }
         }
-        $type = (string) $parameter->getType();
+        $method->invoke($this, ...$args);
+      }
+    }
 
-        // Backwards compatibilty. Support gather methods that
-        // define the Sandbox argument.
-        if ($type == Sandbox::class) {
-          $args[$name] = $sandbox;
+    /**
+     * Expose the data gathering as a public function.
+     * 
+     * This is so that data can be used by aggregate audit classes.
+     */
+    final public function getGatheredData(array $parameters, Sandbox $sandbox):DataBag
+    {
+      $parameters = $this->syntaxProcessor->processParameters($parameters, $this->getContexts(), $this->getDefinition());
+      $values = $this->getDefinition()->fromValues($parameters);
+      $this->dataBag->get('parameters')->add($values);
+      $this->dataBag->add($values);
+      $this->doGather($sandbox);
+      $this->processVariables();
+      return $this->dataBag;
+    }
+
+    private function processVariables(): void
+    {
+      foreach ($this->getParameter('variables',[]) as $key => $value) {
+        try {
+          // Allow variables to be processed with process indicators on keys.
+          if (($processed_key = $this->syntaxProcessor->processParameterName($key)) != $key) {
+            $value = $this->syntaxProcessor->processParameter($key, $value, $this->getContexts());
+            $key = $processed_key;
+          }
+          // Otherwise use fallback method of processing with twig.
+          else {
+            $this->logger->debug(__CLASS__ . ':VARIABLE('.$key.'): ' . $value);
+            $this->set($key, $this->evaluate($value, 'twig'));
+          }
         }
-        else {
-          $args[$name] = $this->container->get($type);
+        catch (RuntimeError $e)
+        {
+          $keys = array_keys($this->getContexts());
+          throw new \Exception(get_class($this) . ": Failed to create variable: $key. Encountered Twig runtime error: " . $e->getMessage() . "\n Available keys: " . implode(', ', $keys), 0, $e);
         }
       }
-      $method->invoke($this, ...$args);
     }
 
     /**
@@ -83,20 +141,16 @@ class AbstractAnalysis extends Audit
         if ($expression = $this->getParameter('not_applicable', 'false')) {
             $this->logger->debug(__CLASS__ . ':INAPPLICABILITY ' . $expression);
             if ($this->evaluate($expression, $syntax)) {
-                return self::NOT_APPLICABLE;
+                return State::NOT_APPLICABLE->value;
             }
         }
-
-        foreach ($this->getParameter('variables',[]) as $key => $value) {
-          try {
-            $this->logger->debug(__CLASS__ . ':VARIABLE('.$key.'): ' . $value);
-            $this->set($key, $this->evaluate($value, 'twig'));
-          }
-          catch (RuntimeError $e)
-          {
-            throw new \Exception("Failed to create variable: $key. Encountered Twig runtime error: " . $e->getMessage());
-          }
+        $omitIf = $this->getParameter('omitIf');
+        if ($omitIf !== null && $this->evaluate($omitIf, 'twig')) {
+          $this->logger->debug(__CLASS__ . ':EXPRESSION(omitIf): ' . $omitIf);
+          return State::IRRELEVANT->value;
         }
+
+       $this->processVariables();
 
         // Set outcome to failure if failIf expression is true.
         // Note: This takes precedence of the `expression` parameter which does not get evaluated

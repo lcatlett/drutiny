@@ -2,15 +2,17 @@
 
 namespace DrutinyTests;
 
+use Drutiny\Audit\SyntaxProcessor;
 use Drutiny\AuditFactory;
 use Drutiny\Policy;
 use Drutiny\PolicyFactory;
 use Drutiny\Target\TargetFactory;
-
+use Drutiny\Target\TargetInterface;
 
 class PolicyTest extends KernelTestCase {
 
-  protected $target;
+  protected TargetInterface $target;
+  protected SyntaxProcessor $syntax;
 
   protected function setUp(): void
   {
@@ -89,5 +91,32 @@ class PolicyTest extends KernelTestCase {
     $audit = $this->container->get(AuditFactory::class)->get($policy, $this->target);
     $response = $audit->execute($policy);
     $this->assertEquals('env', $response->tokens['foo'], "build parameter was correctly evaluated and converted into a token.");
+
+    $policy = $policy->with(build_parameters: [
+      '!bypass' => ['foo' => 'bar']
+    ]);
+
+    $audit = $this->container->get(AuditFactory::class)->get($policy, $this->target);
+    $response = $audit->execute($policy);
+    $this->assertIsArray($response->tokens['bypass'], "build parameter was correctly evaluated and converted into a token.");
+  }
+
+  public function testSyntaxProcessor() {
+    $this->syntax = $this->container->get(SyntaxProcessor::class);
+    $contexts = ['foo' => 'bar'];
+
+    $parameters = [
+      '^message' => 'hello {foo}',
+      '$array' => '[foo]'
+    ];
+
+    $values = $this->syntax->processParameters($parameters, $contexts);
+
+    $this->assertIsArray($values);
+    $this->assertArrayHasKey('message', $values);
+    $this->assertEquals($values['message'], 'hello bar');
+    $this->assertArrayHasKey('array', $values);
+    $this->assertIsArray($values['array']);
+    $this->assertContains('bar', $values['array']);
   }
 }

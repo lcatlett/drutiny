@@ -17,16 +17,20 @@ class Parameter {
 
     public function __construct(
         public readonly string $name,
-        public readonly string $description, 
+        public readonly string $description,
         public readonly int $mode = self::OPTIONAL, 
         public readonly mixed $default = null,
         public readonly ?Type $type = null,
         public readonly ?array $enums = null,
+        /**
+         * Set to true to use SyntaxProcessor::processParameter() before parameter is passed to the audit/gather functions.
+         */
+        public readonly bool $preprocess = true,
     ) {}
 
     public function isRequired():bool
     {
-        return $this->mode === self::REQUIRED;
+        return ($this->mode & static::REQUIRED) === static::REQUIRED;
     }
 
     public function validate(mixed $value)

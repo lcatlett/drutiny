@@ -10,7 +10,10 @@ nav:
     - Using a policy: Usage/Policy.md
     - Using a profile: Usage/Profile.md
   - Develop:
-    - Policy reference: Develop/Policy/GettingStarted.md
+    - Policy reference: 
+        - Getting started: Develop/Policy/GettingStarted.md
+        - Dynamic parameters: Develop/Policy/DynamicParameters.md
+        - Pipelines: Develop/Policy/Pipelines.md
     - Profile reference: Develop/Profile/GettingStarted.md
     - Audit reference:
       - Getting started: Develop/Audit/GettingStarted.md

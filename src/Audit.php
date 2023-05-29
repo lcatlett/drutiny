@@ -8,6 +8,7 @@ use DateTimeInterface;
 use Drutiny\Attribute\Parameter;
 use Drutiny\Audit\AuditInterface;
 use Drutiny\Audit\AuditValidationException;
+use Drutiny\Audit\Exception\AuditException;
 use Drutiny\Audit\InputDefinition;
 use Drutiny\Audit\SyntaxProcessor;
 use Drutiny\AuditResponse\AuditResponse;
@@ -171,27 +172,10 @@ abstract class Audit implements AuditInterface
                 $this->progressBar->advance();
             }
 
-            // Build parameters to be used in the audit.
-            foreach ($policy->build_parameters->all() as $key => $value) {
-                try {
-                    $this->logger->debug(__CLASS__ . ':build_parameters('.$key.'): ' . $value);
-                    $value = $this->evaluate($value, 'twig');
-
-                    // Set the token to be available for other build_parameters.
-                    $this->set($key, $value);
-
-                    // Set the parameter to be available in the audit().
-                    if ($this->definition->hasParameter($key)) {
-                        $parameters = $policy->parameters->all();
-                        $parameters[$key] = $value;
-                        $policy = $policy->with(parameters: $parameters);
-                    }
-                } catch (RuntimeError $e) {
-                    throw new \Exception("Failed to create key: $key. Encountered Twig runtime error: " . $e->getMessage());
-                }
-            }
-
-            $values = $this->definition->fromValues($policy->parameters->all());
+            $this->policy = $this->prepareBuildParameters($policy);
+            
+            $parameters = $this->syntaxProcessor->processParameters($this->policy->parameters->all(), $this->getContexts(), $this->definition);
+            $values = $this->definition->fromValues($parameters);
             $this->dataBag->get('parameters')->add($values);
             $this->dataBag->add($values);
 
@@ -206,7 +190,7 @@ abstract class Audit implements AuditInterface
             $this->logger->log($log_level, "'{policy}' {class} ({uri}): $message", [
               'class' => get_class($this),
               'uri' => $this->target->getUri(),
-              'policy' => $policy->name
+              'policy' => $this->policy->name
             ]);
         } catch (AuditValidationException $e) {
             $outcome = AuditInterface::NOT_APPLICABLE;
@@ -216,7 +200,7 @@ abstract class Audit implements AuditInterface
             $this->logger->warning("'{policy}' {class} ({uri}): $message", [
               'class' => get_class($this),
               'uri' => $this->target->getUri(),
-              'policy' => $policy->name
+              'policy' => $this->policy->name
             ]);
         } catch (TargetPropertyException $e) {
             $outcome = AuditInterface::NOT_APPLICABLE;
@@ -226,7 +210,7 @@ abstract class Audit implements AuditInterface
             $this->logger->warning("'{policy}' {class} ({uri}): $message", [
               'class' => get_class($this),
               'uri' => $this->target->getUri(),
-              'policy' => $policy->name
+              'policy' => $this->policy->name
             ]);
         } catch (InvalidArgumentException $e) {
             $outcome = AuditInterface::ERROR;
@@ -236,7 +220,7 @@ abstract class Audit implements AuditInterface
             $this->logger->warning("'{policy}' {class} ({uri}): $message", [
               'class' => get_class($this),
               'uri' => $this->target->getUri(),
-              'policy' => $policy->name
+              'policy' => $this->policy->name
             ]);
             $this->logger->warning($e->getTraceAsString());
             $this->logger->warning($policy->name . ': ' . get_class($this));
@@ -264,12 +248,12 @@ abstract class Audit implements AuditInterface
             $this->logger->error("'{policy}' {class} ({uri}): $message", [
               'class' => get_class($this),
               'uri' => $this->target->getUri(),
-              'policy' => $policy->name
+              'policy' => $this->policy->name
             ]);
         } 
         finally {
             // Log the parameters output.
-            $tokens = $this->dataBag->export();
+            $tokens = json_decode(json_encode($this->dataBag->export()), true);
             $this->logger->debug("Tokens:\n".Yaml::dump($tokens, 4, 4, Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK));
             // Set the response.
             $response = new AuditResponse(
@@ -280,14 +264,49 @@ abstract class Audit implements AuditInterface
 
             $this->eventDispatcher->dispatch(new GenericEvent('audit', [
               'class' => get_class($this),
-              'policy' => $policy->name,
+              'policy' => $this->policy->name,
               'outcome' => $response->getType(),
               'uri' => $this->target->getUri(),
             ]), 'audit');
         }
         $total_execution_time = $this->dateTime->diff(new DateTime());
-        $this->logger->info($total_execution_time->format('Execution completed for policy "' . $policy->name . '" in %m month(s) %d day(s) %H hour(s) %i minute(s) %s second(s)'));
+        $this->logger->info($total_execution_time->format('Execution completed for policy "' . $this->policy->name . '" in %m month(s) %d day(s) %H hour(s) %i minute(s) %s second(s)'));
         return $response;
+    }
+
+    /**
+     * Prepare build parameters.
+     */
+    protected function prepareBuildParameters(Policy $policy): Policy {
+        // Build parameters to be used in the audit.
+        foreach ($policy->build_parameters->all() as $key => $value) {
+            try {
+                // Use SyntaxProcessor to process build_parameters if the key denotes
+                // it should be processed.
+                if (($processed_key = $this->syntaxProcessor->processParameterName($key)) != $key) {
+                    $value = $this->syntaxProcessor->processParameter($key, $value);
+                    $key = $processed_key;
+                }
+                // Otherwise fallback to standard twig evaluation.
+                else {
+                    $this->logger->debug(__CLASS__ . ':build_parameters('.$key.'): ' . $value);
+                    $value = $this->evaluate($value, 'twig');
+                }
+
+                // Set the token to be available for other build_parameters.
+                $this->set($key, $value);
+
+                // Set the parameter to be available in the audit().
+                if ($this->definition->hasParameter($key)) {
+                    $parameters = $policy->parameters->all();
+                    $parameters[$key] = $value;
+                    $policy = $policy->with(parameters: $parameters);
+                }
+            } catch (RuntimeError $e) {
+                throw new \Exception("Failed to create key: $key. Encountered Twig runtime error: " . $e->getMessage());
+            }
+        }
+        return $policy;
     }
 
     /**

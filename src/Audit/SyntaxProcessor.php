@@ -4,14 +4,101 @@ namespace Drutiny\Audit;
 
 use DateTimeZone;
 use Drutiny\Helper\ExpressionLanguageTranslation;
+use InvalidArgumentException;
+use League\Csv\InvalidArgument;
 use Psr\Log\LoggerInterface;
 
 class SyntaxProcessor {
+
+    const PROCESS_REPLACE = '^';
+    const PROCESS_EVALUATE = '$';
+    const PROCESS_STATIC = '!';
+
     public function __construct(
         protected TwigEvaluator $twigEvaluator,
         protected LoggerInterface $logger
     )
     {}
+
+    /**
+     * Get the process type of a parameter.
+     */
+    protected function getProcessType(string $name): string|false {
+        return match(substr($name, 0, 1)) {
+            self::PROCESS_REPLACE => self::PROCESS_REPLACE,
+            self::PROCESS_EVALUATE => self::PROCESS_EVALUATE,
+            self::PROCESS_STATIC => self::PROCESS_STATIC,
+            default => false
+        };
+    }
+
+    /**
+     * Process a named parameter.
+     * 
+     * Parameter names starting with a ^ will be interpolated (token replacement).
+     * Parameter names starting with a $ will be evaluated (twig rendered).
+     * Parameter names starting with an ! will be passed through as static.
+     * All other parameters are passed on verbatim (not processed).
+     */
+    public function processParameter(string $name, mixed $value, array $contexts = []): mixed
+    {
+        // Do not process unspecified types.
+        if (!$process_type = $this->getProcessType($name)) {
+            // Traverse arrays for dynamic parameters.
+            if (is_array($value)) {
+                $new_values = [];
+                foreach ($value as $k => $v) {
+                    $new_values[$this->processParameterName($k)] = $this->processParameter($k, $v, $contexts);
+                }
+                return $new_values;
+            }
+            return $value;
+        }
+
+        // Reprocess without the ! prefix. This will traverse arrays but leave strings alone.
+        if ($process_type == self::PROCESS_STATIC) {
+            return $this->processParameter($this->processParameterName($name), $value, $contexts);
+        }
+
+        // Cannot process on any other data types other than string and array.
+        if (!is_string($value)) {
+            throw new InvalidArgumentException("$name must be a string to use dynamic parameter processing: " . gettype($value));
+        }
+        
+        $processed_value = match ($process_type) {
+            self::PROCESS_REPLACE => $this->interpolate($value, $contexts),
+            self::PROCESS_EVALUATE => $this->evaluate($value, 'twig', $contexts),
+            default => $value
+        };
+        // $log_value = json_encode($processed_value);
+        // $this->logger->debug("Processing $name: $value => $log_value.");
+        return $processed_value;
+    }
+
+    /**
+     * Clean off the processing indicators from the parameter name.
+     * 
+     * @see static::processParameter().
+     */
+    public function processParameterName(string $name): string {
+        return in_array(substr($name, 0, 1), ['^', '$', '!']) ? substr($name, 1) : $name;
+    }
+
+    /**
+     * Process an array of parameters for syntax evaluations.
+     */
+    public function processParameters(array $parameters, array $contexts = [], InputDefinition $definition = null):array {
+        $processed_parameters = [];
+        foreach ($parameters as $key => $value) {
+            // Don't process parameters that are explicitly set not to be traversed by preprocessors.
+            if (($definition !== null) && $definition->hasParameter($key) && !$definition->getParameter($key)->preprocess) {
+                $processed_parameters[$key] = $value;
+                continue;
+            }
+            $processed_parameters[$this->processParameterName($key)] = $this->processParameter($key, $value, $contexts);
+        }
+        return $processed_parameters;
+    }
 
     /**
      * Evaluate an expression using the Symfony ExpressionLanguage engine.
