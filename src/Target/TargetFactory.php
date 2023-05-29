@@ -63,6 +63,6 @@ class TargetFactory
      */
     public function typeOf(TargetInterface $target, string $name = 'target'): bool
     {
-      return $target instanceof ($this->targetMap[$name] ?? TargetInterface::class);
+      return $target instanceof ($this->targetMap[$name] ?? $name);
     }
 }
