@@ -35,7 +35,11 @@ enum Type:string {
      * Determine if the passed value is of the same Type.
      */
     public function is(mixed $var):bool
-    {
+    {   
+        // Empty hashes otherwise return as arrays.
+        if (is_array($var) && empty($var) && $this == static::HASH) {
+            return true;
+        }
         return $this == static::fromVariable($var);
     }
 }

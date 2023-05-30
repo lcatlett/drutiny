@@ -2,52 +2,98 @@
 
 namespace Drutiny\Http\Audit;
 
+use Drutiny\Attribute\DataProvider;
+use Drutiny\Attribute\Parameter;
+use Drutiny\Attribute\Type;
 use Drutiny\Audit\AbstractAnalysis;
-use Drutiny\Sandbox\Sandbox;
+use Drutiny\Audit\DynamicParameterType;
+use Drutiny\Http\Client;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
+use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
 /**
  *
  */
+#[Parameter(name: 'url', description: 'The url to request', type: Type::STRING, default: '{uri}', preprocess: DynamicParameterType::REPLACE)]
+#[Parameter(name: 'send_warming_request', description: 'Send a warming request and store headers into cold_headers parameter.', type: Type::BOOLEAN, default: false)]
+#[Parameter(name: 'use_cache', description: 'Indicator if Guzzle client should use cache middleware.', type: Type::BOOLEAN, default: false)]
+#[Parameter(name: 'options', description: 'An options array passed to the Guzzle client request method.', type: Type::ARRAY, default: [])]
+#[Parameter(name: 'force_ssl', description: 'Whether to force SSL.', type: Type::BOOLEAN, default: true)]
+#[Parameter(name: 'method', description: 'Which method to use.', type: Type::STRING, default: 'GET')]
 class HttpAnalysis extends AbstractAnalysis
 {
-    use HttpTrait {
-        configure as HttpTrait_configure;
-    }
-
-    public function configure():void
-    {
-        parent::configure();
-        $this->addParameter(
-            'send_warming_request',
-            static::PARAMETER_OPTIONAL,
-            'Send a warming request and store headers into cold_headers parameter.'
-        );
-
-        $this->HttpTrait_configure();
-    }
-
-    protected function gather(Sandbox $sandbox)
+    #[DataProvider]
+    protected function makeHttpRequest (Client $client): void
     {
         $use_cache = $this->getParameter('use_cache', false);
-      // For checking caching functionality, add a listener
-      // to pre-warm the origin.
-        if ($this->set('send_warming_request', false)) {
-            $this->set('use_cache', false);
-            $response = $this->getHttpResponse($sandbox);
+        // For checking caching functionality, add a listener
+        // to pre-warm the origin.
+        if ($this->getParameter('send_warming_request', false)) {
+            $this->setParameter('use_cache', false);
+            $response = $this->getHttpResponse($client);
             $this->set('cold_headers', $this->gatherHeaders($response));
         }
 
-        $this->set('use_cache', $use_cache);
-        $response = $this->getHttpResponse($sandbox);
+        $this->setParameter('use_cache', $use_cache);
+        $response = $this->getHttpResponse($client);
 
-      // Maintain for backwards compatibility.
+        // Maintain for backwards compatibility.
         $this->set('headers', $this->gatherHeaders($response));
         $this->set('res_headers', $response->getHeaders());
         $this->set('status_code', $response->getStatusCode());
     }
 
-    protected function gatherHeaders(ResponseInterface $response)
+    /**
+     * Retrieve a URL to request.
+     */
+    protected function prepareUrl():string {
+        // This allows policies to specify urls that still contain a domain.
+        $url = $this->getParameter('url');
+
+        if (strpos($url, 'http') === FALSE) {
+            $url = 'https://' . $url;
+        }
+
+        if ($this->getParameter('force_ssl', false)) {
+            $url = strtr($url, [
+                'http://' => 'https://',
+            ]);
+        }
+
+        $this->set('url', $url);
+        return $url;
+    }
+
+    protected function getHttpResponse(Client $client): ResponseInterface
+    {
+        // This allows policies to specify urls that still contain a domain.
+        $url = $this->prepareUrl();
+        $method = $this->getParameter('method');
+
+        $this->logger->info(__CLASS__ . ': ' . $method . ' ' . $url);
+        $options = $this->getParameter('options');
+
+        $handler = HandlerStack::create();
+
+        $client = $client->create([
+          'cache' => $this->getParameter('use_cache'),
+          'handler' => $handler,
+        ]);
+
+        $handler->unshift(Middleware::mapRequest(function (RequestInterface $request) {
+            $this->set('req_headers', $request->getHeaders());
+            return $request;
+        }));
+
+        return $client->request($method, $url, $options);
+    }
+
+    /**
+     * Gather the headers from a response.
+     */
+    protected function gatherHeaders(ResponseInterface $response): array
     {
         $headers = [];
 

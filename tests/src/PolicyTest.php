@@ -2,7 +2,10 @@
 
 namespace DrutinyTests;
 
+use Drutiny\Attribute\Parameter;
+use Drutiny\Attribute\Type;
 use Drutiny\Audit\DynamicParameterType;
+use Drutiny\Audit\InputDefinition;
 use Drutiny\Audit\SyntaxProcessor;
 use Drutiny\AuditFactory;
 use Drutiny\Policy;
@@ -142,5 +145,28 @@ class PolicyTest extends KernelTestCase {
     $this->assertEquals(DynamicParameterType::REPLACE, DynamicParameterType::fromParameterName('^foo'));
     $this->assertEquals(DynamicParameterType::STATIC, DynamicParameterType::fromParameterName('!foo'));
     $this->assertEquals(DynamicParameterType::NONE, DynamicParameterType::fromParameterName('foo'));
+
+    $parameter = new Parameter(
+      name: 'url', 
+      description: 'The url to request', 
+      type: Type::STRING, 
+      default: '{foo}', 
+      preprocess: DynamicParameterType::REPLACE
+    );
+
+    $definition = new InputDefinition();
+    $definition->addParameter($parameter);
+
+    $contexts = [
+      'foo' => 'bar'
+    ];
+    
+    $params = [];
+
+    $syntax = $this->container->get(SyntaxProcessor::class);
+    $params = $syntax->processParameters($params, $contexts, $definition);
+
+    $this->assertArrayHasKey('url', $params);
+    $this->assertEquals('bar', $params['url']);
   }
 }

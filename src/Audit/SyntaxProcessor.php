@@ -3,6 +3,7 @@
 namespace Drutiny\Audit;
 
 use DateTimeZone;
+use Drutiny\Audit\Exception\AuditException;
 use Drutiny\Helper\ExpressionLanguageTranslation;
 use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
@@ -73,6 +74,13 @@ class SyntaxProcessor {
      * Process an array of parameters for syntax evaluations.
      */
     public function processParameters(array $parameters, array $contexts = [], InputDefinition $definition = null):array {
+        // Ensure default values are set.
+        if (isset($definition)) {
+            foreach ($definition->getParameters() as $parameter) {
+                $parameters[$parameter->name] ??= $parameter->default;
+            }
+        }
+
         $processed_parameters = [];
         foreach ($parameters as $key => $value) {
 
