@@ -8,6 +8,7 @@ use Drutiny\Audit\AbstractAnalysis;
 use Drutiny\Policy\Dependency;
 use Drutiny\Target\DrushTargetInterface;
 use Drutiny\Target\FilesystemInterface;
+use Symfony\Component\Process\Process;
 
 /**
  * Checks for existence of requested file/directory on specified path.
@@ -167,7 +168,7 @@ class FilesExistenceAnalysis extends AbstractAnalysis {
     $command = implode(' ', $command) . ' || exit 0';
     $this->logger->info('[' . __CLASS__ . '] ' . $command);
 
-    $matches = $this->target->run($command, function ($output) {
+    $matches = $this->target->execute(Process::fromShellCommandline($command), function ($output) {
       return array_filter(explode(PHP_EOL, $output));
     });
     $this->set('has_results', !empty($matches));
