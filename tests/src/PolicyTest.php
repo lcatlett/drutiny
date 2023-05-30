@@ -144,8 +144,10 @@ class PolicyTest extends KernelTestCase {
     $this->assertEquals(DynamicParameterType::EVALUATE, DynamicParameterType::fromParameterName('$foo'));
     $this->assertEquals(DynamicParameterType::REPLACE, DynamicParameterType::fromParameterName('^foo'));
     $this->assertEquals(DynamicParameterType::STATIC, DynamicParameterType::fromParameterName('!foo'));
-    $this->assertEquals(DynamicParameterType::NONE, DynamicParameterType::fromParameterName('foo'));
+    $this->assertEquals(DynamicParameterType::NONE, DynamicParameterType::fromParameterName('foo'));    
+  }
 
+  public function testProcessParameters() {
     $parameter = new Parameter(
       name: 'url', 
       description: 'The url to request', 
@@ -168,5 +170,16 @@ class PolicyTest extends KernelTestCase {
 
     $this->assertArrayHasKey('url', $params);
     $this->assertEquals('bar', $params['url']);
+
+    $parameters = [
+      '^list' => [
+        '{foo}'
+      ]
+    ];
+    $params = $syntax->processParameters($parameters, $contexts);
+
+    $this->assertArrayHasKey('list', $params);
+    $this->assertArrayHasKey(0, $params['list']);
+    $this->assertEquals('bar', $params['list'][0]);
   }
 }

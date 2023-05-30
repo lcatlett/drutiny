@@ -3,7 +3,6 @@
 namespace Drutiny\Audit;
 
 use DateTimeZone;
-use Drutiny\Audit\Exception\AuditException;
 use Drutiny\Helper\ExpressionLanguageTranslation;
 use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
@@ -47,18 +46,18 @@ class SyntaxProcessor {
         }
 
         // Cannot process on any other data types other than string and array.
-        if (!is_string($value)) {
-            throw new InvalidArgumentException("$name must be a string to use dynamic parameter processing: " . gettype($value));
+        if (!($is_string = is_string($value)) && (is_array($value) && !array_is_list($value))) {
+            throw new InvalidArgumentException("$name must be a string or list to use dynamic parameter processing: " . gettype($value));
         }
+        $value = $is_string ? [$value] : $value;
         
         $processed_value = match ($type) {
-            DynamicParameterType::REPLACE => $this->interpolate($value, $contexts),
-            DynamicParameterType::EVALUATE => $this->evaluate($value, 'twig', $contexts),
+            DynamicParameterType::REPLACE => array_map(fn ($v) => $this->interpolate($v, $contexts), $value),
+            DynamicParameterType::EVALUATE => array_map(fn ($v) => $this->evaluate($v, 'twig', $contexts), $value),
             default => $value
         };
-        // $log_value = json_encode($processed_value);
-        // $this->logger->debug("Processing $name: $value => $log_value.");
-        return $processed_value;
+
+        return $is_string ? reset($processed_value) : $processed_value;
     }
 
     /**
@@ -82,7 +81,11 @@ class SyntaxProcessor {
         }
 
         $processed_parameters = [];
+        $ignored_parameters = [];
         foreach ($parameters as $key => $value) {
+            if (in_array($key, $ignored_parameters)) {
+                continue;
+            }
 
             $preprocess = DynamicParameterType::fromParameterName($key);
 
@@ -92,11 +95,17 @@ class SyntaxProcessor {
             }
 
             $name = $this->processParameterName($key);
+
+            if ($name != $key && isset($parameters[$name])) {
+                $this->logger->warning("$name already exists and will be overridden by the dynamic parameter: $key.");
+            }
+
             $processed_parameters[$name] = $this->processParameter(
                 name: $preprocess->decorateParameterName($name),
                 value: $value, 
                 contexts: $contexts
             );
+            $ignored_parameters[] = $name;
         }
         return $processed_parameters;
     }
