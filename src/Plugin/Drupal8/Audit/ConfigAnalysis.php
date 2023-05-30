@@ -2,31 +2,23 @@
 
 namespace Drutiny\Plugin\Drupal8\Audit;
 
-use Drutiny\Sandbox\Sandbox;
+use Drutiny\Attribute\DataProvider;
+use Drutiny\Attribute\Parameter;
+use Drutiny\Attribute\Type;
 use Drutiny\Audit\AbstractAnalysis;
 use Drutiny\Helper\TextCleaner;
 
 /**
  * Check a configuration is set correctly.
  */
+#[Parameter(name: 'collection', description: 'The collection the config belongs to.', type: Type::STRING, mode: Parameter::REQUIRED)]
 class ConfigAnalysis extends AbstractAnalysis
 {
-
-
-    public function configure():void
-    {
-        parent::configure();
-        $this->addParameter(
-           'collection',
-           static::PARAMETER_OPTIONAL,
-           'The collection the config belongs to.'
-        );
-    }
-
   /**
    * @inheritDoc
    */
-    public function gather(Sandbox $sandbox)
+    #[DataProvider]
+    public function drushConfigGet():void
     {
         $collection = $this->getParameter('collection');
 
