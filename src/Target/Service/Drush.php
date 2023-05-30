@@ -29,6 +29,7 @@ class Drush implements ServiceInterface
       'updb' => 'updb',
       'updatedbStatus' => 'updatedb:status',
       'variableGet' => 'vget',
+      'purgeDiagnostics' => 'p:diagnostics'
     ];
     public function __construct(protected TransportInterface $transport, protected LoggerInterface $logger)
     {
