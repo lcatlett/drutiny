@@ -51,10 +51,18 @@ class Helper {
     return $element . '></div>';
   }
 
+  /**
+   * Render a table and chart in a twig templated message.
+   * 
+   * Each column in the table is a new series of data.
+   * The first column is the x-axis.
+   */
   public static function filterChartTable(array $headers, array $rows, Chart|array $chart) {
     if (is_array($chart)) {
       $chart = Chart::fromArray($chart);
     }
+
+    $chart = $chart->addXaxisLabels('tr td:nth-child(1)');
 
     for ($i=2; $i < (count($headers) + 1); $i++) {
       $chart = $chart->addSeriesLabel("tr th:nth-child($i)")->addSeries("tr td:nth-child($i)");

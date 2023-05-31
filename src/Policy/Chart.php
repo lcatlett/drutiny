@@ -69,6 +69,14 @@ class Chart {
         return new static(...$args);
     }
 
+    public function addXaxisLabels(string $css_selector): self {
+        return $this->with(labels: $css_selector);
+    }
+
+    public function addPieLabels(string $css_selector): self {
+        return $this->with(labels: $css_selector);
+    }
+
     /**
      * Add a series to the existing chart as a new object.
      */
