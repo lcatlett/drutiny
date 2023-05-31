@@ -2,7 +2,8 @@
 
 namespace Drutiny\Target\Transport;
 
-use Drutiny\Target\InvalidTargetException;
+use DateTime;
+use Drutiny\Target\Exception\InvalidTargetException;
 use Psr\Cache\CacheItemInterface;
 use Symfony\Component\Process\Process;
 
@@ -43,8 +44,8 @@ class TshTransport extends SshTransport {
     if (!empty($this->telesyncRegion)) {
       $activeRegions = $this->getActiveTelesyncRegions();
       // This means telesync is connected to a different region and we'd have to change that.
-      if (!empty($activeRegions) && !in_array($this->telesyncRegion, $activeRegions)) {
-        throw new InvalidTargetException("Cannot access target on current telesync clusters: " . implode(', ', $activeRegions) . ". You must connect to '{$this->telesyncRegion}' instead.");
+      if (!empty($activeRegions) && !in_array($this->telesyncRegion, array_keys($activeRegions))) {
+        throw new InvalidTargetException("Cannot access target on current telesync clusters: " . implode(', ', array_keys($activeRegions)) . ". You must connect to '{$this->telesyncRegion}' instead.");
       }
       $args[] = '--proxy=' . $this->telesyncRegion;
     }
@@ -57,12 +58,30 @@ class TshTransport extends SshTransport {
     return implode(' ', $args);
   }
 
+  /**
+   * Get a list of active regions.
+   */
   protected function getActiveTelesyncRegions():array
   {
-    return $this->localCommand->run(Process::fromShellCommandline('telesync status | grep Cluster | awk \'{print $2}\''), function (string $output, CacheItemInterface $cache):array {
-      $cache->expiresAfter(300);
-      $clusters = explode("\n", $output);
-      return array_filter(array_map('trim', $clusters));
-    }, 60);
+    return $this->localCommand->run(Process::fromShellCommandline("telesync status | egrep '(Cluster:)|(Valid until:)'"), function (string $output, CacheItemInterface $cache):array {
+      $cache->expiresAfter(1);
+      $clusters = [];
+      $cluster = null;
+      foreach (array_filter(array_map('trim', explode("\n", $output))) as $row) {
+        list($key, $value) = explode(':', $row, 2);
+        if ($key == 'Cluster') {
+          $cluster = trim($value);
+          continue;
+        }
+        if ($key == 'Valid until' && $cluster !== null) {
+          $clusters[$cluster] = new DateTime(substr(trim($value), 0, strpos(trim($value), ' [')));
+          $cluster = null;
+        }
+      }
+
+      $now = new DateTime();
+
+      return array_filter($clusters, fn($c) => $c > $now);
+    });
   }
 }
