@@ -285,7 +285,7 @@ abstract class Audit implements AuditInterface
                 // Use SyntaxProcessor to process build_parameters if the key denotes
                 // it should be processed.
                 if (($processed_key = $this->syntaxProcessor->processParameterName($key)) != $key) {
-                    $value = $this->syntaxProcessor->processParameter($key, $value);
+                    $value = $this->syntaxProcessor->processParameter($key, $value, $this->getContexts());
                     $key = $processed_key;
                 }
                 // Otherwise fallback to standard twig evaluation.
