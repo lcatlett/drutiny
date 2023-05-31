@@ -73,6 +73,7 @@ class TargetMetadataCommand extends DrutinyBaseCommand
           $value = $target->getProperty($key);
           $object[$key] = $value;
           $value = is_object($value) ? '<object> (' . get_class($value) . ')'  : '<'.gettype($value) . '> ' . Yaml::dump($value, 8, 2);
+          $this->logger->debug("$key: $value");
           if (strlen($value) > 1024) {
             $value = substr($value, 0, 1024) . '...';
           }
