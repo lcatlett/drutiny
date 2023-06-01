@@ -6,6 +6,7 @@ use DateTimeZone;
 use Drutiny\Helper\ExpressionLanguageTranslation;
 use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
+use Twig\Error\RuntimeError;
 
 class SyntaxProcessor {
 
@@ -100,11 +101,17 @@ class SyntaxProcessor {
                 $this->logger->warning("$name already exists and will be overridden by the dynamic parameter: $key.");
             }
 
-            $processed_parameters[$name] = $this->processParameter(
-                name: $preprocess->decorateParameterName($name),
-                value: $value, 
-                contexts: $contexts
-            );
+            try {
+                $processed_parameters[$name] = $this->processParameter(
+                    name: $preprocess->decorateParameterName($name),
+                    value: $value, 
+                    contexts: $contexts
+                );
+            }
+            catch (RuntimeError $e) {
+                throw new InvalidArgumentException("Failed to create parameter '$name':\n$value\n" . $e->getMessage(), 0, $e);
+            }
+            
             $ignored_parameters[] = $name;
         }
         return $processed_parameters;

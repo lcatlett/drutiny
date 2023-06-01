@@ -10,6 +10,7 @@ use Drutiny\AuditResponse\State;
 use Drutiny\Entity\DataBag;
 use Drutiny\Policy\Severity;
 use Drutiny\Sandbox\Sandbox;
+use InvalidArgumentException;
 use ReflectionClass;
 use Twig\Error\RuntimeError;
 
@@ -146,9 +147,15 @@ class AbstractAnalysis extends Audit
             }
         }
         $omitIf = $this->getParameter('omitIf');
-        if ($omitIf !== null && $this->evaluate($omitIf, 'twig')) {
-          $this->logger->debug(__CLASS__ . ':EXPRESSION(omitIf): ' . $omitIf);
-          return State::IRRELEVANT->value;
+
+        try {
+          if ($omitIf !== null && $this->evaluate($omitIf, 'twig')) {
+            $this->logger->debug(__CLASS__ . ':EXPRESSION(omitIf): ' . $omitIf);
+            return State::IRRELEVANT->value;
+          }
+        }
+        catch (RuntimeError $e) {
+          throw new InvalidArgumentException("Could not determine outcome of 'omitIf' statement due to a Twig Runtime error. Note: variables from the `variables` parameter have not been evaluated yet.", 0, $e);
         }
 
        $this->processVariables();

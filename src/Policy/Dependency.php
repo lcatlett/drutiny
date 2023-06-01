@@ -7,7 +7,7 @@ use Drutiny\Helper\ExpressionLanguageTranslation;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 
 #[Autoconfigure(autowire: false)]
-#[Attribute]
+#[Attribute(Attribute::IS_REPEATABLE | Attribute::TARGET_CLASS)]
 class Dependency
 {
 
