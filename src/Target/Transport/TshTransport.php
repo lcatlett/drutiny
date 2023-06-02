@@ -3,8 +3,10 @@
 namespace Drutiny\Target\Transport;
 
 use DateTime;
+use Drutiny\Helper\ProcessUtility;
 use Drutiny\Target\Exception\InvalidTargetException;
 use Psr\Cache\CacheItemInterface;
+use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
 /**
@@ -12,7 +14,43 @@ use Symfony\Component\Process\Process;
  */
 class TshTransport extends SshTransport {
 
+  const ERROR_AMBIGUOUS_HOST_MSG = 'ambiguous host could match multiple nodes';
+
   protected string $telesyncRegion = '';
+
+  /**
+   * {@inheritdoc}
+   */
+  public function send(Process $command, ?callable $processor = null)
+  {
+    try {
+      return parent::send($command, $processor);
+    }
+    // Look for teleport issue where an ambiguous host was detected.
+    catch (ProcessFailedException $e) {
+      $err = $e->getProcess()->getErrorOutput();
+      if (strpos($err, self::ERROR_AMBIGUOUS_HOST_MSG) === false) {
+        throw $e;
+      }
+      $output = $e->getProcess()->getOutput();
+      $host = preg_quote($this->sshConfig['Host']);
+
+      // Choose the first node found.
+      if (!preg_match("/$host ([0-9a-z\-]+) /", $output, $matches)) {
+        throw $e;
+      }
+      $node = $matches[1];
+
+      $this->logger->warning("Teleport found multiple nodes for {$this->sshConfig['Host']}. Using first found: $node.");
+
+      // Set future calls to use the Node rather than the hostname to avoid
+      // ambiguous errors for the remainder of the process.
+      $this->sshConfig['Host'] = $node;
+
+      // Retry.
+      return parent::send($command, $processor);
+    }
+  }
 
   /**
    * Formulate an SSH command. E.g. ssh -o User=foo hostname.bar
@@ -64,7 +102,6 @@ class TshTransport extends SshTransport {
   protected function getActiveTelesyncRegions():array
   {
     return $this->localCommand->run(Process::fromShellCommandline("telesync status | egrep '(Cluster:)|(Valid until:)'"), function (string $output, CacheItemInterface $cache):array {
-      $cache->expiresAfter(1);
       $clusters = [];
       $cluster = null;
       foreach (array_filter(array_map('trim', explode("\n", $output))) as $row) {
@@ -81,7 +118,10 @@ class TshTransport extends SshTransport {
 
       $now = new DateTime();
 
-      return array_filter($clusters, fn($c) => $c > $now);
+      $valid = array_filter($clusters, fn($c) => $c > $now);
+      $cache->expiresAt(min(max($valid), new DateTime('+1 hour')));
+
+      return $valid;
     });
   }
 }
