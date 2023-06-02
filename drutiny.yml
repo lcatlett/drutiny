@@ -455,7 +455,7 @@ services:
         - [setBarCharacter, ['▓']]
         - [setFormatDefinition, ['drutiny', '%progress_bar.template%']]
         - [setFormat, ['drutiny']]
-        - [setMessage, ['%progress_bar.loading_message%']]
+        - [setMessage, ['%progress_bar.loading_message%', 'message']]
 
     Symfony\Component\Console\Style\SymfonyStyle:
     Symfony\Component\Console\Terminal:
