@@ -2,81 +2,57 @@
 
 namespace Drutiny\Plugin\Drupal7\Audit;
 
+use Drutiny\Attribute\DataProvider;
+use Drutiny\Attribute\Parameter;
+use Drutiny\Attribute\Type;
 use Drutiny\Audit\AbstractAnalysis;
-use Drutiny\Sandbox\Sandbox;
-use Symfony\Component\Process\Process;
+use Drutiny\Helper\TextCleaner;
+use Drutiny\Policy;
+use Drutiny\Policy\Dependency;
 
 /**
  * Check a configuration is set correctly.
- * @Param(
- *  name = "key",
- *  description = "The name of the variable to compare.",
- *  type = "string",
- * )
- * @Param(
- *  name = "value",
- *  description = "The value to compare against",
- *  type = "mixed",
- * )
- * @Param(
- *  name = "comp_type",
- *  description = "The comparison operator to use",
- *  type = "string",
- *  default = "=="
- * )
- * @Param(
- *  name = "required_modules",
- *  description = "An optional array of modules required in order to check variables",
- *  type = "array",
- *  default = {}
- * )
- * @Param(
- *  name = "default",
- *  description = "An optional default value if a value is not found",
- *  type = "mixed",
- *  default = "no-value-provided"
- * )
- * @Token(
- *  name = "reading",
- *  description = "The value read from the Drupal variables system",
- *  type = "mixed"
- * )
  */
+#[Parameter(name: 'key', description: 'The name of the variable to get.', type: Type::STRING, mode: Parameter::REQUIRED)]
+#[Dependency(expression: 'Drupal.isVersion7')]
 class VariableAnalysis extends AbstractAnalysis
 {
+    private array $vars;
+    private array $keys = [];
+
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
-    public function gather(Sandbox $sandbox)
+    public function prepare(Policy $policy): void
     {
-        $key = $sandbox->getParameter('key');
-
-        $vars = $this->target->getService('drush')->variableGet($key, [
-            'format' => 'json',
-          ])->run(function (Process $process) {
-            $output = $process->getOutput();
-            if ($process->isSuccessful()) {
-                return json_decode($output, true);
-            }
-            else {
-                return [];
-            }
-            
-          });
-
-        $this->set($key, $vars[$key] ?? null);
+        $this->keys[] = $policy->parameters->get('key');
+        $this->keys = array_unique($this->keys);
     }
 
-    /**
-     * @inheritDoc
-     */
-    public function configure():void
+    #[DataProvider]
+    public function variableGet(): void
     {
-        parent::configure();
-        $this->addParameter(
-            'key',
-            static::PARAMETER_OPTIONAL,
-            'The name of the variable to get.'
-        );
+        $key = $this->getParameter('key');
+
+        if (!isset($this->vars)) {
+            $this->vars = $this->target->getService('drush')->variableGet([
+                'format' => 'json',
+            ])
+            ->run(function ($output) {
+                $vars = TextCleaner::decodeDirtyJson($output);
+                return array_filter($vars, function ($k) {
+                    return count(array_filter($this->keys, fn ($key) => strpos($k, $key) === 0));
+                },
+                ARRAY_FILTER_USE_KEY);
+
+            });
+        }
+
+        // Set variables that started with the variable name.
+        foreach (array_filter($this->vars, fn($k) => strpos($k, $key) === 0) as $name => $value) {
+            $this->set($name, $value);
+        }
+        // Ensure the variable name is set incase it wasn't present.
+        $this->set($key, $this->vars[$key] ?? null);
     }
 }
