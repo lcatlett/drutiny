@@ -51,6 +51,3 @@ Class MonologProgressBarHandler extends AbstractProcessingHandler {
       }
   }
 }
-
-
- ?>
