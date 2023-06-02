@@ -21,14 +21,12 @@ use Drutiny\Profile;
 use Drutiny\Profile\PolicyDefinition;
 use Drutiny\Target\TargetInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\Console\Helper\ProgressBar;
 use Twig\Error\RuntimeError;
 use UnexpectedValueException;
 
 class ReportFactory {
     public function __construct(
         protected LoggerInterface $logger,
-        protected ProgressBar $progressBar, 
         protected ForkManager $forkManager,
         protected AuditFactory $auditFactory,
         protected PolicyFactory $policyFactory,
@@ -97,6 +95,7 @@ class ReportFactory {
             array_walk($policies, fn($p) => $audit->prepare($p));
 
             foreach ($policies as $policy) {
+                $this->logger->info("Auditing $policy->title");
                 // Audit each policy inside its own fork.
                 $this->forkPolicyAudit($policy, $audit, $start, $end)
                      ->onError(fn($e, $f) => $errors[] = $this->handleForkError($e, $f, $policy));
@@ -105,8 +104,7 @@ class ReportFactory {
 
         // Wait for audit forks to return... 
         foreach ($this->forkManager->waitWithUpdates(400) as $remaining) {
-            $this->progressBar->setMessage(sprintf("%d/%d policy audits remaining for %s.", count($batch) - $remaining, count($batch), $target->uri));
-            $this->progressBar->display();
+            $this->logger->info(sprintf("%d/%d policy audits remaining for %s.", count($batch) - $remaining, count($batch), $target->uri));
         }
         $results = array_merge($this->forkManager->getForkResults(), $early_results);
         $returned = count($results);
