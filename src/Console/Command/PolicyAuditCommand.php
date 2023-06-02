@@ -9,7 +9,6 @@ use Drutiny\Report\FormatFactory;
 use Drutiny\Report\ReportFactory;
 use Drutiny\Target\TargetFactory;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -32,7 +31,6 @@ class PolicyAuditCommand extends DrutinyBaseCommand
     protected ReportFactory $reportFactory,
     protected FormatFactory $formatFactory,
     protected LoggerInterface $logger,
-    protected ProgressBar $progressBar,
     protected LanguageManager $languageManager
   )
   {
@@ -88,7 +86,6 @@ class PolicyAuditCommand extends DrutinyBaseCommand
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $this->progressBar->start();
         $this->initLanguage($input);
 
         $name = $input->getArgument('policy');
@@ -106,7 +103,7 @@ class PolicyAuditCommand extends DrutinyBaseCommand
           'parameters' => $parameters
         ]];
 
-        $this->progressBar->setMessage("Loading profile...");
+        $this->logger->info("Loading profile...");
 
         $profile = $this->profileFactory->create([
           'title' => 'Policy audit: ' . $name,
@@ -125,7 +122,7 @@ class PolicyAuditCommand extends DrutinyBaseCommand
           ]
         ]);
 
-        $this->progressBar->setMessage("Loading target...");
+        $this->logger->info("Loading target...");
 
         // Setup the target.
         $target = $this->targetFactory->create($input->getArgument('target'), $input->getOption('uri'));
@@ -138,17 +135,14 @@ class PolicyAuditCommand extends DrutinyBaseCommand
         $profile->setReportingPeriod($this->getReportingPeriodStart($input), $this->getReportingPeriodEnd($input));
 
         $policies = [];
-        $this->progressBar->setMessage("Loading policy definitions...");
+        $this->logger->info("Loading policy definitions...");
         foreach ($profile->policies as $definition) {
             $policies[] = $definition->getPolicy($this->policyFactory);
         }
 
-        $this->progressBar->setMessage("Assessing target...");
+        $this->logger->info("Assessing target...");
 
         $report = $this->reportFactory->create($profile, $target);
-
-        $this->progressBar->finish();
-        $this->progressBar->clear();
 
         $style = new SymfonyStyle($input, $output);
         if ($report->results[$name]->isIrrelevant()) {
