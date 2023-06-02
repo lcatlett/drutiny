@@ -67,13 +67,22 @@ abstract class Audit implements AuditInterface
             $this->logger = $logger->withName('audit');
         }
         $this->definition = new InputDefinition();
+        $this->resetDataBag();
+        $this->registerParameters();
+        $this->configure();
+        $this->verbosity = $output->getVerbosity();
+    }
+
+    /**
+     * Reset the databag.
+     * 
+     * This should happen every time an policy is audited.
+     */
+    protected function resetDataBag(): void {
         $this->dataBag = new DataBag();
         $this->dataBag->add([
             'parameters' => new DataBag(),
         ]);
-        $this->registerParameters();
-        $this->configure();
-        $this->verbosity = $output->getVerbosity();
     }
 
     /**
@@ -135,6 +144,8 @@ abstract class Audit implements AuditInterface
      */
     final public function execute(Policy $policy, $remediate = false): AuditResponse
     {
+        $this->resetDataBag();
+
         // Ensure the syntax evaluator uses the right Timezone.
         if (isset($this->reportingPeriodStart)) {
             $this->syntaxProcessor->setTimezone($this->reportingPeriodStart->getTimezone());
