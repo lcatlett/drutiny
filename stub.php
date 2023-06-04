@@ -38,7 +38,7 @@ $versions = array_filter(array_map(function($file) {
 
 // Load from git.
 if (empty($versions) && file_exists(DRUTINY_LIB . '/.git') && $git_bin = exec('which git')) {
-  $versions[] = exec(sprintf('%s -C %s branch --no-color | cut -b 3-', $git_bin, DRUTINY_LIB)) . '-dev';
+  $versions[] = exec(sprintf('%s -C %s branch --show-current', $git_bin, DRUTINY_LIB)) . '-dev';
 }
 
 // Fallback option.
