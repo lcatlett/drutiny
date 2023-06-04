@@ -61,28 +61,37 @@ class AuditInfoCommand extends Command
 
         $info[] = new TableSeparator();
 
-        $info[] = [
-           '<info>Parameters</info>',
-           '<fg=yellow>Name</>',
-           '<fg=yellow>Type</>',
-           '<fg=yellow>Input mode</>',
-           '<fg=yellow>Preprocessing</>',
-           '<fg=yellow>Description</>',
-           '<fg=yellow>Default value</>'
-        ];
+        $params_by_class = [];
+
         foreach ($audit_instance->getDefinition()->getParameters() as $param) {
-          $info[] = [
-            '',
-            $param->name,
-            $param->type?->value,
-            $param->isRequired() ? '<fg=red>Required</>' : 'Optional',
-            $param->preprocess->getTitle(),
-            $param->description,
-            Yaml::dump($param->default),
-          ];
+          $params_by_class[$param->class][] = $param;
         }
 
-        $info[] = new TableSeparator();
+        foreach ($params_by_class as $class => $params) {
+          $info[] = [ new TableCell("<info>Parameters from $class</info>", ['colspan' => 7]) ];
+          $info[] = new TableSeparator();
+          $info[] = [
+            '<info>Parameters</info>',
+            '<fg=yellow>Name</>',
+            '<fg=yellow>Type</>',
+            '<fg=yellow>Input mode</>',
+            '<fg=yellow>Preprocessing</>',
+            '<fg=yellow>Description</>',
+            '<fg=yellow>Default value</>'
+          ];
+          foreach ($params as $param) {
+            $info[] = [
+              '',
+              $param->name,
+              $param->type?->value,
+              $param->isRequired() ? '<fg=red>Required</>' : 'Optional',
+              $param->preprocess->getTitle(),
+              $param->description,
+              Yaml::dump($param->default),
+            ];
+          }
+          $info[] = new TableSeparator();
+        }
 
         $policy_list = array_filter($this->policyFactory->getPolicyList(), function ($policy) use ($audit) {
             return $policy['class'] == $audit;

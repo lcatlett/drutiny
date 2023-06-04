@@ -93,7 +93,8 @@ abstract class Audit implements AuditInterface
         $reflection = new ReflectionClass($this);
         do {
             foreach ($reflection->getAttributes(Parameter::class) as $attr) {
-                $parameter = $attr->newInstance();
+                $parameter = $attr->newInstance()->fromClass($reflection->getName());
+
                 // Don't let parent classes override parameters from child classes.
                 if ($this->definition->hasParameter($parameter->name)) {
                     continue;
@@ -512,7 +513,8 @@ abstract class Audit implements AuditInterface
             mode: $mode ?? Parameter::OPTIONAL, 
             description: $description, 
             default: $default,
-            type: $type
+            type: $type,
+            class: $this,
         ));
         return $this;
     }

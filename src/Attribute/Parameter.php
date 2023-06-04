@@ -16,6 +16,8 @@ class Parameter {
     const REQUIRED = 1;
     const OPTIONAL = 2;
 
+    public readonly string $class;
+
     public function __construct(
         public readonly string $name,
         public readonly string $description,
@@ -24,7 +26,25 @@ class Parameter {
         public readonly ?Type $type = null,
         public readonly ?array $enums = null,
         public readonly DynamicParameterType $preprocess = DynamicParameterType::NONE,
-    ) {}
+        string|object $class = null
+    ) {
+        if ($class !== null) {
+            $this->fromClass($class);
+        }
+    }
+
+    public function fromClass(string|object $class):static {
+        if (is_object($class)) {
+            $this->class = get_class($class);
+        }
+        elseif (!class_exists($class)) {
+            throw new InvalidArgumentException($class . ' does not exist.');
+        }
+        else {
+            $this->class = $class;
+        }
+        return $this;
+    }
 
     public function isRequired():bool
     {

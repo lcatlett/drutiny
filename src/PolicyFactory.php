@@ -81,7 +81,7 @@ class PolicyFactory
     /**
      * Acquire a list of available policies.
      *
-     * @return array of policy information arrays.
+     * @return array[] of policy information arrays.
      */
     public function getPolicyList($include_invalid = false)
     {
