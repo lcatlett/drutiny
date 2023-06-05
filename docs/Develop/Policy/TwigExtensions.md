@@ -1,6 +1,7 @@
 # Twig Extensions
 
 Drutiny uses the Twig templating engine to:
+
 * Template profile reports into Markdown and HTML formats
 * Template policy success, failure, warning, remediation and description messages.
 * Evaluate [dynamic parameters](DynamicParameters.md) including `build_parameters`,
@@ -14,6 +15,7 @@ Drutiny uses Twig.
 
 ## Default Extensions
 By default, Drutiny loads three extensions from Twig:
+
 * `Twig\Extension\DebugExtension`
 * `Twig\Extension\StringLoaderExtension`
 * `Twig\Extra\String\StringExtension`
