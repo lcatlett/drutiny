@@ -14,6 +14,7 @@ nav:
         - Getting started: Develop/Policy/GettingStarted.md
         - Dynamic parameters: Develop/Policy/DynamicParameters.md
         - Pipelines: Develop/Policy/Pipelines.md
+        - Twig extensions: Develop/Policy/TwigExtensions.md
     - Profile reference: Develop/Profile/GettingStarted.md
     - Audit reference:
       - Getting started: Develop/Audit/GettingStarted.md
