@@ -113,6 +113,11 @@ class Policy implements ExportableInterface
     public function with(...$properties):self
     {
         $args = MergeUtility::arrayMerge($this->export(), $properties);
+
+        // Don't allow args to be kept if they're explicitly set.
+        if (isset($properties['parameters'])) {
+          $args['parameters'] = $properties['parameters'];
+        }
         return new static(...$args);
     }
 
