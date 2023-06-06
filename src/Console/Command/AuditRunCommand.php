@@ -101,7 +101,7 @@ class AuditRunCommand extends DrutinyBaseCommand
 
             $info = Yaml::parse($value);
 
-            $parameters = $policy->parameters;
+            $parameters = $policy->parameters->all();
             $parameters[$key] = $info;
             $policy = $policy->with(parameters: $parameters);
         }
