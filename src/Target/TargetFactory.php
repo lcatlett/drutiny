@@ -61,7 +61,7 @@ class TargetFactory
     /**
      * Test if a target is of a given type by its source name.
      */
-    public function typeOf(TargetInterface $target, string $name = 'target'): bool
+    public function typeOf(TargetInterface $target, string $name = TargetInterface::class): bool
     {
       return $target instanceof ($this->targetMap[$name] ?? $name);
     }
