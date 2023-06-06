@@ -101,7 +101,8 @@ class TshTransport extends SshTransport {
    */
   protected function getActiveTelesyncRegions():array
   {
-    return $this->localCommand->run(Process::fromShellCommandline("telesync status | egrep '(Cluster:)|(Valid until:)'"), function (string $output, CacheItemInterface $cache):array {
+    // Add telesyncRegion to the cache ID.
+    return $this->localCommand->run(Process::fromShellCommandline("telesync status | egrep '(Cluster:)|(Valid until:)' # {$this->telesyncRegion}"), function (string $output, CacheItemInterface $cache):array {
       $clusters = [];
       $cluster = null;
       foreach (array_filter(array_map('trim', explode("\n", $output))) as $row) {
@@ -119,7 +120,7 @@ class TshTransport extends SshTransport {
       $now = new DateTime();
 
       $valid = array_filter($clusters, fn($c) => $c > $now);
-      $cache->expiresAt(min(max($valid), new DateTime('+1 hour')));
+      $cache->expiresAt(min(max($valid), new DateTime('+60 seconds')));
 
       return $valid;
     });
