@@ -4,7 +4,6 @@ namespace Drutiny\Audit\Drupal;
 
 use Drutiny\Audit;
 use Drutiny\Sandbox\Sandbox;
-use Drutiny\Annotation\Token;
 
 /**
  * Drush Status Information

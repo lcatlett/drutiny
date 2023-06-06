@@ -3,7 +3,6 @@
 namespace Drutiny\Audit\Drupal;
 
 use Drutiny\Audit\AbstractAnalysis;
-use Drutiny\Helper\ProcessUtility;
 use Drutiny\Helper\TextCleaner;
 use Drutiny\Sandbox\Sandbox;
 
