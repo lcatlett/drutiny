@@ -31,6 +31,9 @@ class Parameter {
         if ($class !== null) {
             $this->fromClass($class);
         }
+        if (in_array($name, ['parameters'])) {
+            throw new InvalidArgumentException("Parameter name '$name' is a reserved keyword.");
+        }
     }
 
     public function fromClass(string|object $class):static {
