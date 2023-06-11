@@ -125,6 +125,10 @@ class PolicyListCommand extends DrutinyBaseCommand
         }
         $io->table($headers, $rows);
 
+        $io->writeln(sprintf('%d policies, %d sources', count($rows), count(
+            array_unique(array_map(fn ($p) => explode(',', $p['source'])[0], $rows))
+        )));
+
         return 0;
     }
 
