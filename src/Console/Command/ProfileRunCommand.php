@@ -127,15 +127,14 @@ class ProfileRunCommand extends DrutinyBaseCommand
      */
     protected function prepareProfile(InputInterface $input): Profile
     {
+        $this->progressBar->setMessage("Loading profile..");
+        $this->progressBar->display();
         $profile = $this->profileFactory->loadProfileByName($input->getArgument('profile'));
 
         // Override the title of the profile with the specified value.
         if ($title = $input->getOption('title')) {
             $profile = $profile->with(title: $title);
         }
-
-        $this->progressBar->advance();
-        $this->progressBar->setMessage("Loading policy definitions..");
 
         // Allow command line to add policies to the profile.
         $included_policies = $input->getOption('include-policy');
@@ -153,6 +152,7 @@ class ProfileRunCommand extends DrutinyBaseCommand
         }
 
         $profile->setReportingPeriod($this->getReportingPeriodStart($input), $this->getReportingPeriodEnd($input));
+        $this->progressBar->advance();
 
         return $profile;
     }
@@ -163,12 +163,15 @@ class ProfileRunCommand extends DrutinyBaseCommand
     protected function loadUris(InputInterface $input): array
     {
         // Get the URLs.
+        $this->progressBar->setMessage("Loading URIs..");
+        $this->progressBar->display();
+
         $uris = $input->getOption('uri');
-        $target = $this->targetFactory->create($input->getArgument('target'));
 
         $domains = [];
         foreach ($this->parseDomainSourceOptions($input) as $source => $options) {
             $this->logger->debug("Loading domains from $source.");
+            $target ??= $this->targetFactory->create($input->getArgument('target'));
             $domains = array_merge($this->domainSource->getDomains($target, $source, $options), $domains);
         }
 
@@ -177,6 +180,7 @@ class ProfileRunCommand extends DrutinyBaseCommand
             // Omit the "default" key that is present by default.
             $uris = array_merge($domains, ($uris === ['default']) ? [] : $uris);
         }
+        $this->progressBar->advance();
         return empty($uris) ? [null] : $uris;
     }
 
@@ -187,23 +191,22 @@ class ProfileRunCommand extends DrutinyBaseCommand
     {
         $this->initLanguage($input);
 
-        $this->progressBar->start();
+        $this->progressBar->start(2);
 
-        $this->progressBar->setMessage("Loading profile..");
         $profile = $this->prepareProfile($input, $this->progressBar);
-
-        $this->progressBar->advance();
-
         $uris = $this->loadUris($input);
 
         // Reset the progress step tracker.
-        $this->progressBar->setMaxSteps($this->progressBar->getMaxSteps() + count($profile->policies) + count($uris));
+        $this->progressBar->setMaxSteps($this->progressBar->getMaxSteps() + count($uris));
 
         $this->forkManager->setAsync($this->forkManager->isAsync() && (count($uris) > 1));
 
         $console = new SymfonyStyle($input, $output);
 
         foreach ($uris as $uri) {
+            $this->progressBar->setMessage("Running {$profile->title} on target $uri...");
+            $this->progressBar->display();
+
             $target = $this->targetFactory->create($input->getArgument('target'), $uri);
             $fork = $this->forkManager->create();
             $fork->setLabel(sprintf("Assessment of '%s': %s", $target->getId(), $uri));
@@ -220,10 +223,9 @@ class ProfileRunCommand extends DrutinyBaseCommand
                 $console->error($fork->getLabel()." failed: " . $e->getMessage());
             });
         }
-        $this->progressBar->advance();
 
         foreach ($this->forkManager->waitWithUpdates(600) as $remaining) {
-            $this->progressBar->setMessage(sprintf("%d/%d assessments remaining.", count($uris) - $remaining, count($uris)));
+            $this->progressBar->setMessage(sprintf("%d/%d assessments completed.", count($uris) - $remaining, count($uris)));
             $this->progressBar->display();
         }
 
