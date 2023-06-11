@@ -2,7 +2,6 @@
 
 namespace Drutiny\Report\Format;
 
-use Drutiny\Profile;
 use Drutiny\Report\FormatInterface;
 use Drutiny\Attribute\AsFormat;
 use Drutiny\Report\Report;

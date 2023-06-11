@@ -92,9 +92,14 @@ abstract class KernelTestCase extends TestCase {
         return $target;
     }
 
-    protected function getFixture($name) {
-        $filename = dirname(__DIR__) . '/fixtures/' . $name .'.yml';
+    protected function getFixture($name, $extension = 'yml') {
+        $filename = dirname(__DIR__) . '/fixtures/' . $name .'.' . $extension;
         if (!file_exists($filename)) return null;
-        return Yaml::parseFile($filename);
+        return match ($extension) {
+            'yml' => Yaml::parseFile($filename),
+            'yaml' => Yaml::parseFile($filename),
+            'json' => json_decode(file_get_contents($filename), true),
+            default => file_get_contents($filename)
+        };
     }
 }

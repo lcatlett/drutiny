@@ -276,12 +276,14 @@ services:
         - [addFunction, ['@twig.functions.semver_satisfies']]
         - [addTest, ['@twig.test.is_numeric']]
         - [addTest, ['@twig.test.keyed']]
-        - [addRuntimeLoader, ['@Drutiny\Report\TwigRuntimeLoader']]
+        - [addRuntimeLoader, ['@Twig\RuntimeLoader\ContainerRuntimeLoader']]
         - [addGlobal, ['logger', '@logger']]
         - [addGlobal, ['ext', 'md']]
 
     Twig\Environment:
       alias: twig
+    
+    Twig\RuntimeLoader\ContainerRuntimeLoader:
 
     twig.functions.policy_result:
       class: Twig\TwigFunction
@@ -475,6 +477,38 @@ services:
     Twig\Extension\StringLoaderExtension:
     Twig\Extra\Markdown\MarkdownExtension:
     Twig\Extra\Markdown\MarkdownInterface:
+      class: Drutiny\Report\Format\LeagueMarkdown\LeagueMarkdown
+      # class: Twig\Extra\Markdown\ErusevMarkdown
+    Parsedown:
+      class: Drutiny\Report\Format\MarkdownHelper
+      deprecated: ~
+
+    # CommonMark configuration
+    League\CommonMark\ConverterInterface:
+      class: League\CommonMark\MarkdownConverter
+    
+    # Required by @League\CommonMark\MarkdownConverter
+    League\CommonMark\Environment\EnvironmentInterface:
+      class: League\CommonMark\Environment\Environment
+      arguments:
+        $config:
+          default_attributes:
+            League\CommonMark\Extension\Table\Table:
+              class: table table-hover
+            League\CommonMark\Extension\Table\TableCell: 
+              scope: ['Drutiny\Report\Format\LeagueMarkdown\LeagueMarkdown', 'tableCellScopeAttribute']
+            League\CommonMark\Extension\Table\TableSection:
+              class: ['Drutiny\Report\Format\LeagueMarkdown\LeagueMarkdown', 'tableSectionClassAttribute']
+      calls:
+        - ['addExtension', ['@League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension']]
+        - ['addExtension', ['@League\CommonMark\Extension\DefaultAttributes\DefaultAttributesExtension']]
+        - ['addExtension', ['@League\CommonMark\Extension\GithubFlavoredMarkdownExtension']]
+    
+    # Register the extensions inside the container.
+    League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension:
+    League\CommonMark\Extension\GithubFlavoredMarkdownExtension:
+    League\CommonMark\Extension\DefaultAttributes\DefaultAttributesExtension:
+    
     Twig\Extra\Markdown\MarkdownRuntime:
     Twig\Extra\String\StringExtension:
     Symfony\Component\Console\Output\ConsoleOutput:

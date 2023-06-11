@@ -40,7 +40,8 @@
         "symfony/yaml": "^6.0",
         "twig/markdown-extra": "^3.0",
         "twig/string-extra": "^3.0",
-        "twig/twig": "^3.3.8"
+        "twig/twig": "^3.3.8",
+        "league/commonmark": "^2.4"
     },
     "conflict": {
       "drutiny/http": "*",

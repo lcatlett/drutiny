@@ -56,8 +56,10 @@ class Helper {
    * 
    * Each column in the table is a new series of data.
    * The first column is the x-axis.
+   * Each row in the $rows array can be an associative array where the
+   * keys are the $headers values.
    */
-  public static function filterChartTable(array $headers, array $rows, Chart|array $chart) {
+  public static function filterChartTable(array $headers, array $rows, Chart|array $chart, string $pad = '') {
     if (is_array($chart)) {
       $chart = Chart::fromArray($chart);
     }
@@ -68,9 +70,20 @@ class Helper {
       $chart = $chart->addSeriesLabel("tr th:nth-child($i)")->addSeries("tr td:nth-child($i)");
     }
 
+    $header_keys = array_is_list($headers) ? $headers : array_keys($headers);
+
     $element = [implode(' | ', $headers)];
     $element[] = implode(' | ', array_map(fn($h) => str_pad('', strlen($h), '-'), $headers));
     foreach ($rows as $row) {
+      if (!array_is_list($row)) {
+        // If rows are keyed by header value, then we should pad any absent key.
+        foreach ($header_keys as $header) {
+          $row[$header] ??= $pad;
+        }
+        // Ensure the row order reflects the header order.
+        $row = array_map(fn($h) => $row[$h], $header_keys);
+      }
+
       $element[] = implode(' | ', $row);
     }
     return self::filterChart($chart) . "\n\n" . implode(PHP_EOL, $element);
