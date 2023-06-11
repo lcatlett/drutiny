@@ -120,7 +120,9 @@ class TshTransport extends SshTransport {
       $now = new DateTime();
 
       $valid = array_filter($clusters, fn($c) => $c > $now);
-      $cache->expiresAt(min(max($valid), new DateTime('+60 seconds')));
+
+      $expiry = empty($valid) ? new DateTime('+1 second') : min(max($valid), new DateTime('+60 seconds'));
+      $cache->expiresAt($expiry);
 
       return $valid;
     });
