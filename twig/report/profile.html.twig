@@ -9,10 +9,15 @@
 {% block period %}
   {{ 'Reporting period' | heading }}
 
-  Period | Date time
-  ------ | ---------
-  Start | {{ assessment.reportingPeriodStart.format('Y-m-d H:i:s e') }}
-  End | {{ assessment.reportingPeriodEnd.format('Y-m-d H:i:s e') }}
+  <table>
+    <thead>
+      <tr><th>Period</th><th>Date time</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Start</td><td>{{ assessment.reportingPeriodStart.format('Y-m-d H:i:s e') }}</td></tr>
+      <tr><td>End</td><td>{{ assessment.reportingPeriodEnd.format('Y-m-d H:i:s e') }}</td></tr>
+    </tbody>
+  </table>
 {% endblock %}
 
 {% block recommendations %}

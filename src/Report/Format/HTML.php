@@ -35,7 +35,7 @@ class HTML extends TwigFormat
       // In 3.x we support Twig TemplateWrappers to be passed directly
       // to the report format.
       foreach ($this->definition->content->getBlockNames() as $block){
-        $sections[] = $markdown->convert($this->definition->content->renderBlock($block, $variables));
+        $sections[] = $this->definition->content->renderBlock($block, $variables);
       }
       return $sections;
     }
