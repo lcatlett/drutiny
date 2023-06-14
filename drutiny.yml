@@ -262,6 +262,7 @@ services:
         - [addFilter, ['@twig.filters.array_unique']]
         - [addFilter, ['@twig.filters.array_values']]
         - [addFilter, ['@twig.filters.chart']]
+        - [addFilter, ['@twig.filters.escape_md']]
         - [addFilter, ['@twig.filters.extract']]
         - [addFilter, ['@twig.filters.format_bytes']]
         - [addFilter, ['@twig.filters.json_decode']]
@@ -382,6 +383,13 @@ services:
       arguments:
         - 'chart'
         - ['Drutiny\Report\Twig\Helper', 'filterChart']
+        - is_safe: ['html']
+    
+    twig.filters.escape_md:
+      class: Twig\TwigFilter
+      arguments:
+        - 'escape_md'
+        - ['Drutiny\Report\Twig\Helper', 'escapeMarkdown']
         - is_safe: ['html']
 
     twig.functions.chartTable:

@@ -163,6 +163,22 @@ format:
             {% endblock %}
 ```
 
+### escape_md
+
+The escape_md filter allow you to escape text that may otherwise be interpreted by markdown later on.
+
+```yaml
+parameters:
+    variables:
+        command: cat apache-access.log | grep ' 200 '
+failure: |
+    We didn't find any HTTP 200 status response using this command:
+
+    Command | Result
+    ------- | ------
+    {{ command|escape_md }} | {{ result }}
+```
+
 ### yaml_dump
 
 The `yaml_dump` filter is a debug filter that can be used to dump contents into yaml format for viewing.

@@ -122,6 +122,12 @@ class Helper {
     return round($bytes, $precision) . ' ' . $units[$pow];
   }
 
+  public static function escapeMarkdown(string $text) {
+    return str_replace([
+      '\\', '-', '#', '*', '+', '`', '.', '[', ']', '(', ')', '!', '&', '<', '>', '_', '{', '}', '|', ], [
+      '\\\\', '\-', '\#', '\*', '\+', '\`', '\.', '\[', '\]', '\(', '\)', '\!', '\&', '\<', '\>', '\_', '\{', '\}', '\|'
+    ], $text);
+  }
 }
 
  ?>
