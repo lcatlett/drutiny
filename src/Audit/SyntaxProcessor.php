@@ -126,7 +126,6 @@ class SyntaxProcessor {
             if ($language == 'expression_language') {
                 $translation = new ExpressionLanguageTranslation($old = $expression);
                 $expression = $translation->toTwigSyntax();
-                $this->logger->warning("Expression language is deprecreated. Syntax will be translated to Twig. '$old' => '$expression'.");
             }
             return $this->twigEvaluator->execute($expression, $contexts);
         } catch (\Exception $e) {
