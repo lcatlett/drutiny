@@ -46,6 +46,12 @@ class PolicyPushCommand extends DrutinyBaseCommand
             'source',
             InputArgument::OPTIONAL,
             'The name of the source to push too.'
+        )
+        ->addOption(
+            'from',
+            'f',
+            InputOption::VALUE_OPTIONAL,
+            'The name of the source to load the policy from.'
         );
     }
 
@@ -54,18 +60,23 @@ class PolicyPushCommand extends DrutinyBaseCommand
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $source = $this->getPushSource($input, $output);
+        $remote = $this->getPushSource($input, $output);
 
         $io = new SymfonyStyle($input, $output);
 
-        if (!($source instanceof PushablePolicySourceInterface)) {
+        if (!($remote instanceof PushablePolicySourceInterface)) {
           $io->error('Source does not support policy push');
           return 1;
         }
-        $policy = $this->policyFactory->loadPolicyByName($input->getArgument('policy'));
+
+        if ($source = $input->getOption('from')) {
+          $source = $this->policyFactory->getSource($source);
+        }
+
+        $policy = $this->policyFactory->loadPolicyByName($input->getArgument('policy'), $source);
 
         try {
-          $policy = $source->push($policy);
+          $policy = $remote->push($policy);
         }
         catch (IdentityProviderException $e)
         {

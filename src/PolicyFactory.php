@@ -2,12 +2,12 @@
 
 namespace Drutiny;
 
+
 use Drutiny\Attribute\AsSource;
 use Drutiny\Policy\UnavailablePolicyException;
 use Drutiny\Policy\UnknownPolicyException;
 use Drutiny\LanguageManager;
 use Drutiny\PolicySource\PolicySourceInterface;
-use Drutiny\PolicySource\PolicyStorage;
 use Exception;
 use InvalidArgumentException;
 use Psr\Container\ContainerInterface;
@@ -38,9 +38,9 @@ class PolicyFactory
      *
      * @param $name string
      */
-    public function loadPolicyByName($name):Policy
+    public function loadPolicyByName($name, ?PolicySourceInterface $source = null):Policy
     {
-        $list = $this->getPolicyList();
+        $list = $source?->getList($this->languageManager) ?? $this->getPolicyList();
 
         if (!isset($list[$name])) {
             $list = $this->getPolicyList(true);
@@ -53,7 +53,7 @@ class PolicyFactory
         unset($definition['sources']);
 
         try {
-            return $this->getSource($definition['source'])->load($definition);
+            return ($source ?? $this->getSource($definition['source']))->load($definition);
         } catch (InvalidArgumentException $e) {
             $this->logger->warning($e->getMessage());
             throw new UnavailablePolicyException("$name requires {$list[$name]['class']} but is not available in this environment.");
