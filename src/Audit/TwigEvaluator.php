@@ -49,6 +49,11 @@ class TwigEvaluator {
             // Remove line breaks from expression. These are only to make them easier to read
             // in YAML files and the like.
             if (strpos($expression, "\n") !== false) {
+                // Remove inline comments starting with '#' and empty lines.
+                $lines = explode("\n", $expression);
+                $lines = array_filter($lines, fn($line) => substr(trim($line), 0, 1) != '#' && trim($line) != '');
+                $expression = implode("\n", $lines);
+
                 $expression = preg_replace('/(\n(\s*)?)/', ' ', $expression);
             }
 
