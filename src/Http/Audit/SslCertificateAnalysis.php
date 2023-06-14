@@ -55,8 +55,8 @@ class SslCertificateAnalysis extends AbstractAnalysis
             return;
         }
         
-        $this->set('valid_from', new DateTime(date('Y-m-d H:i:s', $certinfo['validFrom_time_t'])));
-        $this->set('valid_till', new DateTime(date('Y-m-d H:i:s', $certinfo['validTo_time_t'])));
+        $this->set('valid_from', $certinfo['validFrom_time_t']);
+        $this->set('valid_till', $certinfo['validTo_time_t']);
     }
 
     /**
