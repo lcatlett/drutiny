@@ -145,14 +145,14 @@ class PolicyAuditCommand extends DrutinyBaseCommand
         $report = $this->reportFactory->create($profile, $target);
 
         $style = new SymfonyStyle($input, $output);
-        if ($report->results[$name]->isIrrelevant()) {
+        if ($report->results[$name]->state->isIrrelevant()) {
           $style->warning("Policy $name was evaluated as irrelevant for the target " . $target->getId());
           if (isset($report->results[$name]->tokens['exception'])) {
             $style->error($report->results[$name]->tokens['exception']);
           }
           return 0;
         }
-        elseif ($report->results[$name]->hasError()) {
+        elseif ($report->results[$name]->state->hasError()) {
           $style->error("Policy $name has an error for the target " . $target->getId());
           $tokens = $report->results[$name]->tokens;
           $style->error($tokens['exception_type'] .': '.$tokens['exception'] . ' in ' . ($tokens['file'] ?? 'unknown file') . ' on line ' . ($tokens['line'] ?? 'unknown'));
