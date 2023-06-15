@@ -2,6 +2,7 @@
 
 namespace Drutiny\AuditResponse;
 
+use DateTime;
 use Drutiny\Policy;
 use Drutiny\Attribute\ArrayType;
 use Drutiny\Entity\ExportableInterface;
@@ -21,6 +22,8 @@ class AuditResponse implements ExportableInterface
       public readonly Policy $policy,
       public readonly State $state,  
       array $tokens = [],
+      public readonly ?int $timestamp = null,
+      public readonly ?int $timing = null
     )
     {
       $tokens['chart'] = $policy->chart;
