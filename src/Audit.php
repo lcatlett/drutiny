@@ -272,7 +272,9 @@ abstract class Audit implements AuditInterface
             $response = new AuditResponse(
                 policy: $this->policy,
                 state: State::from((int) $outcome ?? State::ERROR),
-                tokens: $tokens
+                tokens: $tokens,
+                timestamp: (int) $this->dateTime->format('U'),
+                timing: time() - $this->dateTime->format('U')
             );
 
             $this->eventDispatcher->dispatch(new GenericEvent('audit', [
