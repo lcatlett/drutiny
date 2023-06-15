@@ -481,6 +481,9 @@ services:
     Psr\Log\LoggerInterface:
       alias: logger
 
+    Monolog\Logger:
+      alias: logger
+
     Twig\Extension\DebugExtension:
     Twig\Extension\StringLoaderExtension:
     Twig\Extra\Markdown\MarkdownExtension:
