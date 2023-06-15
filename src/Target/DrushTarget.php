@@ -96,7 +96,8 @@ class DrushTarget extends Target implements
         $service = $this->getService('drush');
 
         try {
-          $status = $service->status(['format' => 'json'])->run(function ($output) {
+          $status = $service->status(['format' => 'json'])->run(function (Process $process) {
+            $output = $process->getOutput();
             return TextCleaner::decodeDirtyJson($output);
           });
 
