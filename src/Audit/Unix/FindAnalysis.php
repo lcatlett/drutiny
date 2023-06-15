@@ -8,6 +8,7 @@ use Drutiny\Attribute\Type;
 use Drutiny\Audit\AbstractAnalysis;
 use Drutiny\Audit\DynamicParameterType;
 use InvalidArgumentException;
+use Psr\Cache\CacheItemInterface;
 use Symfony\Component\Process\Process;
 
 /**
@@ -42,7 +43,14 @@ class FindAnalysis extends AbstractAnalysis {
 
         $args = ['test -d', $search_dir, '&&', 'find', $search_dir, $command];
         $command = Process::fromShellCommandline(implode(' ', $args));
-        $results = $this->target->execute($command, function ($output) {
+        $results = $this->target->execute($command, function (Process $process, CacheItemInterface $cache) {
+            if (!$process->isSuccessful()) {
+                $cache->expiresAfter(0);
+            }
+            $output = $process->getOutput();
+            if (empty($output)) {
+                return [];
+            }
             return array_filter(array_map('trim', explode(PHP_EOL, $output)));
         });
 
