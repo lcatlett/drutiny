@@ -17,6 +17,10 @@ class Report {
     use ReportingPeriodTrait;
 
     public readonly string $uuid;
+    
+    /**
+     * @var AuditResponse[]
+     */
     #[ArrayType('keyed', AuditResponse::class)]
     public readonly array $results;
     public readonly Severity $severity;
@@ -27,7 +31,8 @@ class Report {
         public readonly Profile $profile,
         public readonly TargetInterface $target,
         public readonly ReportType $type = ReportType::ASSESSMENT,
-        array $results = []
+        array $results = [],
+        public readonly ?int $timing = null
     )
     {
         // Validate the number of results reflects the number of policies that were 

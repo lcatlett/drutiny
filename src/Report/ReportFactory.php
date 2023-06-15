@@ -21,6 +21,7 @@ use Drutiny\Profile;
 use Drutiny\Profile\PolicyDefinition;
 use Drutiny\Target\TargetInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 use Twig\Error\RuntimeError;
 use UnexpectedValueException;
 
@@ -31,6 +32,7 @@ class ReportFactory {
         protected AuditFactory $auditFactory,
         protected PolicyFactory $policyFactory,
         protected SyntaxProcessor $syntaxProcessor,
+        protected EventDispatcher $eventDispatcher,
     )
     {}
 
@@ -44,12 +46,14 @@ class ReportFactory {
     {
         $contexts = $this->buildContexts($target);
 
+        $start = time();
         $report = new Report(
             uri: $target->uri,
             results: $this->auditPolicies($contexts, $target, $profile->reportingPeriodStart, $profile->reportingPeriodEnd, ...$profile->dependencies),
             type: ReportType::DEPENDENCIES,
             profile: $profile,
-            target: $target
+            target: $target,
+            timing: time() - $start
         );
 
         $report = !$report->successful ? $report : new Report(
@@ -57,8 +61,11 @@ class ReportFactory {
             results: $this->auditPolicies($contexts, $target, $profile->reportingPeriodStart, $profile->reportingPeriodEnd, ...$profile->policies),
             type: ReportType::ASSESSMENT,
             profile: $profile,
-            target: $target
+            target: $target,
+            timing: time() - $start
         );
+
+        $this->eventDispatcher->dispatch($report, 'report.create');
 
         return $report;
     }
@@ -98,6 +105,7 @@ class ReportFactory {
                 $this->logger->info("Auditing $policy->title");
                 // Audit each policy inside its own fork.
                 $this->forkPolicyAudit($policy, $audit, $start, $end)
+                     ->onSuccess(fn (AuditResponse $response) => $this->eventDispatcher->dispatch($response, 'policy.audit.response'))
                      ->onError(fn($e, $f) => $errors[] = $this->handleForkError($e, $f, $policy));
             }
         }
@@ -124,15 +132,20 @@ class ReportFactory {
         $err_msg = $e->getMessage();
         $this->logger->error('Fork error: ' . $fork->getLabel().': '.$err_msg);
 
+
         // Capture the error as a policy error outcome.
-        return new AuditResponse(
+        $response = new AuditResponse(
             policy: $policy,
             state: State::ERROR,
             tokens: [
                 'exception' => $err_msg,
                 'exception_type' => get_class($e),
-            ]
+            ],
+            timing: 0,
+            timestamp: 0
         );
+        $this->eventDispatcher->dispatch($response, 'policy.audit.response');
+        return $response;
     }
 
     private function forkPolicyAudit(Policy $policy, AuditInterface $audit, DateTimeInterface $start, DateTimeInterface $end):ForkInterface
@@ -154,6 +167,7 @@ class ReportFactory {
     {
         $onFail = DependencyBehaviour::PASS;
         $exception = '';
+        $start = time();
         foreach ($policy->depends as $dependency) {
             try {
                 $this->requireDependency($dependency, $contexts);
@@ -171,7 +185,9 @@ class ReportFactory {
             tokens: [
                 'exception' => $exception,
                 'exception_type' => DependencyException::class
-            ]
+            ],
+            timestamp: $start,
+            timing: time() - $start
         );
     }
 
