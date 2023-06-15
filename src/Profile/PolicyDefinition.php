@@ -28,14 +28,17 @@ class PolicyDefinition {
         array $build_parameters = [],
         #[Description('Weighting to influence policy ordering in the profile.')]
         public readonly int $weight = 0,
-        string $severity = 'normal',
+        ?string $severity = null,
         // Internal policy reference can be used to load a policy instead of using the PolicyFactory.
         protected Policy|null $policy = null
     )
     {
         $this->parameters = new FrozenParameterBag($parameters);
         $this->build_parameters = new FrozenParameterBag($build_parameters);
-        $this->severity = Severity::from($severity);
+
+        if ($severity !== null) {
+            $this->severity = Severity::from($severity);
+        }
     }
 
     /**
@@ -58,22 +61,23 @@ class PolicyDefinition {
         // If a base policy was provided when this defintion was constructed,
         // use that policy instead of loading it from the factory.
         $policy = $this->policy ?? $factory->loadPolicyByName($this->name);
-        $policy = $policy->with(
-            severity: $this->severity->value,
-            weight: $this->weight,
-        );
+        $args = ['weight' => $this->weight];
+        
+        if (isset($this->severity)) {
+            $args['severity'] = $this->severity->value;
+        }
 
         // Only override parameters if they are provided.
         if (count($this->parameters->all())) {
-            $policy = $policy->with(parameters: $this->parameters->all());
+            $args['parameters'] = $this->parameters->all();
         }
 
         // Only override build_parameters if they are provided.
         if (count($this->build_parameters->all())) {
-            $policy = $policy->with(build_parameters: $this->build_parameters->all());
+            $args['build_parameters'] = $this->build_parameters->all();
         }
 
-        return $policy;
+        return $policy->with(...$args);
     }
 
     /**
