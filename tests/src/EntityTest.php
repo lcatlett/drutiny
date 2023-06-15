@@ -52,7 +52,9 @@ class EntityTest extends KernelTestCase {
       state: State::SUCCESS,
       tokens: [
         'foo' => 'bar',
-      ]
+      ],
+      timestamp: 0,
+      timing: 0
     );
     $this->assertArrayHasKey('foo', $response->tokens);
     $this->assertContains('bar', $response->tokens);
