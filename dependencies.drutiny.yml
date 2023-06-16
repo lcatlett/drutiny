@@ -127,7 +127,7 @@ Drupal:
     arguments:
       - $module
       - $constraint
-    expression: modules[$module] is defined and semver_satisfies(modules[$module].version, $constraint)
+    expression: modules[$module] is defined and semver_satisfies(modules[$module].version|semver, $constraint)
     return: bool
 SemVer:
   satisfies:

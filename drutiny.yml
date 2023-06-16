@@ -268,6 +268,7 @@ services:
         - [addFilter, ['@twig.filters.json_decode']]
         - [addFilter, ['@twig.filters.sectionHeading']]
         - [addFilter, ['@twig.filters.yaml_dump']]
+        - [addFilter, ['@twig.filters.semver']]
         - [addFunction, ['@twig.functions.chartTable']]
         - [addFunction, ['@twig.functions.combine']]
         - [addFunction, ['@twig.functions.explode']]
@@ -348,6 +349,11 @@ services:
     twig.filters.json_decode:
       class: Twig\TwigFilter
       arguments: ['json_decode', 'json_decode']
+
+    twig.filters.semver:
+      class: Twig\TwigFilter
+      arguments: ['semver', ['Drutiny\Report\Twig\Helper', 'semver']]
+
 
     twig.test.is_numeric:
       class: Twig\TwigTest

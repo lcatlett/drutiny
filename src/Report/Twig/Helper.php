@@ -128,6 +128,34 @@ class Helper {
       '\\\\', '\-', '\#', '\*', '\+', '\`', '\.', '\[', '\]', '\(', '\)', '\!', '\&', '\<', '\>', '\_', '\{', '\}', '\|'
     ], $text);
   }
+
+  /**
+   * Convert an invalid version into a semantic version.
+   */
+  public static function semver(string $version, string $behaviour = 'pop'):string {
+    // Example of bad version: 7.x-3.10
+    $parts = explode('.', $version);
+
+    // Example: 2.x-dev
+    if (count($parts) < 3) {
+      return $version;
+    }
+
+    list($major, $minor, $patch) = $parts;
+
+    $modified_minor = preg_replace('/([^0-9])/', '', $minor);
+    
+    if ($modified_minor == $minor) {
+      return $version;
+    }
+
+    return match ($behaviour) {
+      'shift' => $major,
+      'join' => implode('.', [$major, $modified_minor, $patch]),
+      // pop
+      default => implode('.', [$modified_minor, $patch])
+    };
+  }
 }
 
  ?>
