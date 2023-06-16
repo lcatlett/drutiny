@@ -5,6 +5,7 @@ namespace Drutiny\Target\Transport;
 use DateTime;
 use Drutiny\Helper\ProcessUtility;
 use Drutiny\Target\Exception\InvalidTargetException;
+use Drutiny\Target\Exception\TargetLoadingException;
 use Psr\Cache\CacheItemInterface;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
@@ -83,7 +84,7 @@ class TshTransport extends SshTransport {
       $activeRegions = $this->getActiveTelesyncRegions();
       // This means telesync is connected to a different region and we'd have to change that.
       if (!empty($activeRegions) && !in_array($this->telesyncRegion, array_keys($activeRegions))) {
-        throw new InvalidTargetException("Cannot access target on current telesync clusters: " . implode(', ', array_keys($activeRegions)) . ". You must connect to '{$this->telesyncRegion}' instead.");
+        throw new TargetLoadingException("Cannot access target on current telesync clusters: " . implode(', ', array_keys($activeRegions)) . ". You must connect to '{$this->telesyncRegion}' instead.");
       }
       $args[] = '--proxy=' . $this->telesyncRegion;
     }
