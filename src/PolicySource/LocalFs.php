@@ -27,8 +27,9 @@ class LocalFs extends AbstractPolicySource
         parent::__construct(cache: $cache, source: $source);
 
         $dirs = $settings->get('extension.dirs');
-        $dirs[] = $settings->get('policy.library.fs');
-        $dirs = array_filter(array_unique($dirs), 'file_exists');
+        $dirs[] = realpath($settings->get('policy.library.fs'));
+        $dirs[] = getcwd() . DIRECTORY_SEPARATOR . $settings->get('policy.library.fs');
+        $dirs = array_filter(array_unique($dirs), fn ($f) => $f && file_exists($f));
 
         // Ensure the policy directory is available.
 
