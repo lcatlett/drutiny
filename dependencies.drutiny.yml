@@ -53,54 +53,54 @@ Drupal:
     arguments:
       # Map the order of inputs in the twig function to twig variables for the 'expression'
       - constraint
-    expression: semver_satisfies(attribute(drush, 'drupal-version'), constraint)
+    expression: drush.bootstrap is defined and semver_satisfies(attribute(drush, 'drupal-version'), constraint)
     return: bool
   
   isVersion10orLater:
     description: Drupal version is version 10 or later
-    expression: semver_satisfies(attribute(drush, 'drupal-version'), '>=10')
+    expression: drush.bootstrap is defined and semver_satisfies(attribute(drush, 'drupal-version'), '>=10')
     return: bool
 
   isVersion10:
     description: Drupal version is version 10 with any minor or patch version.
-    expression: semver_satisfies(attribute(drush, 'drupal-version'), '^10.0')
+    expression: drush.bootstrap is defined and semver_satisfies(attribute(drush, 'drupal-version'), '^10.0')
     return: bool
   
   isVersion9orLater:
     description: Drupal version is version 9 or later
-    expression: semver_satisfies(attribute(drush, 'drupal-version'), '>=9')
+    expression: drush.bootstrap is defined and semver_satisfies(attribute(drush, 'drupal-version'), '>=9')
     return: bool
   
   isVersion9:
     description: Drupal version is version 9 with any minor or patch version.
-    expression: semver_satisfies(attribute(drush, 'drupal-version'), '^9.0')
+    expression: drush.bootstrap is defined and semver_satisfies(attribute(drush, 'drupal-version'), '^9.0')
     return: bool
   
   isVersion8orLater:
     description: Drupal version is version 8 or later
-    expression: semver_satisfies(attribute(drush, 'drupal-version'), '>=8')
+    expression: drush.bootstrap is defined and semver_satisfies(attribute(drush, 'drupal-version'), '>=8')
     return: bool
 
   isVersion8:
     description: Drupal version is version 8 with any minor or patch version.
-    expression: semver_satisfies(attribute(drush, 'drupal-version'), '^8.0')
+    expression: drush.bootstrap is defined and semver_satisfies(attribute(drush, 'drupal-version'), '^8.0')
     return: bool
   
   isVersion7:
     description: Drupal version is version 7 with any minor or patch version.
-    expression: semver_satisfies(attribute(drush, 'drupal-version'), '^7.0')
+    expression: drush.bootstrap is defined and semver_satisfies(attribute(drush, 'drupal-version'), '^7.0')
     return: bool
 
   isVersion6:
     description: Drupal version is version 6 with any minor or patch version.
-    expression: semver_satisfies(attribute(drush, 'drupal-version'), '^6.0')
+    expression: drush.bootstrap is defined and semver_satisfies(attribute(drush, 'drupal-version'), '^6.0')
     return: bool
 
   installProfileIs:
     description: Ensures Drupal is using a given install profile
     arguments:
       - profile
-    expression: attribute(drush, 'install-profile') == profile
+    expression: drush.bootstrap is defined and attribute(drush, 'install-profile') == profile
     return: bool
 
   moduleIsEnabled:
