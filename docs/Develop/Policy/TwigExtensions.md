@@ -303,6 +303,18 @@ parameters:
         host: link.host
 ```
 
+### pluralize
+
+The `pluralize` function helps chose a singular or pluralized word based on a given number.
+
+```twig
+You have a {{ pluralize(sheep_count, 'single', 'flock of') }} sheep in your paddock.
+```
+
+```twig
+Found {{ file_count }} {{ pluralize(file_count, 'file', 'files') }}.
+```
+
 ### policy_result
 
 The `policy_result` function renders a policy audit response. This is useful in 
