@@ -156,6 +156,17 @@ class Helper {
       default => implode('.', [$modified_minor, $patch])
     };
   }
+  
+  /**
+   * Determine if to use a singular or pluralized term.
+   */
+  public static function pluralize(array|int $things, $singular, $plural):string {
+    if (is_array($things)) {
+      $things = count($things);
+    }
+    return $things > 1 ? $plural : $singular;
+  }
+
 }
 
  ?>

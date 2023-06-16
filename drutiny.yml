@@ -276,6 +276,7 @@ services:
         - [addFunction, ['@twig.functions.parse_url']]
         - [addFunction, ['@twig.functions.policy_result']]
         - [addFunction, ['@twig.functions.semver_satisfies']]
+        - [addFunction, ['@twig.function.pluralize']]
         - [addTest, ['@twig.test.is_numeric']]
         - [addTest, ['@twig.test.keyed']]
         - [addRuntimeLoader, ['@Twig\RuntimeLoader\ContainerRuntimeLoader']]
@@ -325,6 +326,12 @@ services:
       arguments:
         - is_target
         - ['@Drutiny\Target\TargetFactory', 'typeOf']
+
+    twig.function.pluralize:
+      class: Twig\TwigFunction
+      arguments:
+        - pluralize
+        - ['Drutiny\Report\Twig\Helper', 'pluralize']
 
     twig.filters.array_sum:
       class: Twig\TwigFilter
