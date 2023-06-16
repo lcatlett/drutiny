@@ -98,7 +98,7 @@ class DrushTarget extends Target implements
         try {
           $status = $service->status(['format' => 'json'])->run(function (Process $process) {
             $output = $process->getOutput();
-            return TextCleaner::decodeDirtyJson($output);
+            return TextCleaner::decodeDirtyJson($output) ?? [];
           });
 
           foreach ($status as $key => $value) {
