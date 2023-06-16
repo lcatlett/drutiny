@@ -13,7 +13,7 @@ use Symfony\Component\Process\Process;
 /**
  * Checks for existence of requested file/directory on specified path.
  */
-#[Dependency(expression: 'Target.typeOf("' . FilesystemInterface::class . '")')]
+#[Dependency(expression: 'Target.typeOf("Drutiny\\\Target\\\FilesystemInterface")')]
 class FilesExistenceAnalysis extends AbstractAnalysis {
 
   public function configure():void {
