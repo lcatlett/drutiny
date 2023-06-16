@@ -6,7 +6,6 @@ use Drutiny\Attribute\DataProvider;
 use Drutiny\Audit\AbstractAnalysis;
 use Drutiny\Helper\TextCleaner;
 use Drutiny\Policy\Dependency;
-use Drutiny\Sandbox\Sandbox;
 
 /**
  * Generic module is enabled check.
