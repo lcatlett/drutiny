@@ -48,6 +48,13 @@ class PolicyPushCommand extends DrutinyBaseCommand
             'The name of the source to push too.'
         )
         ->addOption(
+          'commit-msg',
+          'm',
+          InputOption::VALUE_OPTIONAL,
+          'A message detailing the changes involved in the push.',
+          ''
+        )
+        ->addOption(
             'from',
             'f',
             InputOption::VALUE_OPTIONAL,
@@ -76,7 +83,7 @@ class PolicyPushCommand extends DrutinyBaseCommand
         $policy = $this->policyFactory->loadPolicyByName($input->getArgument('policy'), $source);
 
         try {
-          $policy = $remote->push($policy);
+          $policy = $remote->push($policy, $input->getOption('commit-msg'));
         }
         catch (IdentityProviderException $e)
         {
