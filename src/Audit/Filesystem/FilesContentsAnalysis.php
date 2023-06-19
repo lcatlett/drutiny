@@ -31,7 +31,7 @@ class FilesContentsAnalysis extends FilesExistenceAnalysis {
       $filepath = $results['findings'][$index];
     }
 
-    $command = Process::fromShellCommandline('test -f ' . $filepath . ' &&  cat ' . $filepath);
+    $command = Process::fromShellCommandline('test ! -f ' . $filepath . ' ||  cat ' . $filepath);
     $this->set('contents', $this->target->execute($command, function ($output) {
       return trim($output);
     }));
