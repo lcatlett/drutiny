@@ -18,7 +18,7 @@ class FakePushablePolicySource extends AbstractPolicySource implements PushableP
         return $this->policies;
     }
 
-    public function push(Policy $policy):Policy
+    public function push(Policy $policy, string $commit_msg = ''):Policy
     {
         return $this->policies[$policy->name] = $policy->with(uri: 'https://example.com/policy/' . $policy->name);
     }
