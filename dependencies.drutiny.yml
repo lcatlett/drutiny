@@ -129,6 +129,19 @@ Drupal:
       - $constraint
     expression: modules[$module] is defined and semver_satisfies(modules[$module].version|semver, $constraint)
     return: bool
+
+  config:
+    description: Get the configuration of a given key from Drupal 8 or later.
+    use_audit: Drutiny\Plugin\Drupal8\Audit\ConfigAnalysis
+    arguments:
+      - $module
+      - collection
+    depends:
+      - Drupal.isVersion8orLater
+      - Drupal.moduleIsEnabled($module)
+    default: []
+    return: array
+    expression: config
 SemVer:
   satisfies:
     description: Determines if a semantic version satisfies a given constraint.

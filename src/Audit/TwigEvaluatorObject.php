@@ -19,42 +19,42 @@ class TwigEvaluatorObject {
         /**
          * Allow argument-less methods to be called as properties.
          */
-        public function __get($name):bool {
+        public function __get($name):mixed {
             return $this->__call($name, []); 
         }
 
-        public function __call($name, $args):bool {
+        public function __call($name, $args):mixed {
             if (!isset($this->set[$name])) {
                 throw new Exception("{$this->namespace}.{$name} does not exist.");
             }
-            $info = $this->set[$name];
+            $function = new TwigEvaluatorFunction(...$this->set[$name]);
 
-            $contexts = [];
-
-            // Argument Spec //
-            // The name of an argument to pass into an expression:
-            // - arg1
-            //
-            // The token in an expression to swap out with a literal value:
-            // - $arg1
-            //
-            // A parameter to map into a policy using use_audit:
-            // $arg1: arg1
-
-            // This allows us to pass in variables from the twig runtime into function
-            // provided the dependency definition specifies which keys to map the order 
-            // of arguments passed into the function.
-            foreach ($info['arguments'] ?? [] as $param) {
-                $contexts[$param] = array_shift($args);
-            }
+            $contexts = $function->buildContexts($args);
 
             $target = $this->twigEvaluator->getGlobalContexts()['target'] ?? throw new Exception("Missing target from twigEvaluator global contexts.");
 
-            if (isset($info['use_audit'])) {
-                return $this->runPolicyAudit($name, $info, $target, $contexts);
+            // Ensure dependencies are met before running evaluation.
+            $vars = array_filter(array_keys($contexts), fn($key) => strpos($key, '$') === 0);
+            foreach ($function->depends as $expression) {
+                foreach ($vars as $key) {
+                    $expression = str_replace($key, '\'' . $contexts[$key] . '\'', $expression);
+                }
+                if (!$this->twigEvaluator->execute($expression, $contexts)) {
+                    return $function->returnValue($function->default);
+                }
             }
-            elseif (!isset($info['expression'])) {
-                throw new \Exception("Invalid dependency {$this->namespace}.$name. Requires 'expression' or 'use_audit' statement.");
+
+            if (isset($function->use_audit)) {
+                $return = $this->runPolicyAudit($name, $function, $target, $contexts);
+                if ($function->return == 'bool') {
+                    return $return;
+                }
+                foreach ($return as $key => $value) {
+                    $contexts[$key] = $value;
+                }
+            }
+            if (!isset($function->expression)) {
+                throw new \Exception("Invalid dependency {$this->namespace}.$name. Requires 'expression'.");
             }
             
             // Dependencies primarily need to evaluate the target so we'll export
@@ -63,14 +63,14 @@ class TwigEvaluatorObject {
                 $contexts[$key] = $target->getProperty($key);
             }
 
-            return (bool) $this->twigEvaluator->execute($info['expression'], $contexts);
+            return $function->returnValue($this->twigEvaluator->execute($function->expression, $contexts));
         }
 
         /**
          * Create a pseudo policy to audit a result from.
          */
-        protected function runPolicyAudit(string $name, array $info, TargetInterface $target, array $contexts):bool {
-            $audit = $this->auditFactory->mock($info['use_audit'], $target);
+        protected function runPolicyAudit(string $name, TwigEvaluatorFunction $function, TargetInterface $target, array $contexts):mixed {
+            $audit = $this->auditFactory->mock($function->use_audit, $target);
             $tokens = [];
             foreach ($contexts as $key => $value) {
                 // Cannot use as policy parameters.
@@ -82,14 +82,14 @@ class TwigEvaluatorObject {
                         strtolower($value) == 'null' => 'null',
                         is_numeric($value) => $value,
                         // String
-                        default => "'".$value."'" 
+                        default => "'$value'" 
                     };
                     unset($contexts[$key]);
                 }
             }
 
-            if ($audit->getDefinition()->hasParameter('expression') && isset($info['expression'])) {
-                $contexts['expression'] = strtr($info['expression'], $tokens);
+            if ($audit->getDefinition()->hasParameter('expression') && isset($function->expression) && $function->return == 'bool') {
+                $contexts['expression'] = strtr($function->expression, $tokens);
                 $contexts['syntax'] = 'twig';
             }
 
@@ -101,10 +101,13 @@ class TwigEvaluatorObject {
                 description: $name,
                 failure: 'Failure message',
                 success: 'Success message',
-                class: $info['use_audit'],
+                class: $function->use_audit,
                 parameters: $contexts,
                 source: 'phpunit'
             );
-            return $audit->execute($policy)->state->isSuccessful();
+            return match ($function->return) {
+                'bool' => $audit->execute($policy)->state->isSuccessful(),
+                default => $function->returnValue($audit->execute($policy)->tokens)
+            };
         }
 }
