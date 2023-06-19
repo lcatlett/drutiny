@@ -19,7 +19,7 @@ use Psr\Http\Message\ResponseInterface;
 #[Parameter(name: 'url', description: 'The url to request', type: Type::STRING, default: '{uri}', preprocess: DynamicParameterType::REPLACE)]
 #[Parameter(name: 'send_warming_request', description: 'Send a warming request and store headers into cold_headers parameter.', type: Type::BOOLEAN, default: false)]
 #[Parameter(name: 'use_cache', description: 'Indicator if Guzzle client should use cache middleware.', type: Type::BOOLEAN, default: false)]
-#[Parameter(name: 'options', description: 'An options array passed to the Guzzle client request method.', type: Type::ARRAY, default: [])]
+#[Parameter(name: 'options', description: 'An options array passed to the Guzzle client request method.', type: Type::HASH, default: [])]
 #[Parameter(name: 'force_ssl', description: 'Whether to force SSL.', type: Type::BOOLEAN, default: true)]
 #[Parameter(name: 'method', description: 'Which method to use.', type: Type::STRING, default: 'GET')]
 class HttpAnalysis extends AbstractAnalysis
