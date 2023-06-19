@@ -77,9 +77,11 @@ class ProfileInfoCommand extends Command
 
         $render->section('Policies');
         $headers = ['Title', 'Name', 'Severity', 'Class', 'Source'];
-        $render->table($headers, array_map(function ($policy) {
+        $render->table($headers, $rows = array_map(function ($policy) {
           return [$policy->title, $policy->name, $policy->severity->value, $policy->class, $policy->source];
         }, $policies));
+
+        $render->text(count($rows) . ' policies.');
 
         return 0;
     }
