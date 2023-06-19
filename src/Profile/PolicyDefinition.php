@@ -92,7 +92,9 @@ class PolicyDefinition {
         $properties['build_parameters'] = $properties['build_parameters']->all();
 
         // Convert Enums into values.
-        $properties['severity'] = $properties['severity']->value;
+        if (isset($properties['severity'])) {
+            $properties['severity'] = $properties['severity']->value;
+        }
         
         // Only return non-empty values and keys.
         return array_filter($properties);

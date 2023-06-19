@@ -24,6 +24,7 @@ class DependencyTest extends KernelTestCase {
         $targetFactory = $this->container->get(TargetFactory::class);
         $target = $targetFactory->mock('none');
         $target['drush.drupal-version'] = '8.2.1';
+        $target['drush.bootstrap'] = true;
         $twigEvaluator->setContext('target', $target);
 
         $drupal = $this->container->get('twigEvaluator.Drupal');

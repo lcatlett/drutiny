@@ -74,7 +74,7 @@ class TwigEvaluatorObject {
             $tokens = [];
             foreach ($contexts as $key => $value) {
                 // Cannot use as policy parameters.
-                if (!$audit->hasArgument($key)) {
+                if (!$audit->getDefinition()->hasParameter($key)) {
                     // Assume these are tokens to swap out in the expression.
                     $tokens[$key] = match(true) {
                         strtolower($value) == 'true' => 'true',
@@ -88,7 +88,7 @@ class TwigEvaluatorObject {
                 }
             }
 
-            if ($audit->hasArgument('expression') && isset($info['expression'])) {
+            if ($audit->getDefinition()->hasParameter('expression') && isset($info['expression'])) {
                 $contexts['expression'] = strtr($info['expression'], $tokens);
                 $contexts['syntax'] = 'twig';
             }
