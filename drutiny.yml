@@ -521,8 +521,10 @@ services:
               class: table table-hover
             League\CommonMark\Extension\Table\TableCell: 
               scope: ['Drutiny\Report\Format\LeagueMarkdown\LeagueMarkdown', 'tableCellScopeAttribute']
-            League\CommonMark\Extension\Table\TableSection:
-              class: ['Drutiny\Report\Format\LeagueMarkdown\LeagueMarkdown', 'tableSectionClassAttribute']
+            League\CommonMark\Extension\Table\TableRow:
+              class: ['Drutiny\Report\Format\LeagueMarkdown\LeagueMarkdown', 'tableRowClassAttribute']
+            # League\CommonMark\Extension\Table\TableSection:
+            #   class: ['Drutiny\Report\Format\LeagueMarkdown\LeagueMarkdown', 'tableSectionClassAttribute']
       calls:
         - ['addExtension', ['@League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension']]
         - ['addExtension', ['@League\CommonMark\Extension\DefaultAttributes\DefaultAttributesExtension']]
