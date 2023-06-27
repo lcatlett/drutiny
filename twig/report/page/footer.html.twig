@@ -282,7 +282,7 @@
       var pieish = ['pie', 'doughnut'].indexOf(data.chartType) > 0;
 
       // Build color palette.
-      // Change the delimiter from a comma to a semi colon 
+      // Change the delimiter from a comma to a semi colon
       data.chartColors = data.chartColors.replace(/\),/g, ');');
 
       // Merge the various color palette lists together
@@ -297,15 +297,25 @@
           .parent().addClass(['row']);
       }
 
-      $(this).css({
+      $(this).prepend('<div class="chart-container"></div>');
+
+      var container = $('.chart-container', this);
+
+      container.css({
         height: data.chartHeight,
         position: 'relative'
-      });
-      $(this).html('<canvas></canvas>');
+      }).prepend('<canvas></canvas>');
 
-      var ctx = $('canvas', this).get(0).getContext('2d');
+      // Table is inside the chart element.
+      if (data.chartTableIndex === -1) {
+        var table = $('table', this);
+      }
+      else {
+        var table = $(this).siblings('table').get(data.chartTableIndex);
+      }
+
+      var ctx = $('canvas', container).get(0).getContext('2d');
       var series = data.chartSeries.split(',');
-      var table = $(this).siblings('table').get(data.chartTableIndex);
 
       if (pieish) {
         new Chart(ctx, getPieishConfig(data, series, table));
@@ -324,7 +334,6 @@
           .click(function (e) {
             e.preventDefault();
             $(table).toggle();
-
           });
         $(table).hide().before(tbl_toggle);
       }
