@@ -104,7 +104,9 @@ class Policy implements ExportableInterface
       $this->parameters = new FrozenParameterBag($parameters);
       $this->build_parameters = new FrozenParameterBag($build_parameters);
       $this->depends = array_map(fn(string|array $d) => is_string($d) ? Dependency::fromString($d) : new Dependency(...$d), $depends);
-      $this->chart = array_map(fn($c) => Chart::fromArray($c), $chart);
+
+      array_walk($chart, fn(&$c, $k) => $c = Chart::fromArray($c, $k));
+      $this->chart = $chart;
     }
 
     /**

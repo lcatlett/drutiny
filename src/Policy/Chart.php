@@ -9,6 +9,8 @@ use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 #[Autoconfigure(autowire: false)]
 class Chart {
     public function __construct(
+        #[Description('The machine-name of the ID that can be used as an HTML id attribute.')]
+        public readonly string $id,
         #[Description('The title of the graph')]
         public readonly string $title = '',
         #[Description('The height of the graph area set as a CSS style on the <canvas> element.')]
@@ -47,8 +49,8 @@ class Chart {
     /**
      * Create a chart from array parameters.
      */
-    static public function fromArray(array $chart):self {
-        $params = [];
+    static public function fromArray(array $chart, string $id):self {
+        $params = ['id' => $id];
         foreach ($chart as $opt => $value) {
             $property = str_replace('-', '', ucwords($opt, '-'));
             $property[0] = strtolower($property[0]);
