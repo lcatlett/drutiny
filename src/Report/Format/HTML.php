@@ -5,7 +5,6 @@ namespace Drutiny\Report\Format;
 use Drutiny\Report\FormatInterface;
 use Drutiny\Attribute\AsFormat;
 use Drutiny\Profile\FormatDefinition;
-use Twig\Extra\Markdown\MarkdownRuntime;
 
 #[AsFormat(
   name: 'html',
@@ -30,7 +29,6 @@ class HTML extends TwigFormat
     protected function prepareContent(array $variables):array
     {
       $sections = [];
-      $markdown = $this->twig->getRuntime(MarkdownRuntime::class);
 
       // In 3.x we support Twig TemplateWrappers to be passed directly
       // to the report format.
