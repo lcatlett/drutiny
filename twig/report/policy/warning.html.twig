@@ -14,5 +14,9 @@
       </div>
     </div> <!-- /assessment-card -->
 
+    {% with audit_response.tokens %}
+    {{ include(template_from_string(audit_response.policy.success, "success field on warning.html.twig")) | markdown_to_html }}
+    {% endwith %}
+
   </div> <!-- /col -->
 </div> <!-- /row -->
