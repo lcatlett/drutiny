@@ -90,6 +90,9 @@ trait ReportingCommandTrait
           ]);
       }
 
+      /**
+       * @return \Drutiny\Report\FormatInterface[]
+       */
       protected function getFormats(InputInterface $input, Profile $profile = null, FormatFactory $formatFactory):array
       {
         foreach ($input->getOption('format') as $format_option) {
