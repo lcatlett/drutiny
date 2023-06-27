@@ -5,6 +5,7 @@ namespace Drutiny\Report\Twig;
 use Drutiny\AssessmentInterface;
 use Drutiny\AuditResponse\AuditResponse;
 use Drutiny\Policy\Chart;
+use Drutiny\Report\Format\Markdown;
 use Twig\Environment;
 
 
@@ -30,25 +31,28 @@ class Helper {
   /**
    * Registered as a Twig filter to be used as: chart.foo|chart.
    */
-  public static function filterChart(Chart|null|array $chart):string
+  public static function filterChart(Chart|null|array $chart, string $data_table = ''):string
   {
     if (is_null($chart)) {
       return '';
     }
     if (is_array($chart)) {
-      $chart = Chart::fromArray($chart);
+      $chart = Chart::fromArray($chart, $chart['id'] ?? 'chart' . mt_rand(1000, 9999));
+    }
+    if (!empty($data_table)) {
+      $chart = $chart->with(tableIndex: -1);
     }
     $class = 'chart-unprocessed';
     if (isset($chart->htmlClass)) {
         $class .= ' '.$chart->htmlClass;
     }
-    $element = '<div class="'.$class.'" ';
+    $element = '<div id="' . $chart->id . '" class="'.$class.'" ';
     foreach (get_object_vars($chart) as $name => $key) {
       $name = strtolower(preg_replace('/[A-Z]/', '-$0', $name));
       $value = is_array($key) ? implode(',', $key) : $key;
       $element .= 'data-chart-'.$name . '='.json_encode($value).' ' ;
     }
-    return $element . '></div>';
+    return $element . ">\n\n$data_table\n</div>";
   }
 
   /**
@@ -61,7 +65,7 @@ class Helper {
    */
   public static function filterChartTable(array $headers, array $rows, Chart|array $chart, string $pad = '') {
     if (is_array($chart)) {
-      $chart = Chart::fromArray($chart);
+      $chart = Chart::fromArray($chart, $chart['id'] ?? 'chart' . mt_rand(1000, 9999));
     }
 
     $chart = $chart->addXaxisLabels('tr td:nth-child(1)');
@@ -86,9 +90,12 @@ class Helper {
 
       $element[] = implode(' | ', $row);
     }
-    return self::filterChart($chart) . "\n\n" . implode(PHP_EOL, $element);
+    return self::filterChart($chart, implode(PHP_EOL, $element)) . "\n\n";
   }
 
+  /**
+   * Twig policy_result function.
+   */
   public static function renderAuditReponse(Environment $twig, AuditResponse $response, AssessmentInterface $assessment):string
   {
       // Irrelevant responses should be omitted from rendering.
