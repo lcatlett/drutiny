@@ -2,6 +2,8 @@
 
 namespace Drutiny\AuditResponse;
 
+use Drutiny\Policy\PolicyType;
+
 enum State: int
 {
     case SUCCESS = 1;
@@ -21,6 +23,21 @@ enum State: int
             $value = is_numeric($value) ? (int) $value : (bool) $value;
         }
         return is_bool($value) ? ($value ? static::SUCCESS : static::FAILURE) : static::from($value);
+    }
+
+    /**
+     * Special handling of state based on policy type.
+     */
+    public function withPolicyType(PolicyType $type):static {
+        if ($type == PolicyType::AUDIT) {
+            return $this;
+        }
+        return match ($this) {
+            static::ERROR => static::ERROR,
+            static::IRRELEVANT => static::IRRELEVANT,
+            static::NOT_APPLICABLE => static::NOT_APPLICABLE,
+            default => static::NOTICE,
+        };
     }
 
     /**

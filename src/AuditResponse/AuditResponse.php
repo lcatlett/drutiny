@@ -6,6 +6,7 @@ use DateTime;
 use Drutiny\Policy;
 use Drutiny\Attribute\ArrayType;
 use Drutiny\Entity\ExportableInterface;
+use Drutiny\Policy\PolicyType;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 
 /**
@@ -26,6 +27,11 @@ class AuditResponse implements ExportableInterface
       public readonly ?int $timing = null
     )
     {
+      // Ensure the state passed matches a compatible state with the policy type.
+      if ($state != $state->withPolicyType($policy->type)) {
+        throw new AuditResponseException("Cannot accept state {$state->name} for policy of type 'data': {$policy->name}");
+      }
+
       $tokens['chart'] = $policy->chart;
       $this->tokens = $tokens;
     }
@@ -61,7 +67,7 @@ class AuditResponse implements ExportableInterface
     public function getType():string
     {
         // Data type policies cannot 'fail' irrespective of their state.
-        if (!$this->state->isSuccessful() && $this->policy->type == 'data') {
+        if (!$this->state->isSuccessful() && $this->policy->type == PolicyType::DATA) {
           return 'data';
         }
 

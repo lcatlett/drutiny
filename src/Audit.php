@@ -271,7 +271,7 @@ abstract class Audit implements AuditInterface
             // Set the response.
             $response = new AuditResponse(
                 policy: $this->policy,
-                state: State::from((int) $outcome ?? State::ERROR),
+                state: State::from((int) $outcome ?? State::ERROR)->withPolicyType($this->policy->type),
                 tokens: $tokens,
                 timestamp: (int) $this->dateTime->format('U'),
                 timing: time() - $this->dateTime->format('U')
