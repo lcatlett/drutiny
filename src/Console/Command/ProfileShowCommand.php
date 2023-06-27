@@ -38,12 +38,6 @@ class ProfileShowCommand extends DrutinyBaseCommand
             'The name of the profile to show.'
         )
         ->addOption(
-            'backward-compatibility',
-            'b',
-            InputOption::VALUE_NONE,
-            'Render templates in backwards compatibility mode.'
-        )
-        ->addOption(
             'format',
             'f',
             InputOption::VALUE_OPTIONAL,
@@ -62,24 +56,6 @@ class ProfileShowCommand extends DrutinyBaseCommand
 
         $profile = $this->profileFactory->loadProfileByName($input->getArgument('profile'));
         $export = $profile->export();
-
-        if (!$input->getOption('backward-compatibility') && !is_string($export['format']['html']['content'])) {
-            foreach ($export['format']['html']['content'] ?? [] as &$section) {
-                foreach (array_keys($section) as $attribute) {
-                    $template = $this->prefixTemplate($section[$attribute]);
-
-                    // Map the old Drutiny 2.x variables to the Drutiny 3.x versions.
-                    $template = $this->preMapDrutiny2Variables($template);
-
-                    // Convert from Mustache (supported in Drutiny 2.x) over to twig syntax.
-                    $template = $this->convertMustache2TwigSyntax($template);
-
-                    // Map the old Drutiny 2.x variables to the Drutiny 3.x versions.
-                    $template = $this->mapDrutiny2toDrutiny3variables($template);
-                    $section[$attribute] = $template;
-                }
-            }
-        }
 
         if (isset($export['format']['html']['content'])) {
           $export['format']['html']['content'] = str_replace("\r", '', $export['format']['html']['content']);
