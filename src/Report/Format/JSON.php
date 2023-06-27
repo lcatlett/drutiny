@@ -4,12 +4,17 @@ namespace Drutiny\Report\Format;
 
 use DateTime;
 use Drutiny\Attribute\AsFormat;
+use Drutiny\AuditResponse\AuditResponse;
 use Drutiny\Helper\Json as HelperJson;
-use Drutiny\Profile;
 use Drutiny\Report\FilesystemFormatInterface;
 use Drutiny\Report\FormatInterface;
 use Drutiny\Report\Report;
+use League\CommonMark\ConverterInterface;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Output\StreamOutput;
+use Twig\Environment;
+use Twig\Extension\CoreExtension;
 
 #[AsFormat(
   name: 'json',
@@ -20,6 +25,15 @@ class JSON extends FilesystemFormat implements FilesystemFormatInterface
     protected string $name = 'json';
     protected string $extension = 'json';
     protected $data;
+
+    public function __construct(
+      protected Environment $twig,
+      protected ConverterInterface $converter,
+      OutputInterface $output, 
+      LoggerInterface $logger)
+    {
+      parent::__construct($output, $logger);
+    }
 
     protected function prepareContent(Report $report):array
     {
@@ -35,8 +49,8 @@ class JSON extends FilesystemFormat implements FilesystemFormatInterface
         $this->data['reporting_period_end'] = $report->reportingPeriodEnd->format('Y-m-d H:i:s e');
 
         foreach ($report->results as $name => $response) {
+          $this->data['results'][$name]['policy']['rendered'] = $this->preRenderPolicy($response);
           $this->data['policy'][] = $this->data['results'][$name]['policy'];
-
           $total = $this->data['totals'][$response->getType()] ?? 0;
           $this->data['totals'][$response->getType()] = $total+1;
         }
@@ -47,8 +61,32 @@ class JSON extends FilesystemFormat implements FilesystemFormatInterface
 
     public function render(Report $report):FormatInterface
     {
+        $this->twig->getExtension(CoreExtension::class)->setTimezone($report->reportingPeriodStart->getTimezone());
         $this->buffer->write(json_encode($this->prepareContent($report)));
         return $this;
+    }
+
+    protected function preRenderPolicy(AuditResponse $response): array {
+
+      $keys = ['title', 'description', 'success', 'warning', 'failure', 'remediation', 'notes'];
+      $values = [
+        'name' => $response->policy->name
+      ];
+
+      foreach ($keys as $key) {
+        if (!property_exists($response->policy, $key)) {
+          $values[$key] = null;
+          continue;
+        }
+        $values[$key] = $this->converter->convert(
+          $this->twig->render(
+            name: $this->twig->createTemplate($response->policy->{$key}),
+            context: $response->tokens
+          )
+        )->getContent();
+      }
+
+      return $values;
     }
 
     /**
