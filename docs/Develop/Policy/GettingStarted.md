@@ -401,6 +401,25 @@ critical a failure or warning is. Possible values in order of importance:
 severity: 'high'
 ```
 
+## audit_build_info
+
+audit_build_info is metadata attached to a policy indicating the audit classes
+the policy was built with and their versions. This is used to determine if the 
+policy can be run within the current runtime. This is useful if the runtime where
+you're running the policy is different the runtime you create the policy in or
+if your version of drutiny changes overtime.
+
+```yaml
+audit_build_info:
+    - 'Drutiny\Audit\AbstractAnalysis:1.0'
+```
+
+The above example shows that the policy was built with the audit class `Drutiny\Audit\AbstractAnalysis`
+when it was at version 1.0. Future versions of this class will be able to evaluate
+this policy by its version to determine if it can still run the policy.
+
+For more information see [Audit Versions](../Audit/Version.md).
+
 ## chart
 
 Charts in Drutiny are an HTML format feature that allows rendered tabular data

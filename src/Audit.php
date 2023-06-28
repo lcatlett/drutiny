@@ -20,6 +20,7 @@ use Drutiny\Sandbox\Sandbox;
 use Drutiny\Target\TargetInterface;
 use Drutiny\Upgrade\AuditUpgrade;
 use Drutiny\Entity\Exception\DataNotFoundException;
+use Drutiny\Policy\Compatibility\PolicyCompatibilityException;
 use Drutiny\Policy\Dependency;
 use Drutiny\Sandbox\ReportingPeriodTrait;
 use Drutiny\Target\TargetPropertyException;
@@ -166,6 +167,9 @@ abstract class Audit implements AuditInterface
         $this->logger->info('Auditing '.$policy->name.' with '.get_class($this));
         $outcome = AuditInterface::ERROR;
         try {
+            /* @throws \Drutiny\Policy\Compatibility\PolicyCompatibilityException */
+            $policy->isCompatible();
+
             if (!$this->validate()) {
                 throw new AuditValidationException("Target of type ".get_class($this->target)." is not suitable for audit class ".get_class($this). " with policy: ".$policy->name);
             }
@@ -194,6 +198,17 @@ abstract class Audit implements AuditInterface
 
             // Run the audit over the policy.
             $outcome = $this->audit(new Sandbox($this));
+        } catch (PolicyCompatibilityException $e) {
+            $outcome = State::ERROR->value;
+            $message = $e->getMessage();
+            $this->set('exception', $message);
+            $this->set('exception_type', get_class($e));
+            $this->logger->error("'{policy}' {class} ({uri}): $message", [
+                'class' => get_class($this),
+                'uri' => $this->target->getUri(),
+                'policy' => $this->policy->name
+            ]);
+
         } catch (DependencyException $e) {
             $outcome = $e->getDependency()->onFail->getAuditOutcome();
             $message = $e->getMessage();

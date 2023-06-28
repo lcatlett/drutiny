@@ -2,6 +2,7 @@
 
 namespace Drutiny\Console\Command;
 
+use Drutiny\Policy;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -70,14 +71,14 @@ class ProfileInfoCommand extends Command
           $render->block(
           'These are dependency policies. All of these policies must pass for the'
           .' profile to be assessed on the target.');
-          $render->table($headers, array_map(function ($policy) {
+          $render->table($headers, array_map(function (Policy $policy) {
             return [$policy->title, $policy->name, $policy->class, $policy->source];
           }, $dependencies));
         }
 
         $render->section('Policies');
         $headers = ['Title', 'Name', 'Severity', 'Class', 'Source'];
-        $render->table($headers, $rows = array_map(function ($policy) {
+        $render->table($headers, $rows = array_map(function (Policy $policy) {
           return [$policy->title, $policy->name, $policy->severity->value, $policy->class, $policy->source];
         }, $policies));
 

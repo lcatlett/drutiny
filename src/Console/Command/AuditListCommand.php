@@ -4,8 +4,10 @@ namespace Drutiny\Console\Command;
 
 use Drutiny\Audit\AuditInterface;
 use Drutiny\AuditFactory;
+use Drutiny\Policy\AuditClass;
 use Drutiny\PolicyFactory;
 use Drutiny\Settings;
+use Error;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputInterface;
@@ -99,7 +101,14 @@ class AuditListCommand extends DrutinyBaseCommand
           $class_name = $namespace . str_replace('/', '\\', $pathinfo['dirname']) . '\\' . $pathinfo['filename'];
           $class_name = str_replace('\\\\', '\\', $class_name);
 
-          if (!class_exists($class_name)) {
+          if (strpos($class_name, 'Audit') === false) {
+            continue;
+          }
+
+          try {
+            class_exists($class_name);
+          }
+          catch (Error) {
             continue;
           }
 
@@ -118,8 +127,9 @@ class AuditListCommand extends DrutinyBaseCommand
 
         $stats = [];
         foreach ($audits as $audit) {
+          $audit = AuditClass::fromClass($audit);
           try {
-            $instance = $this->auditFactory->mock($audit);
+            $instance = $this->auditFactory->mock($audit->name);
           }
           catch (ServiceNotFoundException $e) {
             $this->logger->error($e->getMessage());
@@ -127,14 +137,14 @@ class AuditListCommand extends DrutinyBaseCommand
           }
 
           $deprecated = $instance->isDeprecated() ? ' <fg=yellow>(deprecated)</>' : '';
-          $stats[] = [$audit.$deprecated, count(array_filter($policy_list, function ($policy) use ($audit) {
-            return $audit == $policy['class'];
+          $stats[] = [$audit->name.$deprecated, $audit->version, count(array_filter($policy_list, function ($policy) use ($audit) {
+            return $audit->name == $policy['class'];
           }))];
         }
 
         $io = new SymfonyStyle($input, $output);
         $io->title('Drutiny Audit Classes');
-        $io->table(['Audit', 'Policy utilisation'], $stats);
+        $io->table(['Audit', 'Version', 'Policy utilisation'], $stats);
         return 0;
     }
 }

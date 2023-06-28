@@ -424,6 +424,7 @@ services:
           - src/Plugin/Drupal7/Audit/*
           - src/Plugin/Drupal8/Audit/*
           - src/Policy.php
+          - src/Policy/Compatibility/*
           - src/Profile.php
           - src/Config/Config.*
           - src/Report/Backport/*

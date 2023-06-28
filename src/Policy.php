@@ -8,6 +8,7 @@ use Drutiny\Audit\AbstractAnalysis;
 use Drutiny\Policy\Dependency;
 use Drutiny\Entity\ExportableInterface;
 use Drutiny\Helper\MergeUtility;
+use Drutiny\Policy\AuditClass;
 use Drutiny\Policy\Chart;
 use Drutiny\Policy\PolicyType;
 use Drutiny\Policy\Severity;
@@ -23,6 +24,9 @@ class Policy implements ExportableInterface
     #[Description('What type of policy this is. Audit types return a pass/fail result while data types return only data.')]
     public readonly PolicyType $type;
     
+    /**
+     * @var \Drutiny\Policy\Tag[]
+     */
     #[Description('A set of tags to categorize a policy.')]
     #[ArrayType('indexed', Tag::class)]
     public readonly array $tags;
@@ -36,10 +40,23 @@ class Policy implements ExportableInterface
     #[Description('Create parameters to pass to the audit before it is executed. Target object is available.')]
     public readonly ParameterBagInterface $build_parameters;
 
+    /**
+     * @var \Drutiny\Policy\Dependency[]
+     */
     #[Description('A list of executable dependencies to require before auditing the policy against a target.')]
     #[ArrayType('indexed', Dependency::class)]
     public readonly array $depends;
 
+    /**
+     * @var \Drutiny\Policy\AuditClass[]
+     */
+    #[Description('A list of audit class version compatibilty constraints.')]
+    #[ArrayType('indexed', AuditClass::class)]
+    public readonly array $audit_build_info;
+
+    /**
+     * @var \Drutiny\Policy\Chart[]
+     */
     #[Description('Configuration for any charts used in the policy messaging.')]
     #[ArrayType('indexed', Chart::class)]
     public readonly array $chart;
@@ -96,6 +113,8 @@ class Policy implements ExportableInterface
 
       #[Description('Notes and commentary on policy configuration and prescribed usage.')]
       public readonly string $notes = '',
+
+      array $audit_build_info = [],
     )
     {
       $this->type = PolicyType::from($type);
@@ -104,9 +123,13 @@ class Policy implements ExportableInterface
       $this->parameters = new FrozenParameterBag($parameters);
       $this->build_parameters = new FrozenParameterBag($build_parameters);
       $this->depends = array_map(fn(string|array $d) => is_string($d) ? Dependency::fromString($d) : new Dependency(...$d), $depends);
-
       array_walk($chart, fn(&$c, $k) => $c = Chart::fromArray($c, $k));
       $this->chart = $chart;
+
+      if (empty($audit_build_info)) {
+        $audit_build_info = [AuditClass::fromClass($class)];
+      }
+      $this->audit_build_info = array_map(fn($c) => $this->buildAuditCompatibility($c), $audit_build_info);
     }
 
     /**
@@ -121,6 +144,27 @@ class Policy implements ExportableInterface
           $args['parameters'] = $properties['parameters'];
         }
         return new static(...$args);
+    }
+
+    /**
+     * @throws \Drutiny\Policy\PolicyCompatibilityException
+     */
+    public function isCompatible(): bool {
+      foreach ($this->audit_build_info as $compatibility) {
+        $compatibility->isCompatible();
+      }
+      return true;
+    }
+
+    /**
+     * The the audit compabitility information.
+     */
+    private function buildAuditCompatibility(string|array|AuditClass $built):AuditClass {
+        return match (gettype($built)) {
+          'string' => AuditClass::fromBuilt($built),
+          'array' => new AuditClass(...$built),
+          default => $built
+        };
     }
 
     /**
@@ -153,6 +197,9 @@ class Policy implements ExportableInterface
         $data['chart'] = array_map(fn($c) => get_object_vars($c), $data['chart']);
         $data['depends'] = array_map(fn($d) => $d->export(), $data['depends']);
         $data['tags'] = array_map(fn ($t) => $t->name, $this->tags);
+        $data['audit_build_info'] = array_map(fn(AuditClass $a) => $a->asBuilt(), array_filter($data['audit_build_info'], function (AuditClass $audit) {
+          return $audit->version !== null;
+        }));
 
         // Fix Yaml::dump bug where it doesn't correctly split \r\n to multiple
         // lines.

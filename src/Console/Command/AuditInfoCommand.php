@@ -3,6 +3,7 @@
 namespace Drutiny\Console\Command;
 
 use Drutiny\AuditFactory;
+use Drutiny\Policy\AuditClass;
 use Drutiny\PolicyFactory;
 use Drutiny\Target\TargetFactory;
 use Symfony\Component\Console\Command\Command;
@@ -50,13 +51,17 @@ class AuditInfoCommand extends Command
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $audit = $input->getArgument('audit');
-        $reflection = new \ReflectionClass($audit);
-        $audit_instance = $this->auditFactory->mock($audit);
+        $audit = AuditClass::fromClass($input->getArgument('audit'));
+        $reflection = new \ReflectionClass($audit->name);
+        $audit_instance = $this->auditFactory->mock($audit->name);
 
         $info = [];
 
-        $info[] = ['<info>Class</info>', new TableCell($audit, ['colspan' => 4])];
+        $info[] = ['<info>Class</info>', new TableCell($audit->name, ['colspan' => 4])];
+        $info[] = [
+          '<info>Version</info>', $audit->version?->version ?? '',
+          '<info>Supports</info>', $audit->version?->compatibilty ?? ''
+        ];
         $info[] = ['<info>Extends</info>', new TableCell($reflection->getParentClass()->name, ['colspan' => 4])];
 
         $info[] = new TableSeparator();
@@ -94,7 +99,7 @@ class AuditInfoCommand extends Command
         }
 
         $policy_list = array_filter($this->policyFactory->getPolicyList(), function ($policy) use ($audit) {
-            return $policy['class'] == $audit;
+            return $policy['class'] == $audit->name;
         });
 
         $info[] = ['<info>Policies</info>', new TableCell($this->listing(array_map(function ($policy) {
