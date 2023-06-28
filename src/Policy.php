@@ -197,9 +197,14 @@ class Policy implements ExportableInterface
         $data['chart'] = array_map(fn($c) => get_object_vars($c), $data['chart']);
         $data['depends'] = array_map(fn($d) => $d->export(), $data['depends']);
         $data['tags'] = array_map(fn ($t) => $t->name, $this->tags);
-        $data['audit_build_info'] = array_map(fn(AuditClass $a) => $a->asBuilt(), array_filter($data['audit_build_info'], function (AuditClass $audit) {
+        $data['audit_build_info'] = array_map(fn(AuditClass $a) => $a->asBuilt(), array_filter($data['audit_build_info'] ?? [], function (AuditClass $audit) {
           return $audit->version !== null;
         }));
+
+        // This prevents older runtimes from not being able to instansiate the policy.
+        if (empty($data['audit_build_info'])) {
+          unset($data['audit_build_info']);
+        }
 
         // Fix Yaml::dump bug where it doesn't correctly split \r\n to multiple
         // lines.

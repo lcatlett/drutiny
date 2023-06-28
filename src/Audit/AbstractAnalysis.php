@@ -18,7 +18,6 @@ use Twig\Error\RuntimeError;
 /**
  * Audit gathered data.
  */
-#[Version('1.1')]
 #[Parameter(name: 'expression', type: Type::STRING, description: 'Twig syntax to evaluate audit data into an outcome.', default: 'true')]
 #[Parameter(name: 'variables', type: Type::HASH, description: 'A keyed array of expressions to set variables before evaluating the passing expression.', default: [])]
 #[Parameter(name: 'syntax', type: Type::STRING, enums: ['twig', 'expression_language'], default: 'expression_language', description: 'Which syntax to use. Options: twig or expression_language.')]
