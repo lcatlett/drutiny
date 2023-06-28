@@ -20,6 +20,7 @@ nav:
       - Getting started: Develop/Audit/GettingStarted.md
       - Parameters: Develop/Audit/Parameters.md
       - Dependencies: Develop/Audit/Dependencies.md
+      - Version: Develop/Audit/Version.md
 
 theme:
   name: material
