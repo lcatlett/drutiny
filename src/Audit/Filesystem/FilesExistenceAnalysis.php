@@ -2,6 +2,7 @@
 
 namespace Drutiny\Audit\Filesystem;
 
+use Drutiny\Attribute\Parameter;
 use Drutiny\Attribute\Type;
 use Drutiny\Sandbox\Sandbox;
 use Drutiny\Audit\AbstractAnalysis;
@@ -13,6 +14,52 @@ use Symfony\Component\Process\Process;
 /**
  * Checks for existence of requested file/directory on specified path.
  */
+
+#[Parameter(
+  name: 'filenames',
+  description: 'File names to include in the scan',
+  type: Type::ARRAY,
+  default: []
+)]
+#[Parameter(
+  name: 'types',
+  description: 'File type as per file system. Allowed values are b for block special, c for character special, d for directory, f for regular file, l for symbolic link, p for FIFO and s for socket files.',
+  default: ['f'],
+  type: Type::ARRAY
+)]
+#[Parameter(
+  name: 'groups',
+  description: 'File owned group.',
+  type: Type::ARRAY,
+  default: []
+)]
+#[Parameter(
+  name: 'users',
+  description: 'File owned user.',
+  default: [],
+  type: Type::ARRAY,
+)]
+#[Parameter(
+  name: 'smaller_than',
+  description: 'File size smaller than x size. Use k for Kilobytes, M Megabytes and G for Gigabytes. E.g. 100k or 100M or 1G.',
+  type: Type::STRING,
+)]
+#[Parameter(
+  name: 'larger_than',
+  description: 'File size larger than x size. Use k for Kilobytes, M Megabytes and G for Gigabytes. E.g. 100k or 100M or 1G.',
+  type: Type::STRING,
+)]
+#[Parameter(
+  name: 'exclude',
+  description: 'Absolute file-paths to directories omit from scanning',
+  default: [],
+  type: Type::ARRAY,
+)]
+#[Parameter(
+  name: 'maxdepth',
+  description: 'An optional max depth for the scan.',
+  type: Type::INTEGER,
+)]
 #[Dependency(expression: 'Target.typeOf("Drutiny\\\Target\\\FilesystemInterface")')]
 class FilesExistenceAnalysis extends AbstractAnalysis {
 
@@ -24,51 +71,6 @@ class FilesExistenceAnalysis extends AbstractAnalysis {
       description: 'List of absolute filepath to directory to scan',
       default: [$dir],
       type: Type::ARRAY
-    );
-    $this->addParameter(
-      name: 'filenames',
-      description: 'File names to include in the scan',
-      type: Type::ARRAY,
-      default: []
-    );
-    $this->addParameter(
-      name: 'types',
-      description: 'File type as per file system. Allowed values are b for block special, c for character special, d for directory, f for regular file, l for symbolic link, p for FIFO and s for socket files.',
-      default: ['f'],
-      type: Type::ARRAY
-    );
-    $this->addParameter(
-      name: 'groups',
-      description: 'File owned group.',
-      type: Type::ARRAY,
-      default: []
-    );
-    $this->addParameter(
-      name: 'users',
-      description: 'File owned user.',
-      default: [],
-      type: Type::ARRAY,
-    );
-    $this->addParameter(
-      name: 'smaller_than',
-      description: 'File size smaller than x size. Use k for Kilobytes, M Megabytes and G for Gigabytes. E.g. 100k or 100M or 1G.',
-      type: Type::STRING,
-    );
-    $this->addParameter(
-      name: 'larger_than',
-      description: 'File size larger than x size. Use k for Kilobytes, M Megabytes and G for Gigabytes. E.g. 100k or 100M or 1G.',
-      type: Type::STRING,
-    );
-    $this->addParameter(
-      name: 'exclude',
-      description: 'Absolute file-paths to directories omit from scanning',
-      default: [],
-      type: Type::ARRAY,
-    );
-    $this->addParameter(
-      name: 'maxdepth',
-      description: 'An optional max depth for the scan.',
-      type: Type::INTEGER,
     );
   }
 
