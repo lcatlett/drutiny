@@ -5,6 +5,7 @@ namespace Drutiny\Target;
 use Drutiny\Audit\TwigEvaluator;
 use Drutiny\Settings;
 use Drutiny\Target\Exception\InvalidTargetException;
+use InvalidArgumentException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class TargetFactory
@@ -34,7 +35,9 @@ class TargetFactory
             list($target_name, $target_data) = explode(':', $target_reference, 2);
         }
 
-        $target = $this->container->get($this->targetMap[$target_name]);
+        $target = $this->container->get($this->targetMap[$target_name] 
+          ?? throw new InvalidArgumentException("$target_name is not a valid target tag. Valid tags are: " . implode(', ', array_keys($this->targetMap)))
+        );
         $target->setTargetName($target_reference);
         $target->load($target_data, $uri);
 
