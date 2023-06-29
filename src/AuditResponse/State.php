@@ -32,6 +32,7 @@ enum State: int
         if ($type == PolicyType::AUDIT) {
             return $this;
         }
+        // PolicyType::DATA
         return match ($this) {
             static::ERROR => static::ERROR,
             static::IRRELEVANT => static::IRRELEVANT,
