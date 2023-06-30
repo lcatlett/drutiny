@@ -171,6 +171,22 @@ parameters:
 In the example above, irrespective of whether the policy passes or fails a warning can be raised if errors were found
 while obtaining the results.
 
+## parameters.omitIf
+
+For audit classes that extend `Drutiny\Audit\AbstractAnalysis`, you can provide an `omitIf` key under
+the `parameters` declaration that when evaluated to true, will return the policy prematurely with an "Irrelevant"
+state which will omit the policy result from a report.
+
+⚠️ omitIf is evaluated before variables in parameters.variables are evaluated so you cannot use those variables in your
+omitIf evaluation.
+
+```yaml
+parameters:
+  # Omit if the "response" variable given by the audit class did not get defined.
+  # E.g. a condition was not met to produce this variable in the audit.
+  omitIf: response is undefined
+```
+
 ## parameters.expression
 
 For audit classes that extend `Drutiny\Audit\AbstractAnalysis`, you can provide a `expression` key under
