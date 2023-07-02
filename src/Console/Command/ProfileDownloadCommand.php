@@ -68,7 +68,12 @@ class ProfileDownloadCommand extends Command
               unset($override['severity']);
           }
         }
-        $filename = "{$profile->name}.profile.yml";
+        $filename = getcwd() . DIRECTORY_SEPARATOR . $this->settings->get('profile.library.fs') . "/{$profile->name}.profile.yml";
+        $dir = dirname($filename);
+
+        // Make sure the directory exists.
+        $fs = new Filesystem;
+        $fs->mkdir($dir);
 
         $export['uuid'] = $filename;
 
