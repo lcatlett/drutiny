@@ -50,7 +50,7 @@ class ProfileFactory
     /**
      * Load policy by name.
      */
-    public function loadProfileByName(string|Profile $name):Profile
+    public function loadProfileByName(string|Profile $name, ?ProfileSourceInterface $source = null):Profile
     {
         if ($name instanceof Profile) {
           return $name;
@@ -62,7 +62,7 @@ class ProfileFactory
             throw new ProfileNotFoundException("No such profile found: '$name'. Available: " . implode(', ', array_keys($list)));
         }
         $definition = $list[$name];
-        return $this->getSource($definition['source'])->load($definition);
+        return ($source ?? $this->getSource($definition['source']))->load($definition);
     }
 
   /**
