@@ -2,6 +2,7 @@
 
 namespace Drutiny\Console\Command;
 
+use Drutiny\LanguageManager;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -11,17 +12,22 @@ use Symfony\Component\Yaml\Yaml;
 use Drutiny\Profile\ProfileSource;
 use Drutiny\ProfileFactory;
 use Drutiny\Profile;
+use Drutiny\Settings;
+use Symfony\Component\Filesystem\Filesystem;
 
 /**
  *
  */
 class ProfileDownloadCommand extends Command
 {
-    protected $profileFactory;
+    use LanguageCommandTrait;
 
-    public function __construct(ProfileFactory $factory)
+    public function __construct(
+        protected ProfileFactory $profileFactory, 
+        protected LanguageManager $languageManager, 
+        protected Settings $settings
+    )
     {
-        $this->profileFactory = $factory;
         parent::__construct();
     }
 
@@ -43,6 +49,7 @@ class ProfileDownloadCommand extends Command
             InputArgument::OPTIONAL,
             'The source to download the profile from.'
         );
+        $this->configureLanguage();
     }
 
   /**
@@ -50,6 +57,7 @@ class ProfileDownloadCommand extends Command
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $this->initLanguage($input);
         $render = new SymfonyStyle($input, $output);
 
         $profile = $this->profileFactory->loadProfileByName($input->getArgument('profile'));
