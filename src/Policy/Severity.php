@@ -41,6 +41,17 @@ enum Severity:string {
     }
 
     /**
+     * Get severity case from int or string value.
+     */
+    static public function fromValue(string|int|null $value): self {
+        return match (gettype($value)) {
+            'string' => self::from($value),
+            'int' => self::fromInt($value),
+            default => self::getDefault(),
+        };
+    }
+
+    /**
      * Return an Enum severity by its weight.
      */
     static public function fromInt(int $int):self
