@@ -20,10 +20,21 @@ class ProfileSourceLocalFs extends AbstractProfileSource
     public function __construct(protected Finder $finder, Settings $settings, AsSource $source, CacheInterface $cache, ProfileFactory $profileFactory)
     {
         parent::__construct(source: $source, cache: $cache, profileFactory: $profileFactory);
-        $this->finder->files()->in(DRUTINY_LIB)->name('*.profile.yml');
 
         try {
-          $this->finder->in($settings->get('profile.library.fs'));
+          $dirs = $settings->get('extension.dirs');
+          $dirs[] = realpath($settings->get('profile.library.fs'));
+          $dirs[] = getcwd() . DIRECTORY_SEPARATOR . $settings->get('profile.library.fs');
+
+          $dirs = array_filter(array_unique($dirs), fn ($f) => $f && is_dir($f));
+
+          // Ensure the profile directory is available.
+
+          $this->finder
+              ->files()
+              ->depth('==1')
+              ->in($dirs)
+              ->name('*.profile.yml');
         }
         catch (DirectoryNotFoundException $e) {
           // Ignore not finding an existing config dir.
