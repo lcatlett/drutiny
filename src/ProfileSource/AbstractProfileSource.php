@@ -7,6 +7,7 @@ use Drutiny\Helper\TextCleaner;
 use Drutiny\LanguageManager;
 use Drutiny\Profile;
 use Drutiny\ProfileFactory;
+use Generator;
 use Symfony\Contracts\Cache\CacheInterface;
 use TypeError;
 
@@ -45,10 +46,12 @@ abstract class AbstractProfileSource implements ProfileSourceInterface
         return $this->doGetList($languageManager);
     }
 
-    final public function refresh(LanguageManager $languageManager): array
+    final public function refresh(LanguageManager $languageManager): Generator
     {
         $key = TextCleaner::machineValue($this->source->name.'.profile.list.'.$languageManager->getCurrentLanguage());
-        return $this->getList($languageManager);
+        foreach ($this->getList($languageManager) as $definition) {
+            yield $this->load($definition);
+        }
     }
 
     abstract protected function doGetList(LanguageManager $languageManager): array;
