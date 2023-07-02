@@ -23,6 +23,9 @@ class Profile
     #[ArrayType('keyed', PolicyDefinition::class)]
     public readonly array $dependencies;
 
+    /**
+     * @var \Drutiny\Profile\FormatDefinition[]
+     */
     #[Description('An array for formats with repspective properties.')]
     #[ArrayType('keyed', FormatDefinition::class)]
     public readonly array $format;
@@ -50,6 +53,9 @@ class Profile
         array $dependencies = [],
         public readonly array $excluded_policies = [],
         array $format = ['terminal' => []],
+
+        #[Description('The URI this profile can be referenced and located by.')]
+        public readonly ?string $uri = null,
     )
     {
         $this->policies = $this->buildPolicyDefinitions($policies);
