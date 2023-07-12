@@ -14,6 +14,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Output\StreamOutput;
 use Twig\Environment;
+use Twig\Error\RuntimeError;
 use Twig\Extension\CoreExtension;
 
 #[AsFormat(
@@ -56,6 +57,9 @@ class JSON extends FilesystemFormat implements FilesystemFormatInterface
         }
 
         $this->data['total'] = array_sum($this->data['totals']);
+
+        // Ensure the target name is present.
+        $this->data['target']['targetName'] = $report->target->getTargetName();
         return $this->data;
     }
 
@@ -78,12 +82,17 @@ class JSON extends FilesystemFormat implements FilesystemFormatInterface
           $values[$key] = null;
           continue;
         }
-        $values[$key] = $this->converter->convert(
-          $this->twig->render(
-            name: $this->twig->createTemplate($response->policy->{$key}),
-            context: $response->tokens
-          )
-        )->getContent();
+        try {
+          $values[$key] = $this->converter->convert(
+            $this->twig->render(
+              name: $this->twig->createTemplate($response->policy->{$key}),
+              context: $response->tokens
+            )
+          )->getContent();
+        }
+        catch (RuntimeError $e) {
+          // Ignore.
+        }
       }
 
       return $values;
