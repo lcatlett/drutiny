@@ -26,7 +26,7 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
     protected array $statsBySeverity = [];
 
     public function __construct(
-        protected Report $report
+        public readonly Report $report
     )
     {
         $this->setReportingPeriod($report->reportingPeriodStart, $report->reportingPeriodEnd);
