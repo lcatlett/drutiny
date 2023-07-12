@@ -2,7 +2,8 @@
   <div class="col">
 
     <h3 id="{{ audit_response.policy.name }}">{{ audit_response.policy.title }}</h3>
-    {{ include(template_from_string(audit_response.policy.description, "Policy description for error.html.twig.")) | markdown_to_html }}
+    {# We don't attempt to render this because it may not contain the required variables. #}
+    {{ audit_response.policy.description | markdown_to_html }}
 
     <div class="card text-white bg-primary mb-3 assessment-card">
       <div class="badge badge-primary"><span class="fa fa-ban" aria-hidden="true"></span> Error</div>

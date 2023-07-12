@@ -271,6 +271,8 @@ services:
         - [addFilter, ['@twig.filters.semver']]
         - [addFunction, ['@twig.functions.chartTable']]
         - [addFunction, ['@twig.functions.combine']]
+        - [addFunction, ['@twig.functions.base64File']]
+        - [addFunction, ['@twig.function.bootstrapColorMap']]
         - [addFunction, ['@twig.functions.explode']]
         - [addFunction, ['@twig.functions.is_target']]
         - [addFunction, ['@twig.functions.parse_url']]
@@ -301,6 +303,20 @@ services:
       arguments:
         - parse_url
         - parse_url
+    
+    twig.functions.base64File:
+      class: Twig\TwigFunction
+      arguments:
+        - base64File
+        - ['Drutiny\Report\Twig\Helper', 'base64File']
+        - is_safe: [html]
+          needs_environment: true
+
+    twig.function.bootstrapColorMap:
+      class: Twig\TwigFunction
+      arguments:
+        - bscolor
+        - ['Drutiny\Report\Twig\Helper', 'bootstrapColorMap']
 
     twig.functions.semver_satisfies:
       class: Twig\TwigFunction

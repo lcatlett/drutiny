@@ -2,10 +2,9 @@
 
 namespace Drutiny\Report\Twig;
 
-use Drutiny\AssessmentInterface;
+use Drutiny\Assessment;
 use Drutiny\AuditResponse\AuditResponse;
 use Drutiny\Policy\Chart;
-use Drutiny\Report\Format\Markdown;
 use Twig\Environment;
 
 
@@ -42,7 +41,7 @@ class Helper {
     if (!empty($data_table)) {
       $chart = $chart->with(tableIndex: -1);
     }
-    $class = 'chart-unprocessed';
+    $class = 'chart-unprocessed placeholder-glow';
     if (isset($chart->htmlClass)) {
         $class .= ' '.$chart->htmlClass;
     }
@@ -52,7 +51,7 @@ class Helper {
       $value = is_array($key) ? implode(',', $key) : $key;
       $element .= 'data-chart-'.$name . '='.json_encode($value).' ' ;
     }
-    return $element . ">\n\n$data_table\n</div>";
+    return $element . "><canvas class=\"placeholder\"></canvas>\n\n$data_table\n</div>";
   }
 
   /**
@@ -96,21 +95,59 @@ class Helper {
   /**
    * Twig policy_result function.
    */
-  public static function renderAuditReponse(Environment $twig, AuditResponse $response, AssessmentInterface $assessment):string
+  public static function renderAuditReponse(Environment $twig, AuditResponse $response, Assessment $assessment, ?string $style = null):string
   {
       // Irrelevant responses should be omitted from rendering.
       if ($response->state->isIrrelevant()) {
         return '';
       }
       $globals = $twig->getGlobals();
-      $template = 'report/policy/'.$response->getType().'.'.$globals['ext'].'.twig';
-      $globals['logger']->info("Rendering audit response for ".$response->policy->name.' with '.$template);
+
+      $ext = $globals['ext'];
+      $type = $response->getType();
+      $profile = $assessment->report->profile->name;
+      $path = 'report/policy';
+
+      $templates = [
+        // Templates using style.
+        "$path/$profile-$type-$style.$ext.twig",
+        "$path/$type-$style.$ext.twig",
+        "$profile/$type-$style.$ext.twig",
+        "$type-$style.$ext.twig",
+
+        // Templates without style
+        "$path/$profile-$type.$ext.twig",
+        "$profile/$type.$ext.twig",
+        "$profile/policy.$ext.twig",
+        "$type.$ext.twig",
+        "policy.$ext.twig",
+
+        // Generic
+        "$profile/$type.twig",
+        "$profile/policy.twig",
+        "$type.twig",
+        "policy.twig",
+
+        // Default
+        "$path/$type.$ext.twig",
+      ];
+
+      $template = $twig->resolveTemplate($templates);
+      $globals['logger']->info("Rendering audit response for ".$response->policy->name.' with '.$template->getTemplateName());
       $globals['logger']->debug('Keys: ' . implode(', ', array_keys($response->tokens)));
       return $twig->render($template, [
         'audit_response' => $response,
         'assessment' => $assessment,
         'target' => $assessment->getTarget(),
       ]);
+  }
+
+  /**
+   * Render a file into base64.
+   */
+  public static function base64File(Environment $twig, string $path) {
+    $template = $twig->resolveTemplate($path);
+    return base64_encode($twig->render($template));
   }
 
   public static function keyed($variable) {
@@ -172,6 +209,22 @@ class Helper {
       $things = count($things);
     }
     return $things > 1 ? $plural : $singular;
+  }
+
+  public static function bootstrapColorMap(string $state):string {
+    return match (strtolower($state)) {
+      'failure' => 'danger',
+      'error' => 'danger',
+      'irrelevent' => 'secondary',
+      'not_applicable' => 'secondary',
+      'notice' => 'info',
+      'normal' => 'info',
+      'critical' => 'danger',
+      'high' => 'warning',
+      'low' => 'secondary',
+      'none' => 'secondary',
+      default => strtolower($state),
+    };
   }
 
 }

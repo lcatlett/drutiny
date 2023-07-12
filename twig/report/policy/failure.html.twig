@@ -2,7 +2,9 @@
   <div class="col">
 
     <h3 id="{{ audit_response.policy.name }}">{{ audit_response.policy.title }}</h3>
+    {% with audit_response.tokens %}
     {{ include(template_from_string(audit_response.policy.description, "description field on failure.html.twig" )) | markdown_to_html }}
+    {% endwith %}
 
     <div class="card border-danger mb-3 assessment-card">
       <div class="badge badge-danger"><span class="fa fa-minus-circle" aria-hidden="true"></span> Failure</div>

@@ -1,4 +1,4 @@
-#### ❌ {{ audit_response.policy.title }} - {{ audit_response.type }}
+#### ❌ {{ audit_response.policy.title }} - {{ audit_response.type }} [SEV={{ audit_response.policy.severity.value }}]
 
 {% with audit_response.tokens %}
 {{ include(template_from_string(audit_response.policy.description, "description.field on failure.md.twig"))|raw }}

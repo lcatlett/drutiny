@@ -1,11 +1,7 @@
 <div id="report">
-  <!-- Example row of columns -->
-
-
     {% if sections is iterable %}
-
-      {% for section in sections %}
-      <div class="row">
+      {% for name, section in sections|filter((s, n) => n not in (exclude ?? [])) %}
+      <div class="row" id="section-{{ name }}">
         <div class="col py-1">
         {% if section.heading is defined %}
         <h2 class="section-title" id="section_{{ section.heading|u.snake }}">{{ section.heading }}</h2>

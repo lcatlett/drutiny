@@ -10,10 +10,10 @@
         </tr>
       </thead>
       <tbody>
-        {% for result in assessment.results|sort((a, b) => a.severityCode <=> b.severityCode) %}
+        {% for result in assessment.results|sort((a, b) => a.severityCode <=> b.severityCode)|reverse %}
         {% if result.hasWarning or result.hasError or not result.isSuccessful and not result.notApplicable and not result.isIrrelevant %}
         <tr class="{% if result.isNotice %}{% elseif result.isSuccessful %}has-success{% elseif result.hasWarning %}has-warning{% else %}has-error{% endif %}">
-          <th><a href="#{{ result.policy.name }}">{{ result.policy.title }}</a></th>
+          <th><a href="#{{ result.policy.name }}" class="link-underline-opacity-50 link-underline-{{ bscolor(result.type) }}">{{ result.policy.title }}</a></th>
           <td>{{ result.severity }}</td>
           <td class="control-label">{{ result.type|split('-')|join(' ')|title  }}</td>
           </tr>
