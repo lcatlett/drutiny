@@ -18,6 +18,9 @@ use ReflectionClass;
 class PolicyFactory
 {
 
+    /**
+     * @var \Drutiny\Attribute\AsSource[]
+     */
     public readonly array $sources;
 
     public function __construct(
@@ -147,7 +150,7 @@ class PolicyFactory
     /**
      * Load the sources that provide policies.
      *
-     * @return array of PolicySourceInterface objects.
+     * @return \Drutiny\PolicySource\PolicySourceInterface[]
      */
     private function buildSources():array
     {
