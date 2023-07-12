@@ -37,7 +37,7 @@ class Dependency
 
     public function __construct(
       string $expression = 'true',
-      $on_fail = self::ON_FAIL_DEFAULT,
+      string $on_fail = self::ON_FAIL_DEFAULT,
       string $syntax = 'expression_language',
       public readonly string $description = ''
       )
