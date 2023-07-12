@@ -21,6 +21,7 @@ use Drutiny\Profile;
 use Drutiny\Profile\PolicyDefinition;
 use Drutiny\Target\TargetInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Twig\Error\RuntimeError;
 use UnexpectedValueException;
@@ -33,6 +34,7 @@ class ReportFactory {
         protected PolicyFactory $policyFactory,
         protected SyntaxProcessor $syntaxProcessor,
         protected EventDispatcher $eventDispatcher,
+        protected ProgressBar $progressBar
     )
     {}
 
@@ -111,8 +113,16 @@ class ReportFactory {
         }
 
         // Wait for audit forks to return... 
-        foreach ($this->forkManager->waitWithUpdates(400) as $remaining) {
-            $this->logger->info(sprintf("%d/%d policy audits remaining for %s.", count($batch) - $remaining, count($batch), $target->uri));
+        foreach ($this->forkManager->waitWithUpdates(800) as $remaining) {
+            $this->logger->info(sprintf("%d of %d policy audits remaining for %s.", $remaining, count($definitions), $target->uri));
+            $forks = $this->forkManager->getForks(ForkInterface::STATUS_INPROGRESS);
+            if (!empty($forks)) {
+                $fork = reset($forks);
+                $others_count = count($forks) - 1;
+                $message = sprintf("Awaiting %s%s", $fork->getLabel(), $others_count ? " and $others_count others in progress" : ".");
+                $this->progressBar->setMessage($message);
+                $this->progressBar->display();
+            }
         }
         $results = array_merge($this->forkManager->getForkResults(), $early_results);
         $returned = count($results);
