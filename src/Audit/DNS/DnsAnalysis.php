@@ -2,40 +2,25 @@
 
 namespace Drutiny\Audit\DNS;
 
+use Drutiny\Attribute\DataProvider;
+use Drutiny\Attribute\Parameter;
 use Drutiny\Audit\AbstractAnalysis;
-use Drutiny\Sandbox\Sandbox;
-use InvalidArgumentException;
 
 /**
  * Assert a value is present in the DNS record of the zone.
  */
+#[Parameter(name: 'type', mode: Parameter::OPTIONAL, description: 'The type of DNS record to lookup', enums: ['A', 'CNAME', 'MX', 'TXT'], default: 'A')]
+#[Parameter(name: 'zone', mode: Parameter::OPTIONAL, description: 'The DNS zone to look up.')]
 class DnsAnalysis extends AbstractAnalysis
 {
-
-    public function configure():void
+    #[DataProvider]
+    public function lookup(): void
     {
-        parent::configure();
-        $this->addParameter(
-            'type',
-            static::PARAMETER_OPTIONAL,
-            'The type of DNS record to lookup',
-            'A'
-        );
-        $this->addParameter(
-            'zone',
-            static::PARAMETER_OPTIONAL,
-            '',
-        );
-    }
-
-    public function gather(Sandbox $sandbox)
-    {
-        $type = match($this->getParameter('type', 'A')) {
+        $type = match($this->getParameter('type')) {
             'A' => DNS_A,
             'CNAME' => DNS_CNAME,
             'MX' => DNS_MX,
-            'TXT' => DNS_TXT,
-            default => throw new InvalidArgumentException("Parameter 'type' has a invalid value of: " . $this->getParameter('type') . '. Valid options are A, CNAME, MX and TXT.'),
+            'TXT' => DNS_TXT
         };
         $zone = $this->getParameter('zone', $this->target['domain']);
 
