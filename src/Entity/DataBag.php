@@ -2,14 +2,24 @@
 
 namespace Drutiny\Entity;
 
+use ArrayIterator;
 use Drutiny\Entity\Exception\DataNotFoundException;
+use IteratorAggregate;
+use Traversable;
 
 /**
  * Holds data.
  */
-class DataBag implements ExportableInterface
+class DataBag implements ExportableInterface, IteratorAggregate
 {
     protected array $data = [];
+
+    public function __construct(?array $data = null)
+    {
+        if ($data !== null) {
+            $this->add($data);
+        }
+    }
 
     /**
      * Clears all data.
@@ -17,6 +27,14 @@ class DataBag implements ExportableInterface
     public function clear()
     {
         $this->data = [];
+    }
+
+    /**
+     * Implements IteratorAggregate::getIterator().
+     */
+    public function getIterator(): Traversable
+    {
+        return new ArrayIterator($this->data);
     }
 
     /**
