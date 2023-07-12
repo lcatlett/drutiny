@@ -8,6 +8,8 @@ use Drutiny\PolicyFactory;
 use Drutiny\Profile;
 use Drutiny\ProfileFactory;
 use Fiasco\SymfonyConsoleStyleMarkdown\Renderer;
+use InvalidArgumentException;
+use LogicException;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -50,12 +52,12 @@ class PolicyDiffCommand extends DrutinyBaseCommand
         )
         ->addArgument(
             'source1',
-            InputArgument::REQUIRED,
+            InputArgument::OPTIONAL,
             'The name of the source to load the original policy from.'
         )
         ->addArgument(
             'source2',
-            InputArgument::REQUIRED,
+            InputArgument::OPTIONAL,
             'The name of the source to load the comparative policy from.'
         );
         $this->configureLanguage();
@@ -71,8 +73,41 @@ class PolicyDiffCommand extends DrutinyBaseCommand
         // Set global language used by policy/profile sources.
         $this->initLanguage($input);
 
-        $source1 = $this->policyFactory->getSource($input->getArgument('source1'));
-        $source2 = $this->policyFactory->getSource($input->getArgument('source2'));
+        $policy_name = $input->getArgument('policy');
+
+        if ($input->getArgument('source1') === null || $input->getArgument('source2') === null) {
+            $policy_sources = $this->getSourcesByPolicyName($policy_name);
+            if (empty($policy_sources)) {
+                throw new LogicException("There are no sources found for policy: $policy_name.");
+            }
+        }
+        if ($input->getArgument('source1') === null) {
+            $source = $io->choice(
+                question: "Which source to diff as the original policy?",
+                choices: array_keys($policy_sources),
+            );
+            $source1 = $policy_sources[$source];
+            unset($policy_sources[$source]);
+        }
+        else {
+            $source1 = $this->policyFactory->getSource($input->getArgument('source1'));
+            if (isset($policy_sources)) {
+                unset($policy_sources[$source1->name]);
+            }
+        }
+
+        if ($input->getArgument('source2') === null && empty($policy_sources)) {
+            throw new LogicException("There are not enough sources to diff this policy.");
+        }
+        elseif ($input->getArgument('source2') === null) {
+            $source2 = count($policy_sources) == 1 ? array_shift($policy_sources) : $policy_sources[$io->choice(
+                question: "Which source to diff as the comparative policy?",
+                choices: array_keys($policy_sources),
+            )];
+        }
+        else {
+            $source2 = $this->policyFactory->getSource($input->getArgument('source2'));
+        }
 
         $policy1_list = $source1->getList($this->languageManager);
         $policy2_list = $source2->getList($this->languageManager);
@@ -109,6 +144,22 @@ class PolicyDiffCommand extends DrutinyBaseCommand
             });
         }
         return 0;
+    }
+
+    /**
+     * @return \Drutiny\PolicySource\AbstractPolicySource[]
+     */
+    protected function getSourcesByPolicyName(string $policy_name):array {
+        $policy_sources = [];
+
+        foreach ($this->policyFactory->sources as $source) {
+            $list = $this->policyFactory->getSource($source->name)->getList($this->languageManager);
+
+            if (isset($list[$policy_name])) {
+                $policy_sources[$source->name] = $this->policyFactory->getSource($source->name);
+            }
+        }
+        return $policy_sources;
     }
 
     protected function preparePolicy(Policy $policy) {
