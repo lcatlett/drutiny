@@ -78,8 +78,11 @@ abstract class KernelTestCase extends TestCase {
         // Dependency factory loads the target from the twigEvaluator.
         $twigEvaluator = $this->container->get(TwigEvaluator::class);
         $targetFactory = $this->container->get(TargetFactory::class);
+
+
         $target = $targetFactory->mock($type);
         $target->setUri('https://example.com/');
+        $target->setTargetName($type . ':test');
 
         if (!empty($exec_responses)) {
             $this->container->get(LocalCommand::class)
