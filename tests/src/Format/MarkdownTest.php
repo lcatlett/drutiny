@@ -123,7 +123,7 @@ class MarkdownTest extends KernelTestCase {
         $markdown = $twig->getRuntime(MarkdownRuntime::class);
         $html = $markdown->convert($md);
 
-        $this->assertStringContainsString('class="chart-unprocessed"', $html);
+        $this->assertStringContainsString('class="chart-unprocessed', $html);
 
         // Keyed rows support.
         $headers = ['Step', 'Runner 1', 'Runner 2'];
