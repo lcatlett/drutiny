@@ -8,6 +8,7 @@ use Async\ForkManager;
 use DateTime;
 use DateTimeInterface;
 use Drutiny\Audit\AuditInterface;
+use Drutiny\Audit\Exception\AuditException;
 use Drutiny\Audit\SyntaxProcessor;
 use Drutiny\AuditFactory;
 use Drutiny\AuditResponse\AuditResponse;
@@ -101,7 +102,7 @@ class ReportFactory {
         foreach ($batch as $class => $policies) {
             $audit = $this->auditFactory->mock($class, $target);
             $audit->setReportingPeriod($start, $end);
-            array_walk($policies, fn($p) => $audit->prepare($p));
+            array_walk($policies, fn($policy) => $this->prepareAudit($audit, $policy, $errors));
 
             foreach ($policies as $policy) {
                 $this->logger->info("Auditing $policy->title");
@@ -132,6 +133,29 @@ class ReportFactory {
         
         // Merge results and errors together as result set.
         return array_merge($errors, $results);
+    }
+
+    /**
+     * Prepare an audit with a given policy.
+     *
+     * @param \Drutiny\AuditResponse[] $errors
+     */
+    private function prepareAudit(AuditInterface $audit, Policy $policy, array &$errors):void {
+        try {
+            $audit->prepare($policy);
+        }
+        catch (AuditException $e) {
+            $errors[] = new AuditResponse(
+                policy: $policy,
+                state: $e->state,
+                tokens: [
+                    'exception' => $e->getMessage(),
+                    'exception_type' => get_class($e),
+                ],
+                timing: 0,
+                timestamp: 0
+            );
+        }
     }
 
     /**
