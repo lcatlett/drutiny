@@ -333,7 +333,7 @@ abstract class Audit implements AuditInterface
                     $policy = $policy->with(parameters: $parameters);
                 }
             } catch (RuntimeError $e) {
-                throw new \Exception("Failed to create key: $key. Encountered Twig runtime error: " . $e->getMessage());
+                throw new AuditException("Failed to create key: $key. Encountered Twig runtime error: " . $e->getMessage());
             }
         }
         return $policy;
