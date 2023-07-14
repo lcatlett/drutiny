@@ -2,12 +2,18 @@
 
 namespace Drutiny\Audit\Exception;
 
-use Drutiny\Audit\AuditInterface;
+use Drutiny\AuditResponse\State;
+use Throwable;
 
 class AuditException extends \Exception {
 
-  public function getStatus()
+  public function __construct(string $message, public readonly State $state = State::ERROR, ?Throwable $previous = null)
   {
-    return AuditInterface::FAIL;
+    parent::__construct($message, 0, $previous);
+  }
+
+  public function getStatus():int
+  {
+    return $this->state->value;
   }
 }
