@@ -3,7 +3,6 @@
 namespace Drutiny\Policy;
 
 use Composer\Semver\Comparator;
-use Composer\Semver\Semver;
 use Drutiny\Attribute\Version;
 use Drutiny\Policy\Compatibility\IncompatibleVersionException;
 use Drutiny\Policy\Compatibility\NoRuntimeVersionException;
@@ -63,6 +62,9 @@ class AuditClass {
         return sprintf('%s:%s', $this->name, $this->version?->version ?? '');
     }
 
+    /**
+     * Check if the instance is compatible with the current runtime class.
+     */
     public function isCompatible(): bool {
         // If version is not available then this is not a real compatibility check.
         // For backwards compatibility we'll return "true".
