@@ -137,7 +137,7 @@ class AuditListCommand extends DrutinyBaseCommand
           }
 
           $deprecated = $instance->isDeprecated() ? ' <fg=yellow>(deprecated)</>' : '';
-          $stats[] = [$audit->name.$deprecated, $audit->version, count(array_filter($policy_list, function ($policy) use ($audit) {
+          $stats[] = [$audit->name.$deprecated, $audit->version?->version, count(array_filter($policy_list, function ($policy) use ($audit) {
             return $audit->name == $policy['class'];
           }))];
         }
