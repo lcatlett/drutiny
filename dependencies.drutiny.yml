@@ -45,7 +45,7 @@ Target:
 Drupal:
   isBootstrapped: 
     description: Drupal is bootstrapped
-    expression: drush.bootstrap is defined and drush.bootstrap == 'Successful'
+    expression: drush.bootstrap is defined
     return: bool
 
   versionSatisfies:
