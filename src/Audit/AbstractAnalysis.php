@@ -32,6 +32,7 @@ use Twig\Error\RuntimeError;
   description: 'Change the policy severity to High if policy outcome is a failure and this expression is true. Cannot lower severity if severity is higher.')]
 #[Parameter(name: 'severityNormalIf', type: Type::STRING, 
   description: 'Change the policy severity to Normal if policy outcome is a failure and this expression is true. Cannot lower severity if severity is higher.')]
+#[Version('2.0')]
 class AbstractAnalysis extends Audit
 {
     /**

@@ -4,11 +4,14 @@ namespace DrutinyTests;
 
 use Drutiny\Attribute\Parameter;
 use Drutiny\Attribute\Type;
+use Drutiny\Audit\AbstractAnalysis;
 use Drutiny\Audit\DynamicParameterType;
 use Drutiny\Audit\InputDefinition;
 use Drutiny\Audit\SyntaxProcessor;
 use Drutiny\AuditFactory;
 use Drutiny\Policy;
+use Drutiny\Policy\AuditClass;
+use Drutiny\Policy\Compatibility\IncompatibleVersionException;
 use Drutiny\PolicyFactory;
 use Drutiny\Target\TargetFactory;
 use Drutiny\Target\TargetInterface;
@@ -181,5 +184,44 @@ class PolicyTest extends KernelTestCase {
     $this->assertArrayHasKey('list', $params);
     $this->assertArrayHasKey(0, $params['list']);
     $this->assertEquals('bar', $params['list'][0]);
+  }
+
+  public function testVersion() {
+    $policy = new Policy(
+      title: 'Test policy',
+      name: 'Test:Policy',
+      description: 'Test policy',
+      uuid: uniqid('test'),
+      source: 'phpunit',
+      class: AbstractAnalysis::class
+    );
+
+    $this->assertNotEmpty($policy->audit_build_info);
+    $this->assertArrayHasKey('audit_build_info', $policy->export());
+    $this->assertIsArray($policy->export()['audit_build_info']);
+    $this->assertIsString($policy->export()['audit_build_info'][0]);
+
+    $this->assertStringContainsString(AbstractAnalysis::class, $policy->export()['audit_build_info'][0]);
+
+    $build_info = $policy->export()['audit_build_info'][0];
+    list($class, $version) = explode(':', $build_info);
+    $this->assertEquals($class, $policy->class);
+    $this->assertInstanceOf(AuditClass::class, $policy->audit_build_info[0]);
+    $this->assertTrue($policy->audit_build_info[0]->isCompatible());
+  }
+
+  public function testVersionIncompatible() {
+    $policy = new Policy(
+      title: 'Test policy',
+      name: 'Test:Policy',
+      description: 'Test policy',
+      uuid: uniqid('test'),
+      source: 'phpunit',
+      class: AbstractAnalysis::class,
+      audit_build_info: [AbstractAnalysis::class . ':1.0']
+    );
+
+    $this->expectException(IncompatibleVersionException::class);
+    $policy->audit_build_info[0]->isCompatible();
   }
 }
