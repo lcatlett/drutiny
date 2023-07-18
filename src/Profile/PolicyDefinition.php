@@ -37,7 +37,7 @@ class PolicyDefinition {
         $this->build_parameters = new FrozenParameterBag($build_parameters);
 
         if ($severity !== null) {
-            $this->severity = Severity::from($severity);
+            $this->severity = is_numeric($severity) ? Severity::fromInt($severity) : Severity::from($severity);
         }
     }
 
