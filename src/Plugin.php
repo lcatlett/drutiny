@@ -13,7 +13,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class Plugin implements PluginInterface {
     private array $stores;
-    private bool $isInstalled;
+    private ?bool $isInstalled;
 
     public function __construct(
       ConfigInterface $pluginConfig, 
@@ -108,6 +108,7 @@ class Plugin implements PluginInterface {
       foreach ($this->stores as $store) {
         $store->save();
       }
+      $this->isInstalled = null;
     }
 
     /**
