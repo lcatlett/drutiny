@@ -5,8 +5,10 @@ namespace Drutiny\Audit\Drupal;
 use Drutiny\Attribute\DataProvider;
 use Drutiny\Audit\AbstractAnalysis;
 use Drutiny\Helper\TextCleaner;
+use Drutiny\Policy\Dependency;
 use Drutiny\Target\Service\Drush;
 
+#[Dependency('Drupal.moduleIsEnabled("purge_drush")')]
 class PurgeDiagnosticsAnalysis extends AbstractAnalysis {
     #[DataProvider]
     protected function runDiagnostics():void {
