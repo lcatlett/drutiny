@@ -124,7 +124,7 @@ class SyntaxProcessor {
     {
         try {
             if ($language == 'expression_language') {
-                $translation = new ExpressionLanguageTranslation($old = $expression);
+                $translation = new ExpressionLanguageTranslation($expression);
                 $expression = $translation->toTwigSyntax();
             }
             return $this->twigEvaluator->execute($expression, $contexts);
