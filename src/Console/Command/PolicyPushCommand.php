@@ -94,7 +94,7 @@ class PolicyPushCommand extends DrutinyBaseCommand
 
         $io->success(sprintf('Policy %s successfully pushed to %s. Visit %s',
           $input->getArgument('policy'),
-          $input->getArgument('source'),
+          $remote->name,
           $policy->uri
         ));
 
