@@ -3,6 +3,7 @@
 namespace Drutiny\Plugin\Drupal8\Audit;
 
 use Drutiny\Audit;
+use Drutiny\Policy\Dependency;
 use Drutiny\Sandbox\Sandbox;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Yaml\Yaml;
@@ -10,6 +11,7 @@ use Symfony\Component\Yaml\Yaml;
 /**
  * Duplicate modules.
  */
+#[Dependency('Drupal.isVersion8orLater', Dependency::ON_FAIL_OMIT)]
 class DuplicateModules extends Audit
 {
 

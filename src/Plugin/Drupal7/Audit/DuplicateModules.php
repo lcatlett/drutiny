@@ -3,12 +3,14 @@
 namespace Drutiny\Plugin\Drupal7\Audit;
 
 use Drutiny\Audit;
+use Drutiny\Policy\Dependency;
 use Drutiny\Sandbox\Sandbox;
 use Symfony\Component\Yaml\Yaml;
 
 /**
  * Duplicate modules.
  */
+#[Dependency('Drupal.isVersion7', Dependency::ON_FAIL_OMIT)]
 class DuplicateModules extends Audit {
 
   /**
