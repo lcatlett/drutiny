@@ -21,7 +21,7 @@ class Plugin implements PluginInterface {
       ConfigInterface $pluginState,
       protected InputInterface $input, 
       protected OutputInterface $output,
-      private PluginAttribute $attribute,
+      protected PluginAttribute $attribute,
       protected Settings $settings,
       protected LoggerInterface $logger
     )

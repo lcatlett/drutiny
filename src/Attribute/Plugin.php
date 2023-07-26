@@ -42,7 +42,11 @@ class Plugin implements KeyableAttributeInterface {
         return $this->fields->getAll();
     }
 
-    public function getField($name):PluginField
+    public function hasField(string $name): bool {
+        return array_key_exists($name, $this->getFieldAttributes());
+    }
+
+    public function getField(string $name):PluginField
     {
         return $this->fields->get($name);
     }
