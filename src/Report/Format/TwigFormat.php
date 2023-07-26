@@ -6,6 +6,7 @@ use Drutiny\Assessment;
 use Drutiny\Report\FilesystemFormatInterface;
 use Drutiny\Report\FormatInterface;
 use Drutiny\Report\Report;
+use Drutiny\Settings;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Output\StreamOutput;
@@ -45,6 +46,7 @@ abstract class TwigFormat extends FilesystemFormat implements FilesystemFormatIn
           // Backward compatibility
           $vars['assessment'] = new Assessment($report);
           $vars['sections'] = $this->prepareContent($vars);
+          $vars['settings'] = $this->twig->getRuntime(Settings::class)->getAll();
           $this->buffer->write($this->twig->render($template, $vars));
         }
         catch (Error $e) {
