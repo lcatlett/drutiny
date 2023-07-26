@@ -3,10 +3,13 @@
 namespace Drutiny\Report\Twig;
 
 use Drutiny\Assessment;
+use Drutiny\Audit\TwigEvaluator;
 use Drutiny\AuditResponse\AuditResponse;
 use Drutiny\Policy\Chart;
+use Monolog\Logger;
+use Psr\Log\LoggerInterface;
 use Twig\Environment;
-
+use Twig\Error\RuntimeError;
 
 class Helper {
   /**
@@ -135,11 +138,25 @@ class Helper {
       $template = $twig->resolveTemplate($templates);
       $globals['logger']->info("Rendering audit response for ".$response->policy->name.' with '.$template->getTemplateName());
       $globals['logger']->debug('Keys: ' . implode(', ', array_keys($response->tokens)));
-      return $twig->render($template, [
-        'audit_response' => $response,
-        'assessment' => $assessment,
-        'target' => $assessment->getTarget(),
-      ]);
+
+      /**
+       * @var \Drutiny\Audit\TwigEvaluator
+       */
+      $twigEvaluator = $twig->getRuntime(TwigEvaluator::class);
+
+      $contexts = $twigEvaluator->getGlobalContexts();
+      $contexts['audit_response'] = $response;
+      $contexts['assessment'] = $assessment;
+      $contexts['target'] = $assessment->getTarget();
+
+      try {
+        return $twig->render($template, $contexts);
+      }
+      catch (RuntimeError $e) {
+        $message = sprintf("%s of %s:\n%s",$e->getMessage(), $e->getSourceContext()->getName(), $e->getSourceContext()->getCode());
+        $twig->getRuntime(LoggerInterface::class)->error($message);
+        return '';
+      }   
   }
 
   /**
