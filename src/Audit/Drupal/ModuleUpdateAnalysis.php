@@ -5,6 +5,7 @@ namespace Drutiny\Audit\Drupal;
 use Drutiny\Sandbox\Sandbox;
 use Composer\Semver\Comparator;
 use Composer\Semver\Semver;
+use Drutiny\Attribute\DataProvider;
 
 /**
  * Generic module is enabled check.
@@ -12,16 +13,13 @@ use Composer\Semver\Semver;
  */
 class ModuleUpdateAnalysis extends ModuleAnalysis
 {
+    const UPDATES_URL = 'https://updates.drupal.org/release-history/%module%/%core_version%';
 
-  const UPDATES_URL = 'https://updates.drupal.org/release-history/%module%/%core_version%';
-
-  /**
-   *
-   */
-    public function gather(Sandbox $sandbox)
+    #[DataProvider]
+    public function listModules(): void
     {
         // Gather module data from drush pm-list.
-        parent::gather($sandbox);
+        parent::listModules();
 
         $modules = $this->get('modules');
         $modules = $this->getModuleFilepathData($modules);
