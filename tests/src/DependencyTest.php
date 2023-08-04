@@ -5,6 +5,7 @@ namespace DrutinyTests;
 use Drutiny\Policy;
 use Drutiny\AuditFactory;
 use Drutiny\Audit\TwigEvaluator;
+use Drutiny\Target\NullTarget;
 use Drutiny\Target\TargetFactory;
 
 
@@ -53,13 +54,13 @@ class DependencyTest extends KernelTestCase {
     {
         $policy = $this->getPolicyWithDepends('Drupal.isBootstrapped');
         $target = $this->loadMockTarget();
-        $target['drush.bootstrap'] = 'Successful';
-        $audit = $this->container->get(AuditFactory::class)->mock($policy->class, $target);
-        $this->assertTrue($audit->execute($policy, $target)->isSuccessful(), "Dependency check passes.");
 
         $policy = $this->getPolicyWithDepends('Drupal.isBootstrapped');
-        $target['drush.bootstrap'] = 'Failure';
+        $audit = $this->container->get(AuditFactory::class)->mock($policy->class, $target);
         $this->assertFalse($audit->execute($policy, $target)->isSuccessful(), "Dependency check failed the policy.");
+
+        $target['drush.bootstrap'] = 'Successful';
+        $this->assertTrue($audit->execute($policy, $target)->isSuccessful(), "Dependency check passes.");
     }
 
     protected function getPolicyWithDepends(...$expressions):Policy {
