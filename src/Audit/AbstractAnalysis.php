@@ -170,7 +170,7 @@ class AbstractAnalysis extends Audit
           $this->logger->debug(__CLASS__ . ':EXPRESSION(failIf): ' . $failIf);
           $outcome = $this->evaluate($failIf, 'twig') ? State::FAILURE : State::SUCCESS;
         }
-        else {
+        if (!isset($outcome) || $outcome === State::SUCCESS) {
           $expression = $this->getParameter('expression', 'true');
           $this->logger->debug(__CLASS__ . ':EXPRESSION: ' . $expression);
           $outcome = State::fromValue($this->evaluate($expression, $syntax));
