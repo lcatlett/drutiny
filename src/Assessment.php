@@ -161,4 +161,8 @@ class Assessment implements ExportableInterface, AssessmentInterface, \Serializa
     {
         $this->report = unserialize($export['report']);
     }
+
+    public function getRequestTime(): int {
+        return REQUEST_TIME;
+    }
 }
