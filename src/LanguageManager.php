@@ -2,28 +2,27 @@
 
 namespace Drutiny;
 
-use Symfony\Component\DependencyInjection\ContainerInterface;
-
 class LanguageManager {
-    protected $container;
-    protected $lang_code;
-    public function __construct(ContainerInterface $container)
+    protected string $defaultLanguageCode;
+    protected string $languageCode;
+
+    public function __construct(Settings $settings)
     {
-        $this->container = $container;
+        $this->defaultLanguageCode = $settings->get('language_default');
     }
 
-    public function getCurrentLanguage()
+    public function getCurrentLanguage():string
     {
-        return $this->lang_code ?? $this->container->getParameter('language_default');
+        return $this->languageCode ?? $this->defaultLanguageCode;
     }
 
-    public function getDefaultLanguage()
+    public function getDefaultLanguage():string
     {
-        return $this->container->getParameter('language_default');
+        return $this->defaultLanguageCode;
     }
 
-    public function setLanguage($lang_code = 'en')
+    public function setLanguage($lang_code = 'en'):void
     {
-        $this->lang_code = $lang_code;
+        $this->languageCode = $lang_code;
     }
 }
