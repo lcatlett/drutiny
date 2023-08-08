@@ -3,6 +3,7 @@
 namespace Drutiny\Console\Command;
 
 use Drutiny\Attribute\AsSource;
+use Drutiny\LanguageManager;
 use Drutiny\PolicyFactory;
 use Drutiny\PolicySource\PolicySourceInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
@@ -24,7 +25,8 @@ class PolicyPushCommand extends DrutinyBaseCommand
 
     public function __construct(
       protected PolicyFactory $policyFactory,
-      protected LoggerInterface $logger
+      protected LoggerInterface $logger,
+      protected LanguageManager $languageManager,
     )
     {
       parent::__construct();
@@ -60,6 +62,7 @@ class PolicyPushCommand extends DrutinyBaseCommand
             InputOption::VALUE_OPTIONAL,
             'The name of the source to load the policy from.'
         );
+        $this->configureLanguage();
     }
 
   /**
@@ -67,6 +70,7 @@ class PolicyPushCommand extends DrutinyBaseCommand
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $this->initLanguage($input);
         $remote = $this->getPushSource($input, $output);
 
         $io = new SymfonyStyle($input, $output);

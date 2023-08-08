@@ -3,14 +3,12 @@
 namespace Drutiny\Console\Command;
 
 use Drutiny\Attribute\AsSource;
-use Drutiny\PolicyFactory;
-use Drutiny\PolicySource\PolicySourceInterface;
+use Drutiny\LanguageManager;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Output\OutputInterface;
-use Drutiny\PolicySource\PushablePolicySourceInterface;
 use Drutiny\ProfileFactory;
 use Drutiny\ProfileSource\PushableProfileSourceInterface;
 use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
@@ -25,7 +23,8 @@ class ProfilePushCommand extends DrutinyBaseCommand
 
     public function __construct(
       protected ProfileFactory $profileFactory,
-      protected LoggerInterface $logger
+      protected LoggerInterface $logger,
+      protected LanguageManager $languageManager,
     )
     {
       parent::__construct();
@@ -59,6 +58,7 @@ class ProfilePushCommand extends DrutinyBaseCommand
             InputOption::VALUE_OPTIONAL,
             'The name of the source to load the profile from.'
         );
+        $this->configureLanguage();
     }
 
   /**
@@ -66,6 +66,7 @@ class ProfilePushCommand extends DrutinyBaseCommand
    */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $this->initLanguage($input);
         $remote = $this->getPushSource($input, $output);
 
         $io = new SymfonyStyle($input, $output);
