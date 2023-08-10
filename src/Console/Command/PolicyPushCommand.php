@@ -128,6 +128,6 @@ class PolicyPushCommand extends DrutinyBaseCommand
         throw new InvalidArgumentException("There are no pushable sources to push policies too.");
       }
       $choice = $io->choice("Which source would you like to push to?", array_keys($sources));
-      return $this->policyFactory->getSource($sources[$choice]);
+      return $this->policyFactory->getSource($sources[$choice]->name);
     }
 }
