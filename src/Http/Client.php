@@ -17,7 +17,10 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class Client
 {
-    public function __construct(protected Settings $settings, protected FilesystemAdapter $cache, protected ContainerInterface $container)
+    public function __construct(
+        protected Settings $settings, 
+        protected FilesystemAdapter $cache, 
+        protected ContainerInterface $container)
     {
     }
 
