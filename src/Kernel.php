@@ -23,8 +23,10 @@ use Symfony\Component\EventDispatcher\DependencyInjection\RegisterListenersPass;
 use Symfony\Component\EventDispatcher\GenericEvent;
 use Drutiny\DependencyInjection\TwigLoaderPass;
 use Drutiny\DependencyInjection\UseServiceAttributePass;
+use Monolog\ErrorHandler;
 use ProjectServiceContainer;
 use Psr\EventDispatcher\StoppableEventInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
@@ -64,7 +66,7 @@ class Kernel
     public function getContainer():ContainerInterface
     {
         if (!isset($this->container)) {
-            return $this->initializeContainer($this->environment != 'production');
+            $this->container = $this->initializeContainer($this->environment != 'production');
         }
         return $this->container;
     }
@@ -110,6 +112,9 @@ class Kernel
         }
         $this->initialized = true;
         $this->cleanOldContainers();
+
+        ErrorHandler::register($this->container->get(LoggerInterface::class)->withName('php'));
+
         return $this->container;
     }
 
