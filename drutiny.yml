@@ -175,6 +175,9 @@ services:
     event_dispatcher:
         class: Symfony\Component\EventDispatcher\EventDispatcher
 
+    Symfony\Component\EventDispatcher\EventDispatcherInterface:
+      alias: event_dispatcher
+
     Drutiny\Console\Application:
       calls:
         - [setDispatcher, ['@event_dispatcher']]
