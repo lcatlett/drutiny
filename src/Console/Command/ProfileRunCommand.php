@@ -16,8 +16,12 @@ use Drutiny\Report\FormatFactory;
 use Drutiny\Report\Report;
 use Drutiny\Report\ReportFactory;
 use Drutiny\Report\ReportType;
+use Drutiny\Target\Exception\InvalidTargetException;
+use Drutiny\Target\Exception\TargetLoadingException;
+use Drutiny\Target\Exception\TargetNotFoundException;
 use Drutiny\Target\TargetFactory;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -203,11 +207,21 @@ class ProfileRunCommand extends DrutinyBaseCommand
 
         $console = new SymfonyStyle($input, $output);
 
+        $exit_codes = [Command::SUCCESS];
+
         foreach ($uris as $uri) {
             $this->progressBar->setMessage("Running {$profile->title} on target $uri...");
             $this->progressBar->display();
 
-            $target = $this->targetFactory->create($input->getArgument('target'), $uri);
+            try {
+                $target = $this->targetFactory->create($input->getArgument('target'), $uri);
+            }
+            catch (TargetLoadingException | TargetNotFoundException | InvalidTargetException $e) {
+                $console->error($e->getMessage());
+                $exit_codes[] = $e::ERROR_CODE;
+                continue;
+            }
+            
             $fork = $this->forkManager->create();
             $fork->setLabel(sprintf("Assessment of '%s': %s", $target->getId(), $uri));
             $fork->run(fn() => $this->reportFactory->create(
@@ -228,8 +242,6 @@ class ProfileRunCommand extends DrutinyBaseCommand
             $this->progressBar->setMessage(sprintf("%d/%d assessments completed.", count($uris) - $remaining, count($uris)));
             $this->progressBar->display();
         }
-
-        $exit_codes = [0];
 
         foreach ($this->forkManager->getForkResults(true) as $report) {
             $this->progressBar->advance();
@@ -263,11 +275,11 @@ class ProfileRunCommand extends DrutinyBaseCommand
         // Do not use a non-zero exit code when no severity is set (Default).
         $exit_severity = $input->getOption('exit-on-severity');
         if ($exit_severity === false) {
-            return 0;
+            return Command::SUCCESS;
         }
         $exit_code = max($exit_codes);
 
-        return $exit_code >= $exit_severity ? $exit_code : 0;
+        return $exit_code >= $exit_severity ? $exit_code : Command::SUCCESS;
     }
 
     protected function formatReport(Report $report, SymfonyStyle $console, InputInterface $input) {

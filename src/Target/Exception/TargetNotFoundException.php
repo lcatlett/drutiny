@@ -13,7 +13,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 #[Autoconfigure(autowire: false)]
 class TargetNotFoundException extends \Exception
 {
-    const ERROR_CODE = 221;
+    const ERROR_CODE = 220;
 
     public function __construct(string $message, \Throwable|null $previous = null)
     {
