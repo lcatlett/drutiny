@@ -43,15 +43,41 @@ class LogsCommand extends DrutinyBaseCommand
           // Set timeout till log rotates (by day).
           $process->setTimeout(strtotime('tomorrow') - time());
           $process->run(function ($type, $buffer) use ($output) {
-            $output->write($buffer);
+            $output->write($this->formatLogs($buffer));
           });
         }
         else {
           $process = Process::fromShellCommandline(sprintf('cat %s', $this->logFile->getUrl()));
+          
           $process->run(function ($type, $buffer) use ($output) {
             $output->write($buffer);
           });
         }
         return 0;
+    }
+
+    protected function formatLogs(string $buffer): string {
+      return implode(PHP_EOL, array_map(function ($line) {
+        if (!preg_match('/\[(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+\+\d{2}:\d{2})\]\[pid:(\d+) (\d+ [GKM]?B)\] (\w+\.\w+): (.*)/', $line, $matches)) {
+          return $line;
+        }
+        list($name, $status) = explode('.', $matches[4]);
+        $status_color = match($status) {
+          'ERROR' => 'red',
+          'WARNING' => 'yellow',
+          'NOTICE' => 'green',
+          'INFO' => 'blue',
+          default => 'white',
+        };
+        return strtr('<fg=green>[{datetime}][pid: {pid} {memory_usage}]</> {name}.{status}: {message}', [
+          '{datetime}' => $matches[1],
+          '{pid}' => $matches[2],
+          '{memory_usage}' => $matches[3],
+          '{status}' => "<fg=$status_color>$status</>",
+          '{name}' => $name,
+          '{message}' => $matches[5]
+        ]);
+      },
+      explode(PHP_EOL, $buffer)));
     }
 }
