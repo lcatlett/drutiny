@@ -20,7 +20,7 @@ class Drush implements ServiceInterface
     protected const LAUNCHERS = ['../vendor/drush/drush/drush', 'drush-launcher', 'drush.launcher', 'drush'];
     protected $supportedCommandMap = [
       'configGet' => 'config:get',
-      'pmList' => 'pm-list',
+      'pmList' => 'pm:list',
       'pmSecurity' => 'pm:security',
       'stateGet' => 'state:get',
       'status' => 'status',
