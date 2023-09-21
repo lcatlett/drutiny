@@ -134,12 +134,6 @@ class PolicyAuditCommand extends DrutinyBaseCommand
 
         $profile->setReportingPeriod($this->getReportingPeriodStart($input), $this->getReportingPeriodEnd($input));
 
-        $policies = [];
-        $this->logger->info("Loading policy definitions...");
-        foreach ($profile->policies as $definition) {
-            $policies[] = $definition->getPolicy($this->policyFactory);
-        }
-
         $this->logger->info("Assessing target...");
 
         $report = $this->reportFactory->create($profile, $target);
