@@ -3,6 +3,7 @@
 namespace Drutiny\Report\Format;
 
 use Drutiny\Assessment;
+use Drutiny\Console\Helper\User;
 use Drutiny\Report\FilesystemFormatInterface;
 use Drutiny\Report\FormatInterface;
 use Drutiny\Report\Report;
@@ -45,8 +46,9 @@ abstract class TwigFormat extends FilesystemFormat implements FilesystemFormatIn
           $vars = get_object_vars($report);
           // Backward compatibility
           $vars['assessment'] = new Assessment($report);
-          $vars['sections'] = $this->prepareContent($vars);
           $vars['settings'] = $this->twig->getRuntime(Settings::class)->getAll();
+          $vars['userIdentity'] = $this->twig->getRuntime(User::class)->getIdentity();
+          $vars['sections'] = $this->prepareContent($vars);
           $this->buffer->write($this->twig->render($template, $vars));
         }
         catch (Error $e) {
