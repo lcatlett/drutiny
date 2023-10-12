@@ -13,6 +13,7 @@ use Drutiny\Audit\SyntaxProcessor;
 use Drutiny\AuditFactory;
 use Drutiny\AuditResponse\AuditResponse;
 use Drutiny\AuditResponse\State;
+use Drutiny\LanguageManager;
 use Drutiny\Policy;
 use Drutiny\Policy\Dependency;
 use Drutiny\Policy\DependencyBehaviour;
@@ -35,6 +36,7 @@ class ReportFactory {
         protected PolicyFactory $policyFactory,
         protected SyntaxProcessor $syntaxProcessor,
         protected EventDispatcher $eventDispatcher,
+        protected LanguageManager $languageManager,
         protected ProgressBar $progressBar
     )
     {}
@@ -56,7 +58,8 @@ class ReportFactory {
             type: ReportType::DEPENDENCIES,
             profile: $profile,
             target: $target,
-            timing: time() - $start
+            timing: time() - $start,
+            language: $this->languageManager->getCurrentLanguage(),
         );
 
         $report = !$report->successful ? $report : new Report(
@@ -65,7 +68,8 @@ class ReportFactory {
             type: ReportType::ASSESSMENT,
             profile: $profile,
             target: $target,
-            timing: time() - $start
+            timing: time() - $start,
+            language: $this->languageManager->getCurrentLanguage(),
         );
 
         $this->eventDispatcher->dispatch($report, 'report.create');

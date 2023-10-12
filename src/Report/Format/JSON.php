@@ -7,12 +7,11 @@ use Drutiny\Attribute\AsFormat;
 use Drutiny\AuditResponse\AuditResponse;
 use Drutiny\Helper\Json as HelperJson;
 use Drutiny\Report\FilesystemFormatInterface;
-use Drutiny\Report\FormatInterface;
+use Drutiny\Report\RenderedReport;
 use Drutiny\Report\Report;
 use League\CommonMark\ConverterInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Output\StreamOutput;
 use Twig\Environment;
 use Twig\Error\RuntimeError;
 use Twig\Extension\CoreExtension;
@@ -63,11 +62,11 @@ class JSON extends FilesystemFormat implements FilesystemFormatInterface
         return $this->data;
     }
 
-    public function render(Report $report):FormatInterface
+    public function render(Report $report):RenderedReport
     {
         $this->twig->getExtension(CoreExtension::class)->setTimezone($report->reportingPeriodStart->getTimezone());
         $this->buffer->write(json_encode($this->prepareContent($report)));
-        return $this;
+        return new RenderedReport($report->getName(), $this->buffer);
     }
 
     protected function preRenderPolicy(AuditResponse $response): array {
@@ -96,17 +95,5 @@ class JSON extends FilesystemFormat implements FilesystemFormatInterface
       }
 
       return $values;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function write():iterable
-    {
-      $filepath = $this->directory . '/' . $this->namespace . '.' .  $this->getExtension();
-      $stream = new StreamOutput(fopen($filepath, 'w'));
-      $stream->write($this->buffer->fetch());
-      $this->logger->info("Written $filepath.");
-      yield $filepath;
     }
 }

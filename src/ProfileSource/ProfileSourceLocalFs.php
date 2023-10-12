@@ -75,6 +75,7 @@ class ProfileSourceLocalFs extends AbstractProfileSource
       $info = Yaml::parse(file_get_contents($filepath));
       $info['name'] = str_replace('.profile.yml', '', pathinfo($filepath, PATHINFO_BASENAME));
       $info['uuid'] = $filepath;
+      $info['uri'] = $filepath;
 
       return parent::doLoad($info);
     }

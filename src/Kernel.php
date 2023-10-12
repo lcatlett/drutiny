@@ -3,6 +3,7 @@
 namespace Drutiny;
 
 use Drutiny\Attribute\AsSource;
+use Drutiny\Attribute\AsStore;
 use Drutiny\Attribute\Name;
 use Drutiny\Console\Application;
 use Drutiny\DependencyInjection\AddConsoleCommandPass;
@@ -177,6 +178,7 @@ class Kernel
         $container->addCompilerPass(new TagCollectionPass('http.middleware', 'http.middleware.registry'));
         $container->addCompilerPass(new TagCollectionPass('source.cache', 'source.cache.registry'));
         $container->addCompilerPass(new TagCollectionPass('format', 'format.registry'));
+        $container->addCompilerPass(new TagCollectionPass('store', 'store.registry', AsStore::class));
         $container->addCompilerPass(new TagCollectionPass('service', 'service.registry'));
         $container->addCompilerPass(new TagCollectionPass('target', 'target.registry'));
         $container->addCompilerPass(new TagCollectionPass('policy.source', 'policy.source.registry', AsSource::class));

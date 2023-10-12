@@ -4,6 +4,7 @@ namespace Drutiny\Report\Format;
 
 use Drutiny\Report\FormatInterface;
 use Drutiny\Attribute\AsFormat;
+use Drutiny\Report\RenderedReport;
 use Drutiny\Report\Report;
 
 #[AsFormat(
@@ -13,11 +14,11 @@ use Drutiny\Report\Report;
 class Markdown extends HTML
 {
 
-    public function render(Report $report):FormatInterface
+    public function render(Report $report):RenderedReport
     {
-        parent::render($report);
+        $render = parent::render($report);
 
-        $markdown = self::formatTables($this->buffer->fetch());
+        $markdown = self::formatTables((string) $render);
 
         $lines = explode(PHP_EOL, $markdown);
         array_walk($lines, function (&$line) {
@@ -25,7 +26,7 @@ class Markdown extends HTML
         });
 
         $this->buffer->write(implode(PHP_EOL, $lines));
-        return $this;
+        return new RenderedReport($render->name, $this->buffer);
     }
 
     protected function prepareContent(array $variables):array

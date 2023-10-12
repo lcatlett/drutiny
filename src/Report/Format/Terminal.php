@@ -2,9 +2,9 @@
 
 namespace Drutiny\Report\Format;
 
-use Drutiny\Report\FormatInterface;
 use Fiasco\SymfonyConsoleStyleMarkdown\Renderer;
 use Drutiny\Attribute\AsFormat;
+use Drutiny\Report\RenderedReport;
 use Drutiny\Report\Report;
 
 #[AsFormat(
@@ -24,27 +24,10 @@ class Terminal extends Markdown
     /**
      * {@inheritdoc}
      */
-    public function render(Report $report):FormatInterface
+    public function render(Report $report):RenderedReport
     {
         parent::render($report);
         $this->buffer->write(Renderer::createFromMarkdown($this->buffer->fetch()));
-        return $this;
-    }
-
-    /**
-     * @deprecated
-     */
-    protected static function format(string $output)
-    {
-        return Renderer::createFromMarkdown($output);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function write():iterable
-    {
-        $this->output->write($this->buffer->fetch());
-        yield 'terminal';
+        return new RenderedReport('terminal', $this->buffer);
     }
 }

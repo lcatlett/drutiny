@@ -7,6 +7,7 @@ use Drutiny\PolicyFactory;
 use Drutiny\ProfileFactory;
 use Drutiny\Report\FormatFactory;
 use Drutiny\Report\ReportFactory;
+use Drutiny\Report\StoreFactory;
 use Drutiny\Target\TargetFactory;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Input\InputArgument;
@@ -30,6 +31,7 @@ class PolicyAuditCommand extends DrutinyBaseCommand
     protected TargetFactory $targetFactory,
     protected ReportFactory $reportFactory,
     protected FormatFactory $formatFactory,
+    protected StoreFactory $storeFactory,
     protected LoggerInterface $logger,
     protected LanguageManager $languageManager
   )
@@ -156,13 +158,8 @@ class PolicyAuditCommand extends DrutinyBaseCommand
           return 1;
         }
 
-        foreach ($this->getFormats($input, $profile, $this->formatFactory) as $format) {
-            $format->setNamespace($this->getReportNamespace($input, $uri));
-            $format->render($report);
-            foreach ($format->write() as $location) {
-              $output->writeln("Policy Audit written to $location.");
-            }
-        }
+        $this->formatReport($report, $style, $input);
+
         $output->writeln("Policy Audit Complete.");
 
         // Do not use a non-zero exit code when no severity is set (Default).

@@ -2,17 +2,15 @@
 
 namespace Drutiny\Report\Format;
 
-use Drutiny\AuditResponse\AuditResponse;
-use Drutiny\Policy;
-use Drutiny\Report\FormatInterface;
 use Drutiny\Report\FilesystemFormatInterface;
 use League\Csv\Writer;
-use Symfony\Component\Console\Output\StreamOutput;
 use Drutiny\Attribute\AsFormat;
 use Drutiny\Helper\OpenApi;
+use Drutiny\Report\RenderedReport;
 use Drutiny\Report\Report;
 use Fiasco\TabularOpenapi\Table;
 use Fiasco\TabularOpenapi\TableManager;
+use Symfony\Component\Console\Output\BufferedOutput;
 
 #[AsFormat(
   name: 'csv',
@@ -22,7 +20,7 @@ class CSV extends FilesystemFormat implements FilesystemFormatInterface
 {
     protected TableManager $tabularSchema;
 
-    public function render(Report $report):FormatInterface
+    public function render(Report $report):iterable
     {
         $target = [];
         $target['class'] = get_class($report->target);
@@ -43,14 +41,9 @@ class CSV extends FilesystemFormat implements FilesystemFormatInterface
 
         $this->tabularSchema->getTable('Report')->insertRow($row);
 
-        return $this;
-    }
-
-    public function write():iterable
-    {
         $lookup_table = $this->tabularSchema->buildLookupTable();
         if ($lookup_table->getRowsTotal()) {
-          yield $this->writeTable($lookup_table);
+          yield new RenderedReport($lookup_table->name . '__' . $this->namespace, $this->writeTable($lookup_table), RenderedReport::EXISTS_APPEND);
         }
 
         // Append new rows.
@@ -58,11 +51,11 @@ class CSV extends FilesystemFormat implements FilesystemFormatInterface
             if (!$table->getRowsTotal()) {
               continue;
             }
-            yield $this->writeTable($table);
+            yield new RenderedReport($table->name . '__' . $this->namespace, $this->writeTable($table), RenderedReport::EXISTS_APPEND);
         }
     }
 
-    protected function writeTable(Table $table):string
+    protected function writeTable(Table $table):BufferedOutput
     {
         $writer = Writer::createFromString();
         $writer->setEscape('');
@@ -82,9 +75,8 @@ class CSV extends FilesystemFormat implements FilesystemFormatInterface
           $writer->insertOne($row);
         }
         $filepath = $this->directory . '/' . $table->name . '__' . $this->namespace . '.' . $this->getExtension();
-        $stream = new StreamOutput(fopen($filepath, 'w'));
+        $stream = new BufferedOutput(fopen($filepath, 'w'));
         $stream->write($writer->toString());
-        $this->logger->info("Written $filepath.");
-        return $filepath;
+        return $stream;
     }
 }

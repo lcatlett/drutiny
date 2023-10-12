@@ -22,14 +22,6 @@ abstract class Format implements FormatInterface
         $this->configure();
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function setNamespace(string $namespace):void
-    {
-      $this->namespace = $namespace;
-    }
-
     protected function configure() {}
 
     /**

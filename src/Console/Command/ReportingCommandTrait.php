@@ -5,9 +5,16 @@ namespace Drutiny\Console\Command;
 use Drutiny\Report\FilesystemFormatInterface;
 use Drutiny\Profile;
 use Drutiny\Profile\FormatDefinition;
+use Drutiny\Report\Format\Terminal;
 use Drutiny\Report\FormatFactory;
+use Drutiny\Report\Report;
+use Drutiny\Report\ReportType;
+use Drutiny\Report\Store\StoreInterface;
+use Drutiny\Report\Store\TerminalStore;
+use Drutiny\Report\StoreFactory;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  *
@@ -16,6 +23,9 @@ trait ReportingCommandTrait
 {
     protected \DateTime $reportingPeriodStart;
     protected \DateTime $reportingPeriodEnd;
+    protected StoreFactory $storeFactory;
+    protected FormatFactory $formatFactory;
+
   /**
    * @inheritdoc
    */
@@ -28,6 +38,13 @@ trait ReportingCommandTrait
             InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY,
             'Specify which output format to render the report (terminal, html, json). Defaults to terminal.',
             ['terminal']
+        )
+        ->addOption(
+            'store',
+            's',
+            InputOption::VALUE_OPTIONAL,
+            'The handler to use to store the formatted output.',
+            null
         )
         ->addOption(
             'report-dir',
@@ -93,10 +110,10 @@ trait ReportingCommandTrait
       /**
        * @return \Drutiny\Report\FormatInterface[]
        */
-      protected function getFormats(InputInterface $input, Profile $profile = null, FormatFactory $formatFactory):array
+      protected function getFormats(InputInterface $input, Profile $profile = null):array
       {
         foreach ($input->getOption('format') as $format_option) {
-          $formats[$format_option] = $formatFactory->create($format_option, $profile->format[$format_option] ?? new FormatDefinition($format_option));
+          $formats[$format_option] = $this->formatFactory->create($format_option, $profile->format[$format_option] ?? new FormatDefinition($format_option));
 
           if ($formats[$format_option] instanceof FilesystemFormatInterface) {
             $formats[$format_option]->setWriteableDirectory($input->getOption('report-dir'));
@@ -104,6 +121,60 @@ trait ReportingCommandTrait
         }
         return $formats;
       }
+
+      protected function getStore(InputInterface $input): StoreInterface 
+      {
+        if ($input->getOption('store') === null) {
+          // Maintain backwards compatibility.
+          return match ($input->getOption('format')[0]) {
+            'html' => $this->storeFactory->get('fs'),
+            'json' => $this->storeFactory->get('fs'),
+            'csv' => $this->storeFactory->get('fs'),
+            default => $this->storeFactory->get('terminal'),
+          };
+        }
+        return $this->storeFactory->get($input->getOption('store'));
+      }
+
+      protected function formatReport(Report $report, SymfonyStyle $console, InputInterface $input) {
+        // If this wasn't the actual assessment, then it means the target
+        // failed a dependency check. We'll render a dependency failure
+        // report out to the terminal.
+        if ($report->type == ReportType::DEPENDENCIES) {
+            $console->error($report->uri . " failed to meet profile dependencies of {$report->profile->name}.");
+            $format = $this->formatFactory->create('terminal', new FormatDefinition('terminal'));
+            if ($format instanceof Terminal) {
+                $format->setDependencyReport();
+            }
+            $formats = [$format];
+        }
+        else {
+            $formats = $this->getFormats($input, $report->profile, $this->formatFactory);
+        }
+
+        $store = $this->getStore($input, $this->storeFactory);
+
+        foreach ($formats as $format) {
+
+            $render = $format->render($report);
+
+            if (!is_iterable($render)) {
+                $render = [$render];
+            }
+
+            /**
+             * @var \Drutiny\Report\RenderedReport
+             */
+            foreach ($render as $rendered_report) {
+                $uri = $store->store($rendered_report, $format, $report);
+
+                if (!$store instanceof TerminalStore) {
+                    $console->success("Written $uri");
+                }
+            }
+            $console->writeln('');
+        }
+    }
 
       /**
        * Get the reporting period start DateTime.

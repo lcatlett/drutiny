@@ -96,6 +96,16 @@
                         "nullable": false,
                         "readOnly": true
                     },
+                    "audit_build_info": {
+                        "title": "audit_build_info",
+                        "type": "array",
+                        "description": "A list of audit class version compatibilty constraints.",
+                        "nullable": true,
+                        "items": {
+                            "type": "string"
+                        },
+                        "readOnly": true
+                    },
                     "chart": {
                         "title": "chart",
                         "type": "array",
@@ -127,11 +137,25 @@
                         "nullable": false,
                         "readOnly": true
                     },
+                    "notes": {
+                        "title": "notes",
+                        "type": "string",
+                        "description": "Notes and commentary on policy configuration and prescribed usage.",
+                        "nullable": false,
+                        "readOnly": true
+                    },
                     "uuid": {
                         "title": "uuid",
                         "type": "string",
                         "description": "Unique identifier such as a URL.",
                         "nullable": false,
+                        "readOnly": true
+                    },
+                    "uri": {
+                        "title": "uri",
+                        "type": "string",
+                        "description": "The URI this policy can be referenced and located by.",
+                        "nullable": true,
                         "readOnly": true
                     },
                     "source": {
@@ -269,6 +293,13 @@
                         "nullable": false,
                         "readOnly": true
                     },
+                    "uri": {
+                        "title": "uri",
+                        "type": "string",
+                        "description": "The URI this profile can be referenced and located by.",
+                        "nullable": true,
+                        "readOnly": true
+                    },
                     "description": {
                         "title": "description",
                         "type": "string",
@@ -404,6 +435,18 @@
                         "nullable": false,
                         "readOnly": true,
                         "x-class": "DateTimeInterface"
+                    },
+                    "timing": {
+                        "title": "timing",
+                        "type": "number",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "language": {
+                        "title": "language",
+                        "type": "string",
+                        "nullable": false,
+                        "readOnly": true
                     }
                 },
                 "x-name": "Report",
@@ -420,9 +463,11 @@
                     "tokens": {
                         "title": "tokens",
                         "type": "object",
-                        "nullable": false,
+                        "nullable": true,
                         "readOnly": true,
-                        "additionalProperties": true
+                        "additionalProperties": {
+                            "nullable": true
+                        }
                     },
                     "policy": {
                         "$ref": "#\/components\/schemas\/Policy"
@@ -443,6 +488,18 @@
                         "nullable": false,
                         "readOnly": true,
                         "x-class": "Drutiny\\AuditResponse\\State"
+                    },
+                    "timestamp": {
+                        "title": "timestamp",
+                        "type": "number",
+                        "nullable": false,
+                        "readOnly": true
+                    },
+                    "timing": {
+                        "title": "timing",
+                        "type": "number",
+                        "nullable": false,
+                        "readOnly": true
                     }
                 },
                 "x-name": "Result",
@@ -662,7 +719,7 @@
                         "type": "object",
                         "properties": {},
                         "description": "The parameter overrides to use for the policy in this profile.",
-                        "nullable": false,
+                        "nullable": true,
                         "readOnly": true,
                         "x-class": "Symfony\\Component\\DependencyInjection\\ParameterBag\\ParameterBagInterface"
                     },

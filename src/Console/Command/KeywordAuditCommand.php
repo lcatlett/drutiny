@@ -9,6 +9,7 @@ use Drutiny\ProfileFactory;
 use Drutiny\Report\Format\Terminal;
 use Drutiny\Report\FormatFactory;
 use Drutiny\Report\ReportFactory;
+use Drutiny\Report\StoreFactory;
 use Drutiny\Target\TargetFactory;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
@@ -34,6 +35,7 @@ class KeywordAuditCommand extends DrutinyBaseCommand
     protected ReportFactory $reportFactory,
     protected LoggerInterface $logger,
     protected ProgressBar $progressBar,
+    protected StoreFactory $storeFactory,
     protected LanguageManager $languageManager
   )
   {
@@ -165,14 +167,8 @@ class KeywordAuditCommand extends DrutinyBaseCommand
           $rows
         );
 
-        foreach ($this->getFormats($input, $profile, $this->formatFactory) as $format) {
-            $format->setNamespace($this->getReportNamespace($input, $uri));
-            $format->render($report);
-            foreach ($format->write() as $location) {
-              if ($format instanceof Terminal) continue;
-              $output->writeln("Policy Audit written to $location.");
-            }
-        }
+        $this->formatReport($report, $io, $input);
+
         $output->writeln("Keyword Audit Complete.");
 
         // Do not use a non-zero exit code when no severity is set (Default).

@@ -32,7 +32,8 @@ class Report {
         public readonly TargetInterface $target,
         public readonly ReportType $type = ReportType::ASSESSMENT,
         array $results = [],
-        public readonly ?int $timing = null
+        public readonly ?int $timing = null,
+        public readonly string $language = 'und',
     )
     {
         // Validate the number of results reflects the number of policies that were 
@@ -82,5 +83,27 @@ class Report {
         $args = MergeUtility::arrayMerge(get_object_vars($this), $properties);
         unset($args['uuid']);
         return new static(...$args);
+    }
+
+    /**
+     * Get an identifiable name of the report.
+     * 
+     * Although this name contains the date, for a completely
+     * unique name, use or incorporate the UUID.
+     */
+    public function getName(): string {
+        return strtr(implode('-', [
+            $this->target->getTargetName(), 
+            $this->profile->name, 
+            $this->uri,
+            $this->reportingPeriodStart->format('Ymd-His'),
+          ]) . '.' . $this->language, [
+            ':' => '',
+            '@' => '',
+            '/' => '',
+            '?' => '',
+            '#' => '',
+            '&' => '',
+          ]);
     }
 }

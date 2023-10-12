@@ -22,10 +22,14 @@ abstract class FilesystemFormat extends Format implements FilesystemFormatInterf
       $this->directory = $dir;
     }
 
+    public function getWriteableDirectory(): string {
+        return $this->directory;
+    }
+
     /**
      * {@inheritdoc}
      */
-    function getExtension(): string
+    public function getExtension(): string
     {
         $reflect = new ReflectionClass($this);
         $attributes = $reflect->getAttributes(AsFormat::class);

@@ -9,6 +9,8 @@ interface FilesystemFormatInterface extends FormatInterface
      */
     public function setWriteableDirectory(string $dir):void;
 
+    public function getWriteableDirectory(): string;
+
     /**
      * Return the file extension used for the format.
      */

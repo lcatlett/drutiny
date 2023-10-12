@@ -7,6 +7,7 @@ use Drutiny\Policy;
 use Drutiny\ProfileFactory;
 use Drutiny\Report\FormatFactory;
 use Drutiny\Report\ReportFactory;
+use Drutiny\Report\StoreFactory;
 use Drutiny\Target\TargetFactory;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -28,6 +29,7 @@ class AuditRunCommand extends DrutinyBaseCommand
     protected ReportFactory $reportFactory,
     protected ProfileFactory $profileFactory,
     protected FormatFactory $formatFactory,
+    protected StoreFactory $storeFactory,
     protected LanguageManager $languageManager
   )
   {
@@ -156,13 +158,7 @@ class AuditRunCommand extends DrutinyBaseCommand
           return 1;
         }
 
-        foreach ($this->getFormats($input, $profile, $this->formatFactory) as $format) {
-            $format->setNamespace($this->getReportNamespace($input, $uri));
-            $format->render($report);
-            foreach ($format->write() as $written_location) {
-              // To nothing.
-            }
-        }
+        $this->formatReport($report, $style, $input);
 
         return $report->successful ? 0 : $report->severity->getWeight();
     }

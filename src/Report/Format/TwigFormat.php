@@ -5,12 +5,11 @@ namespace Drutiny\Report\Format;
 use Drutiny\Assessment;
 use Drutiny\Console\Helper\User;
 use Drutiny\Report\FilesystemFormatInterface;
-use Drutiny\Report\FormatInterface;
+use Drutiny\Report\RenderedReport;
 use Drutiny\Report\Report;
 use Drutiny\Settings;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Output\StreamOutput;
 use Twig\Environment;
 use Twig\Error\Error;
 use Twig\Extension\CoreExtension;
@@ -30,7 +29,7 @@ abstract class TwigFormat extends FilesystemFormat implements FilesystemFormatIn
         $this->twig->addGlobal('ext', $this->getExtension());
     }
 
-    public function render(Report $report):FormatInterface
+    public function render(Report $report):RenderedReport
     {
         // Ensure Twig's timezone reflects that of the report.
         $this->twig->getExtension(CoreExtension::class)->setTimezone($report->reportingPeriodStart->getTimezone());
@@ -55,20 +54,9 @@ abstract class TwigFormat extends FilesystemFormat implements FilesystemFormatIn
           $this->logTwigError($e);
           throw $e;
         }
-        return $this;
-    }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function write():iterable
-    {
-      $filepath = $this->directory . '/' . $this->namespace . '.' . $this->getExtension();
-      $stream = new StreamOutput(fopen($filepath, 'w'));
-      $stream->write($this->buffer->fetch());
-      $this->logger->info("Written $filepath.");
-      yield $filepath;
-    }
+        return new RenderedReport($report->getName(), $this->buffer);
+      }
 
     /**
      * Attempt to load a twig template based on the provided format extension.

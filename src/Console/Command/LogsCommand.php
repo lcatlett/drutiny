@@ -39,6 +39,7 @@ class LogsCommand extends DrutinyBaseCommand
     protected function execute(InputInterface $input, OutputInterface $output):int
     {
         if ($input->getOption('tail')) {
+          $output->writeln("Tailing log: " . $this->logFile->getUrl());
           $process = Process::fromShellCommandline(sprintf('tail -f -n 20 %s', $this->logFile->getUrl()));
           // Set timeout till log rotates (by day).
           $process->setTimeout(strtotime('tomorrow') - time());
@@ -58,11 +59,10 @@ class LogsCommand extends DrutinyBaseCommand
 
     protected function formatLogs(string $buffer): string {
       return implode(PHP_EOL, array_map(function ($line) {
-        if (!preg_match('/\[(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+\+\d{2}:\d{2})\]\[pid:(\d+) (\d+ [GKM]?B)\] (\w+\.\w+): (.*)/', $line, $matches)) {
+        if (!preg_match('/\[(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+\+\d{2}:\d{2})\]\[pid:(\d+) (\d+ [GKM]?B)\] ([\w+\.]+)\.(\w+): (.*)/', $line, $matches)) {
           return $line;
         }
-        list($name, $status) = explode('.', $matches[4]);
-        $status_color = match($status) {
+        $status_color = match($matches[5]) {
           'ERROR' => 'red',
           'WARNING' => 'yellow',
           'NOTICE' => 'green',
@@ -73,9 +73,9 @@ class LogsCommand extends DrutinyBaseCommand
           '{datetime}' => $matches[1],
           '{pid}' => $matches[2],
           '{memory_usage}' => $matches[3],
-          '{status}' => "<fg=$status_color>$status</>",
-          '{name}' => $name,
-          '{message}' => $matches[5]
+          '{status}' => "<fg=$status_color>{$matches[5]}</>",
+          '{name}' => $matches[4],
+          '{message}' => $matches[6]
         ]);
       },
       explode(PHP_EOL, $buffer)));

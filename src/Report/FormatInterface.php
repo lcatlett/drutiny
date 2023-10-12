@@ -3,6 +3,7 @@
 namespace Drutiny\Report;
 
 use Drutiny\Profile\FormatDefinition;
+use Symfony\Component\Console\Output\BufferedOutput;
 
 interface FormatInterface
 {
@@ -12,11 +13,6 @@ interface FormatInterface
     public function getName():string;
 
     /**
-     * Set the namespace for writing data to the format.
-     */
-    public function setNamespace(string $namespace):void;
-
-    /**
      * Set options for the format.
      */
     public function setDefinition(FormatDefinition $definition):FormatInterface;
@@ -24,12 +20,5 @@ interface FormatInterface
     /**
      * Render the assessment into the format.
      */
-    public function render(Report $report):FormatInterface;
-
-    /**
-     * Write the format to the format medium (e.g. filesystem).
-     *
-     * @return iterable return a string location where the format was written too.
-     */
-    public function write():iterable;
+    public function render(Report $report):RenderedReport|iterable;
 }

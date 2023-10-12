@@ -16,6 +16,8 @@ use Drutiny\Report\FormatFactory;
 use Drutiny\Report\Report;
 use Drutiny\Report\ReportFactory;
 use Drutiny\Report\ReportType;
+use Drutiny\Report\Store\TerminalStore;
+use Drutiny\Report\StoreFactory;
 use Drutiny\Target\Exception\InvalidTargetException;
 use Drutiny\Target\Exception\TargetLoadingException;
 use Drutiny\Target\Exception\TargetNotFoundException;
@@ -53,6 +55,7 @@ class ProfileRunCommand extends DrutinyBaseCommand
         protected ForkManager $forkManager,
         protected FormatFactory $formatFactory,
         protected EventDispatcher $eventDispatcher,
+        protected StoreFactory $storeFactory,
         protected LanguageManager $languageManager
     )
     {
@@ -280,29 +283,5 @@ class ProfileRunCommand extends DrutinyBaseCommand
         $exit_code = max($exit_codes);
 
         return $exit_code >= $exit_severity ? $exit_code : Command::SUCCESS;
-    }
-
-    protected function formatReport(Report $report, SymfonyStyle $console, InputInterface $input) {
-        // If this wasn't the actual assessment, then it means the target
-        // failed a dependency check. We'll render a dependency failure
-        // report out to the terminal.
-        if ($report->type == ReportType::DEPENDENCIES) {
-            $console->error($report->uri . " failed to meet profile dependencies of {$report->profile->name}.");
-            $format = $this->formatFactory->create('terminal', new FormatDefinition('terminal'));
-            if ($format instanceof Terminal) {
-                $format->setDependencyReport();
-            }
-            $formats = [$format];
-        }
-        else {
-            $formats = $this->getFormats($input, $report->profile, $this->formatFactory);
-        }
-        foreach ($formats as $format) {
-            $format->setNamespace($this->getReportNamespace($input, $report->uri));
-            $format->render($report);
-            foreach ($format->write() as $written_location) {
-                $console->success("Written $written_location");
-            }
-        }
     }
 }
