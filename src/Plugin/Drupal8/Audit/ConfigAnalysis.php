@@ -7,6 +7,7 @@ use Drutiny\Attribute\Parameter;
 use Drutiny\Attribute\Type;
 use Drutiny\Audit\AbstractAnalysis;
 use Drutiny\Helper\TextCleaner;
+use Symfony\Component\Process\Exception\ProcessFailedException;
 
 /**
  * Check a configuration is set correctly.
@@ -27,10 +28,23 @@ class ConfigAnalysis extends AbstractAnalysis
           'format' => 'json',
           'include-overridden' => true,
         ]);
-        $config = $command->run(function ($output) {
-          return TextCleaner::decodeDirtyJson($output);
-        });
+        try {
+          $config = $command->run(function ($output) {
+            return TextCleaner::decodeDirtyJson($output);
+          });
+          $this->set('config', $config);
+        }
+        catch (ProcessFailedException $e) {
+          // Check if the error was because the config did not exist.
+          $config_missing_error = "Config $collection does not exist";
+          $stderr = $e->getProcess()->getErrorOutput();
+          if (strpos($stderr, $config_missing_error) !== FALSE) {
+            $this->set('config', null);
+            return;
+          }
 
-        $this->set('config', $config);
+          // Some other error we should continue to throw.
+          throw $e;
+        }
     }
 }
