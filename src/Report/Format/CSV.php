@@ -75,7 +75,7 @@ class CSV extends FilesystemFormat implements FilesystemFormatInterface
           $writer->insertOne($row);
         }
         $filepath = $this->directory . '/' . $table->name . '__' . $this->namespace . '.' . $this->getExtension();
-        $stream = new BufferedOutput(fopen($filepath, 'w'));
+        $stream = new BufferedOutput();
         $stream->write($writer->toString());
         return $stream;
     }
