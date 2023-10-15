@@ -50,10 +50,13 @@ class ModuleUpdateAnalysis extends ModuleAnalysis
       }
 
       foreach($modules as $module => &$info) {
-        $info['filepath'] = $module_filepaths[$module];
-        $info['dirname'] = dirname($info['filepath']);
+        $info['filepath'] = $module_filepaths[$module] ?? null;
+        $info['dirname'] = $info['filepath'] === null ? null : dirname($info['filepath']);
         $info['name'] = $module;
         switch (true) {
+          case isset($info['filepath']) === false:
+            $info['type'] = 'missing';
+            break;
           case strpos($info['filepath'], 'core/modules')  !== false:
             $info['type'] = 'core';
             break;
@@ -86,6 +89,10 @@ class ModuleUpdateAnalysis extends ModuleAnalysis
         // If the module is embedded inside another project then its a sub-module.
         $parent_modules = array_filter($modules, function ($mod) use ($info) {
           if ($info['name'] == $mod['name']) {
+            return false;
+          }
+          // Missing modules.
+          if ($info['filepath'] === null) {
             return false;
           }
           return strpos($info['filepath'], $mod['dirname'] . '/') !== false;
