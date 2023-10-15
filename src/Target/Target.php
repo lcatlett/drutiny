@@ -27,6 +27,7 @@ abstract class Target implements \ArrayAccess, TargetInterface
     private string $targetName;
     protected TransportInterface $transport;
     protected DataBag $properties;
+    protected array $lazyProperties = [];
 
     public function __construct(
         protected LoggerInterface $logger, 
@@ -156,6 +157,13 @@ abstract class Target implements \ArrayAccess, TargetInterface
         return $this;
     }
 
+    public function registerLazyProperty($name, callable $value): void {
+        if ($this->hasProperty($name)) {
+            throw new TargetPropertyException("Cannot register lazy property '$name'. Property already exists.");
+        }
+        $this->lazyProperties[$name] = $value;
+    }
+
     /**
      * Rebuild the environment variables from the target properties.
      */
@@ -242,7 +250,19 @@ abstract class Target implements \ArrayAccess, TargetInterface
      */
     public function getProperty($key):mixed
     {
-        return $this->propertyAccessor->getValue($this->properties, $key);
+        try {
+            return $this->propertyAccessor->getValue($this->properties, $key);
+        }
+        catch (NoSuchIndexException $e) {
+            if (isset($this->lazyProperties[$key])) {
+                $this->setProperty($key, $value = $this->lazyProperties[$key]($this));
+                // Unload lazy property now it has been fufilled.
+                unset($this->lazyProperties[$key]);
+                
+                return $value;
+            }
+            throw $e;
+        }
     }
 
     /**
@@ -287,6 +307,9 @@ abstract class Target implements \ArrayAccess, TargetInterface
      */
     public function hasProperty($key):bool
     {
+        if (isset($this->lazyProperties[$key])) {
+            return true;
+        }
         try {
             $this->propertyAccessor->getValue($this->properties, $key);
             return true;
