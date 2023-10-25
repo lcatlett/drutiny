@@ -36,7 +36,7 @@ class LocalFs extends AbstractPolicySource
 
         $this->finder
             ->files()
-            ->depth('==1')
+            ->depth('<=1')
             ->in($dirs)
             ->name('*.policy.yml');
     }
