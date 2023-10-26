@@ -81,17 +81,35 @@ class Application extends BaseApplication
         ]);
         $this->eventDispatcher->dispatch($event, $event->getSubject());
 
-        if (!$command instanceof ListCommand) {
+        try {
+          if (!$command instanceof ListCommand) {
             if ($this->registrationErrors) {
                 $this->renderRegistrationErrors($input, $output);
                 $this->registrationErrors = [];
             }
+            
+            $returnCode = parent::doRunCommand($command, $input, $output);
+            $endTimer = microtime(TRUE);
 
-            return parent::doRunCommand($command, $input, $output);
+            $event = new GenericEvent('command.exit', [
+              'command' => $command,
+              'input' => $input,
+              'output' => $output,
+              'exitCode' => $returnCode,
+              'runtime' => ($endTimer-$startTimer),
+            ]);
+            $this->eventDispatcher->dispatch($event, $event->getSubject());
+
+            return $returnCode;
+          }
+
+          $returnCode = parent::doRunCommand($command, $input, $output);
+          $endTimer = microtime(TRUE);
         }
-
-        $returnCode = parent::doRunCommand($command, $input, $output);
-        $endTimer = microtime(TRUE);
+        catch (\Exception $e) {
+          $this->container->get(LoggerInterface::class)->error($e->getMessage());
+          throw $e;
+        }
 
         if ($this->registrationErrors) {
             $this->renderRegistrationErrors($input, $output);
