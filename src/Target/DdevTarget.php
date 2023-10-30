@@ -3,12 +3,16 @@
 namespace Drutiny\Target;
 
 use Drutiny\Attribute\AsTarget;
+use Drutiny\Helper\ProcessUtility;
+use Drutiny\Target\Exception\InvalidTargetException;
 use Drutiny\Target\Exception\TargetLoadingException;
 use Drutiny\Target\Exception\TargetNotFoundException;
 use Drutiny\Target\Exception\TargetSourceFailureException;
 use Drutiny\Target\Transport\DockerTransport;
+use Drutiny\Target\Transport\Transport;
 use Psr\Cache\CacheItemInterface;
 use Symfony\Component\Process\Exception\ProcessFailedException;
+use Symfony\Component\Process\Process;
 
 /**
  * Target for parsing Drush aliases.
@@ -53,10 +57,26 @@ class DdevTarget extends DrushTarget implements TargetInterface, TargetSourceInt
         foreach ($ddev as $k => $v) {
             $this['ddev.'.$k] = $v;
         }
-        $this->transport = new DockerTransport($this->localCommand);
-        $this->transport->setContainer($ddev['services']['web']['full_name']);
 
+        $docker_compose_bin = getenv('HOME') . '/.ddev/bin/docker-compose';
+        if (!file_exists($docker_compose_bin)) {
+            throw new InvalidTargetException("Failed to find $docker_compose_bin. Perhaps the wrong version of DDEV is installed?");
+        }
         $this['drush.root'] = '/var/www/html/'.$ddev['docroot'];
+
+        $this->transport = Transport::create(function (Process $process, ?callable $processor = null) use ($ddev, $docker_compose_bin) {
+            ProcessUtility::mergeEnv($process, $this->localCommand->getEnvVars());
+            $command = strtr('%docker_compose_bin -f %approot/.ddev/.ddev-docker-compose-full.yaml exec web bash -c "%command"', [
+                '%docker_compose_bin' => $docker_compose_bin,
+                '%approot' => $ddev['approot'],
+                '%command' => sprintf("echo %s | base64 --decode | sh", base64_encode(ProcessUtility::replacePlaceholders($process)->getCommandLine()))
+            ]);
+            return $this->localCommand->run(Process::fromShellCommandline($command), $processor);
+        });
+        // $this->transport = new DockerTransport($this->localCommand);
+        // $this->transport->setContainer($ddev['services']['web']['full_name']);
+
+       
 
         // Provide a default URI if none already provided.
         $this->setUri($uri ?? $ddev['primary_url']);
