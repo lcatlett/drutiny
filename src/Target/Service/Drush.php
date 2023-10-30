@@ -26,7 +26,6 @@ class Drush implements ServiceInterface
       'status' => 'status',
       'userInformation' => 'user:information',
       'sqlq' => 'sqlq',
-      'updb' => 'updb',
       'updatedbStatus' => 'updatedb:status',
       'variableGet' => 'vget',
       'purgeDiagnostics' => 'p:diagnostics'
