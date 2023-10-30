@@ -20,7 +20,8 @@ class ModuleAnalysis extends AbstractAnalysis
         $list = $this->target->getService('drush')
           ->pmList([
             'format' => 'json',
-            'type' => 'module'
+            'type' => 'module',
+            'fields' => 'project,package,path,status,version,display_name,type,name'
           ])
           ->run(function ($output) {
               return TextCleaner::decodeDirtyJson($output);
