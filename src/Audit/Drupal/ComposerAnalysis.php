@@ -2,10 +2,7 @@
 
 namespace Drutiny\Audit\Drupal;
 
-use Drutiny\Sandbox\Sandbox;
-use Drutiny\Credential\Manager;
-use Drutiny\Acquia\CloudApiDrushAdaptor;
-use Drutiny\Acquia\CloudApiV2;
+use Drutiny\Attribute\DataProvider;
 use Drutiny\Audit\AbstractAnalysis;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 
@@ -14,10 +11,9 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
  */
 class ComposerAnalysis extends AbstractAnalysis {
 
-  /**
-   * @inheritdoc
-   */
-  public function gather(Sandbox $sandbox) {
+
+  #[DataProvider]
+  public function gather() {
 
     try {
       $composer_info = $this->target->run('cat $DRUSH_ROOT/../composer.lock || cat $DRUSH_ROOT/composer.lock || echo "[]"' , function($output){
