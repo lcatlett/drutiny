@@ -2,10 +2,13 @@
 
 namespace Drutiny\Console\Command;
 
+use Aws\Arn\Exception\InvalidArnException;
+use Drutiny\Console\Helper\ProcessManagerViewer;
 use Drutiny\Console\ProcessManager;
 use Drutiny\Profile;
 use Drutiny\DomainSource;
 use Drutiny\LanguageManager;
+use Drutiny\Policy\Severity;
 use Drutiny\PolicyFactory;
 use Drutiny\ProfileFactory;
 use Drutiny\Report\FormatFactory;
@@ -17,6 +20,7 @@ use Drutiny\Target\Exception\TargetLoadingException;
 use Drutiny\Target\Exception\TargetNotFoundException;
 use Drutiny\Target\TargetFactory;
 use Drutiny\Target\TargetInterface;
+use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -120,6 +124,12 @@ class ProfileRunCommand extends DrutinyBaseCommand
             'Override the title of the profile with the specified value.',
             false
         )
+        ->addOption(
+            'pipe',
+            null,
+            InputOption::VALUE_NONE,
+            'Pipe the output instead of formatting it.',
+        )
         ;
         $this->configureReporting();
         $this->configureDomainSource($this->domainSource);
@@ -193,6 +203,10 @@ class ProfileRunCommand extends DrutinyBaseCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        if (count($input->getOption('uri')) > 1 && in_array('terminal', $input->getOption('format'))) {
+            throw new InvalidArgumentException("format option is required when passing multiple URIs.");
+        }
+
         $this->initLanguage($input);
 
         $this->progressBar->start(2);
@@ -200,54 +214,43 @@ class ProfileRunCommand extends DrutinyBaseCommand
         $profile = $this->prepareProfile($input, $this->progressBar);
         $uris = $this->loadUris($input);
 
-        // Reset the progress step tracker.
-        $this->progressBar->setMaxSteps($this->progressBar->getMaxSteps() + count($uris));
-
         $console = new SymfonyStyle($input, $output);
 
         $exit_codes = [Command::SUCCESS];
 
-        foreach ($uris as $uri) {
-            $this->progressBar->setMessage("Running {$profile->title} on target $uri...");
-            $this->progressBar->display();
-
+        // Run multisite audits in seperate processes.
+        if (count($uris) > 1) {
+            $this->progressBar->clear();
+            $exit_codes = $this->asyncExecuteWithUpdates($input, $output, $uris);
+        }
+        else {
+            $uri = array_shift($uris);
+            $report_uris = [];
             try {
                 $target = $this->targetFactory->create($input->getArgument('target'), $uri);
-            }
-            catch (TargetLoadingException | TargetNotFoundException | InvalidTargetException $e) {
-                $console->error($e->getMessage());
-                $exit_codes[] = $e::ERROR_CODE;
-                continue;
-            }
-
-            try {
+                
                 $report = $this->reportFactory->promise(
                     profile: $profile,
                     target: $target
                 );
 
+                $this->progressBar->clear();
+
                 if ($report instanceof ProcessManager) {
                     if ($output instanceof ConsoleOutput && !$input->getOption('no-interaction')) {
-                        $report = $this->waitForReport($report, $output, $target);
+                        $report = $this->waitForReportWithUpdates($report, $output, $target);
                     }
                     else {
-                        while (!$report->hasFinished()) {
-                            $total = $report->length();
-                            $active = count($report->getActive());
-                            $complete = count($report->getCompleted());
-                            $this->progressBar->setMaxSteps($total);
-                            $this->progressBar->setProgress($complete);
-                            $this->progressBar->setMessage(date('H:i:s') . " $active in progress. $complete/$total complete.");
-                            $this->progressBar->display();
-                            sleep(1);
-                            $report->update();
-                        }
-                        $report = $report->resolve();
+                        $report = $this->waitForReport($report);
                     }
                 }
     
-                $this->formatReport($report, $console, $input);
+                $report_uris = $this->formatReport($report, $console, $input);
                 $exit_codes[] = $report->successful ? 0 : $report->severity->getWeight();
+            }
+            catch (TargetLoadingException | TargetNotFoundException | InvalidTargetException $e) {
+                $console->error($e->getMessage());
+                $exit_codes[] = $e::ERROR_CODE;
             }
             catch (\Exception $e) {
                 $this->logger->error("{$profile->name} audit on $uri failed: " . $e->getMessage());
@@ -261,13 +264,20 @@ class ProfileRunCommand extends DrutinyBaseCommand
                 $exit_codes[] = 17;
                 throw $e;
             }
-            finally {
-                $this->progressBar->advance();
+            if ($input->getOption('pipe')) {
+                $output->write(base64_encode(json_encode([
+                    'severity' => max($exit_codes),
+                    'uri' => $uri,
+                    'report_uris' =>  $report_uris
+                ])));
+                return Command::SUCCESS;
             }
-        }
 
-        $this->progressBar->finish();
-        $this->progressBar->clear();
+            foreach ($report_uris as $uri) {
+                $console->success("Written $uri");
+            }
+            $output->writeln("");
+        }
 
         // Do not use a non-zero exit code when no severity is set (Default).
         $exit_severity = $input->getOption('exit-on-severity');
@@ -279,86 +289,137 @@ class ProfileRunCommand extends DrutinyBaseCommand
         return $exit_code >= $exit_severity ? $exit_code : Command::SUCCESS;
     }
 
+    protected function asyncExecuteWithUpdates(InputInterface $input, ConsoleOutput $output, array $uris):array {
+        $processManager = new ProcessManager($this->logger);
+        $processManager->maxConcurrency = 3;
+        foreach ($uris as $uri) {
+            // Grab all options excluding domain-source options.
+            $options = array_filter($input->getOptions(), function ($key) {
+                return strpos($key, 'domain-source') === false;
+            }, \ARRAY_FILTER_USE_KEY);
+
+            // We're only sending a single URL.
+            $options['uri'] = [$uri];
+
+            // We don't want the policy level updates, just the overall progress.
+            $options['no-interaction'] = true;
+
+            if (empty($options['store'])) {
+                unset($options['store']);
+            }
+
+            $cmd = ['profile:run', $input->getArgument('profile'), $input->getArgument('target')];
+
+            foreach ($options as $key => $value) {
+                $definition = $this->getDefinition()->getOption($key);
+                if (!$definition->acceptValue() && $value) {
+                    $cmd[] = '--' . $key;
+                    continue;
+                }
+                $values = is_array($value) ? $value : [$value];
+
+                foreach ($values as $value) {
+                    if ($definition->acceptValue()) {
+                        $cmd[] = '--' . $key . '=' . $value;
+                    }
+                }
+            }
+            $cmd[] = '--pipe';
+            $processManager->add(ProcessManager::create($cmd), name: $uri);
+        }
+        $processManager->then(function (array $processes) {
+            return array_map(function (Process $process) {
+                return json_decode(base64_decode($process->getOutput()), true);
+            }, $processes);
+        });
+
+        $viewer = new ProcessManagerViewer($output, $processManager);
+        $viewer->setHeaders(['URI', 'Status', 'Timing'])
+            ->onStatusChange(function ($status, $name, Process $process) {
+                $report_uri = null;
+                if ($status == ProcessManagerViewer::STATUS_TERMINATED && $process->isSuccessful()) {
+                    $output = json_decode(base64_decode($process->getOutput()), true);
+                    $report_uri = $output['report_uris'][0] ?? null;
+                }
+                return match ($status) {
+                    ProcessManagerViewer::STATUS_PENDING => '<fg=yellow>Waiting to start</>',
+                    ProcessManagerViewer::STATUS_RUNNING => 'In progress',
+                    ProcessManagerViewer::STATUS_TERMINATED => '<fg=green>' . ($report_uri ?? 'Complete') . '</>',
+                };
+            })
+            ->onUpdate(function (Process $process, string $name) {
+                $stderr = $process->getIncrementalErrorOutput();
+                $process->clearErrorOutput();
+                if (empty($stderr)) {
+                    return;
+                }
+                $lines = array_filter(array_map('trim', explode(PHP_EOL, $stderr)));
+                if (count($lines)) {
+                    return array_pop($lines);
+                }
+            })
+            ->render()
+            ->watchAndWait();
+        $viewer->clean();
+
+        $results = $processManager->resolve();
+
+        $io = new SymfonyStyle($input, $output);
+        $io->table(
+            headers: ['URI', 'Severity', 'Reports'],
+            rows: array_map(function ($result) {
+                try {
+                    $severity = Severity::fromInt($result['severity'])->name;
+                }
+                catch (\Exception $e) {
+                    $severity = 'NONE';
+                }
+                return [
+                    $result['uri'], 
+                    $severity, 
+                    implode(PHP_EOL, $result['report_uris'])
+                ];
+            }, $results)
+        );
+
+        return array_map(fn($r) => $r['severity'], $results);
+    }
+
     /**
      * Wait for a streaming report to resolve.
      */
-    protected function waitForReport(ProcessManager $report, ConsoleOutput $output, TargetInterface $target): Report {
-        $table_output = $output->section();
-        $table = new Table($table_output);
-        $table->setHeaders([$target['domain'], 'Status']);
-        // Create a section for each process in the report.
-        /**
-         * @var Array[]
-         */
-        $rows = $report->map(function (Process $process, string $policy) use ($output) {
-            $policies = explode(', ', $policy);
-            $tag = array_shift($policies);
-            if (count($policies)) {
-                $tag .= ' and ' . count($policies) . ' more';
-            }
-            return [$tag, '<fg=yellow>Waiting to start</>'];
-        });
-        $keys = array_keys($rows);
-        $rows = array_values($rows);
-        $table->setRows($rows);
-        $table->render();
-
-        $status = [];
-
-        while (!$report->hasFinished()) {
-            $updated = false;
-
-            $active_pids = [];
-            $active = $report->getActive();
-            foreach ($active as $name => $process) {
-                $row_id = array_search($name, $keys);
-                if (!isset($status[$name])) {
-                    $rows[$row_id][1] = 'Running policy';
-                    $table->setRow($row_id, $rows[$row_id]);
-                    $status[$name] = $process->getPid();
-                    $updated = true;
-                }
-                $active_pids[] = $process->getPid();
-
-                // $stderr = $process->getIncrementalErrorOutput();
-                // if (!empty($stderr)) {
-                //     $lines = array_filter(explode(PHP_EOL, trim($stderr)));
-                //     $rows[$row_id][1] = array_pop($lines);
-                //     $table->setRow($row_id, $rows[$row_id]);
-                //     $process->clearErrorOutput();
-                //     $updated = true;
-                // }
-            }
-            $completed = $report->getCompleted();
-
-            foreach ($completed as $name => $process) {
-                if (is_bool($status[$name])) {
-                    continue;
-                }
-                $row_id = array_search($name, $keys);
-                $rows[$row_id][1] =  $process->isSuccessful() ? '<fg=green>Complete</>' : '<fg=red>An error occured</>';
-                $table->setRow($row_id, $rows[$row_id]);
-                $status[$name] = $process->isSuccessful();
-                $updated = true;
-            }
-
-            if ($table_output instanceof ConsoleSectionOutput && $updated) {
-                $clear_lines = 5 + count($rows);
-                $table_output->clear($clear_lines);
-                $table->render();
-                $table_output->writeln(count($active) . ' Active. ' . count($completed) . ' Completed');
-            }
-            
-            sleep(1);
-            $report->update();
-        }
-
-        $clear_lines = 5 + count($rows);
-        $table_output->clear($clear_lines);
+    protected function waitForReportWithUpdates(ProcessManager $report, ConsoleOutput $output, TargetInterface $target): Report {
+        $viewer = new ProcessManagerViewer($output, $report);
+        $viewer->setHeaders([$target['domain'], 'Status', 'Timing'])
+            ->onStatusChange(function ($status) {
+                return match ($status) {
+                    ProcessManagerViewer::STATUS_PENDING => '<fg=yellow>Waiting to start</>',
+                    ProcessManagerViewer::STATUS_RUNNING => 'In progress',
+                    ProcessManagerViewer::STATUS_TERMINATED => '<fg=green>Complete</>',
+                };
+            })
+            ->render()
+            ->watchAndWait();
+        $viewer->clean();
 
         /**
          * @var \Drutiny\Report
          */
+        return $report->resolve();
+    }
+
+    protected function waitForReport(ProcessManager $report): Report {
+        while (!$report->hasFinished()) {
+            $total = $report->length();
+            $active = count($report->getActive());
+            $complete = count($report->getCompleted());
+            $this->progressBar->setMaxSteps($total);
+            $this->progressBar->setProgress($complete);
+            $this->progressBar->setMessage(date('H:i:s') . " $active in progress. $complete/$total complete.");
+            $this->progressBar->display();
+            sleep(1);
+            $report->update();
+        }
         return $report->resolve();
     }
 }

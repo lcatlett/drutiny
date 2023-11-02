@@ -136,7 +136,7 @@ trait ReportingCommandTrait
         return $this->storeFactory->get($input->getOption('store'));
       }
 
-      protected function formatReport(Report $report, SymfonyStyle $console, InputInterface $input) {
+      protected function formatReport(Report $report, SymfonyStyle $console, InputInterface $input): array {
         // If this wasn't the actual assessment, then it means the target
         // failed a dependency check. We'll render a dependency failure
         // report out to the terminal.
@@ -154,8 +154,8 @@ trait ReportingCommandTrait
 
         $store = $this->getStore($input, $this->storeFactory);
 
+        $uris = [];
         foreach ($formats as $format) {
-
             $render = $format->render($report);
 
             if (!is_iterable($render)) {
@@ -167,13 +167,10 @@ trait ReportingCommandTrait
              */
             foreach ($render as $rendered_report) {
                 $uri = $store->store($rendered_report, $format, $report);
-
-                if (!$store instanceof TerminalStore) {
-                    $console->success("Written $uri");
-                }
+                $uris[] = $uri;
             }
-            $console->writeln('');
         }
+        return $uris;
     }
 
       /**

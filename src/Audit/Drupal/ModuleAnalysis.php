@@ -5,6 +5,7 @@ namespace Drutiny\Audit\Drupal;
 use Drutiny\Attribute\DataProvider;
 use Drutiny\Audit\AbstractAnalysis;
 use Drutiny\Helper\TextCleaner;
+use Drutiny\Policy;
 use Drutiny\Policy\Dependency;
 
 /**
@@ -14,6 +15,11 @@ use Drutiny\Policy\Dependency;
 #[Dependency('Drupal.isBootstrapped')]
 class ModuleAnalysis extends AbstractAnalysis
 {
+    public function prepare(Policy $policy): ?string
+    {
+      return static::class;  
+    }
+
     #[DataProvider]
     public function listModules():void
     {

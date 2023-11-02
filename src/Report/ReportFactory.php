@@ -55,7 +55,6 @@ class ReportFactory {
         $start = time();
         $report = new Report(
             uri: $target->uri,
-            // results: $this->streamAudit($contexts, $target, $profile->reportingPeriodStart, $profile->reportingPeriodEnd, ...$profile->dependencies)->resolve(),
             results: $this->auditPolicies($contexts, $target, $profile->reportingPeriodStart, $profile->reportingPeriodEnd, ...$profile->dependencies),
             type: ReportType::DEPENDENCIES,
             profile: $profile,
@@ -66,7 +65,6 @@ class ReportFactory {
 
         $report = !$report->successful ? $report : new Report(
             uri: $target->uri,
-            // results: $this->streamAudit($contexts, $target, $profile->reportingPeriodStart, $profile->reportingPeriodEnd, ...$profile->policies)->resolve(),
             results: $this->auditPolicies($contexts, $target, $profile->reportingPeriodStart, $profile->reportingPeriodEnd, ...$profile->policies),
             type: ReportType::ASSESSMENT,
             profile: $profile,
@@ -87,7 +85,7 @@ class ReportFactory {
         return $report;
     }
 
-    private function streamAudit(array $contexts, TargetInterface $target, DateTime $start, DateTime $end, PolicyDefinition ...$definitions): ProcessManager
+    private function streamAudit(array $contexts, Profile $profile, TargetInterface $target, PolicyDefinition ...$definitions): ProcessManager
     {
         $processManager = new ProcessManager($this->logger);
         $audit_groups = [];
@@ -111,7 +109,7 @@ class ReportFactory {
         foreach ($audit_groups as $class => $policies) {
             $batch = [];
             $audit = $this->auditFactory->mock($class, $target);
-            $audit->setReportingPeriod($start, $end);
+            $audit->setReportingPeriod($profile->reportingPeriodStart, $profile->reportingPeriodEnd);
 
             /**
              * @var \Drutiny\Profile\PolicyDefinition
@@ -128,18 +126,23 @@ class ReportFactory {
 
             foreach ($batch as $batch_id => $policies) {
                 $opts = array_values(array_map(fn(PolicyDefinition $p) => '--policy-definition=' . base64_encode(serialize($p)), $policies));
-                $opts[] = '--reporting-period-start=' . $start->format('Y-m-d H:i:s');
-                $opts[] = '--reporting-period-end=' . $end->format('Y-m-d H:i:s');
-                $opts[] = '--reporting-timezone=' . $start->format('e');
+                $opts[] = '--reporting-period-start=' . $profile->reportingPeriodStart->format('Y-m-d H:i:s');
+                $opts[] = '--reporting-period-end=' . $profile->reportingPeriodEnd->format('Y-m-d H:i:s');
+                $opts[] = '--reporting-timezone=' . $profile->reportingPeriodStart->format('e');
+                $opts[] = '--language=' . $profile->language;
                 $opts[] = '--no-ansi';
 
                 $process = ProcessManager::create(['policy:audit:batch', $target_filepath, ...$opts]);
-                // $process->setPty(Process::isPtySupported());
-                // $process->setTty(Process::isTtySupported());
+
+                $keys = array_keys($policies);
+                $name = array_shift($keys);
+                if (count($keys)) {
+                    $name .= ' and ' . count($keys) . ' more';
+                }
 
                 $processManager->add(
                     process: $process, 
-                    name: implode(', ', array_keys($policies))
+                    name: $name
                 );
             }
             $processManager->update();
@@ -191,7 +194,7 @@ class ReportFactory {
             language: $this->languageManager->getCurrentLanguage(),
         );
 
-        $processManager = $this->streamAudit($contexts, $target, $profile->reportingPeriodStart, $profile->reportingPeriodEnd, ...$profile->policies);
+        $processManager = $this->streamAudit($contexts, $profile, $target, ...$profile->policies);
         $processManager->then(function (array $results) use ($report) {
             return $report->with(results: $results);
         });

@@ -138,7 +138,11 @@ abstract class Audit implements AuditInterface
      */
     public function prepare(Policy $policy):null|string
     {
-        return $this::class;
+        // By default, policies don't get batched together.
+        // An audit may override this method to get a different
+        // batching string that allow policies to be batch audited.
+        // This is typically done to make the auditing process faster.
+        return $policy->name;
     }
 
     /**
