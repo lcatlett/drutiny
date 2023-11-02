@@ -2,26 +2,21 @@
 
 namespace Drutiny\Console\Command;
 
-use Async\ForkInterface;
-use Async\Exception\ChildExceptionDetected;
-use Async\ForkManager;
+use Drutiny\Console\ProcessManager;
 use Drutiny\Profile;
 use Drutiny\DomainSource;
 use Drutiny\LanguageManager;
 use Drutiny\PolicyFactory;
-use Drutiny\Profile\FormatDefinition;
 use Drutiny\ProfileFactory;
-use Drutiny\Report\Format\Terminal;
 use Drutiny\Report\FormatFactory;
 use Drutiny\Report\Report;
 use Drutiny\Report\ReportFactory;
-use Drutiny\Report\ReportType;
-use Drutiny\Report\Store\TerminalStore;
 use Drutiny\Report\StoreFactory;
 use Drutiny\Target\Exception\InvalidTargetException;
 use Drutiny\Target\Exception\TargetLoadingException;
 use Drutiny\Target\Exception\TargetNotFoundException;
 use Drutiny\Target\TargetFactory;
+use Drutiny\Target\TargetInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -30,8 +25,11 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Console\Helper\ProgressBar;
+use Symfony\Component\Console\Helper\Table;
+use Symfony\Component\Console\Output\ConsoleOutput;
+use Symfony\Component\Console\Output\ConsoleSectionOutput;
 use Symfony\Component\EventDispatcher\EventDispatcher;
-use Symfony\Component\EventDispatcher\GenericEvent;
+use Symfony\Component\Process\Process;
 
 /**
  * Run a profile and generate a report.
@@ -52,7 +50,6 @@ class ProfileRunCommand extends DrutinyBaseCommand
         protected TargetFactory $targetFactory,
         protected LoggerInterface $logger,
         protected ProgressBar $progressBar,
-        protected ForkManager $forkManager,
         protected FormatFactory $formatFactory,
         protected EventDispatcher $eventDispatcher,
         protected StoreFactory $storeFactory,
@@ -206,8 +203,6 @@ class ProfileRunCommand extends DrutinyBaseCommand
         // Reset the progress step tracker.
         $this->progressBar->setMaxSteps($this->progressBar->getMaxSteps() + count($uris));
 
-        $this->forkManager->setAsync($this->forkManager->isAsync() && (count($uris) > 1));
-
         $console = new SymfonyStyle($input, $output);
 
         $exit_codes = [Command::SUCCESS];
@@ -224,56 +219,55 @@ class ProfileRunCommand extends DrutinyBaseCommand
                 $exit_codes[] = $e::ERROR_CODE;
                 continue;
             }
-            
-            $fork = $this->forkManager->create();
-            $fork->setLabel(sprintf("Assessment of '%s': %s", $target->getId(), $uri));
-            $fork->run(fn() => $this->reportFactory->create(
-                profile: $profile,
-                target: $target
-            ));
 
-            // Write the report to the provided formats.
-            $fork->onSuccess(fn (Report $report) => $this->formatReport($report, $console, $input));
+            try {
+                $report = $this->reportFactory->promise(
+                    profile: $profile,
+                    target: $target
+                );
 
-            $fork->onError(function (ChildExceptionDetected $e, ForkInterface $fork) use ($console) {
-                $this->logger->error($fork->getLabel()." failed: " . $e->getMessage());
-                $console->error($fork->getLabel()." failed: " . $e->getMessage());
-            });
-        }
-
-        foreach ($this->forkManager->waitWithUpdates(600) as $remaining) {
-            $this->progressBar->setMessage(sprintf("%d/%d assessments completed.", count($uris) - $remaining, count($uris)));
-            $this->progressBar->display();
-        }
-
-        foreach ($this->forkManager->getForkResults(true) as $report) {
-            $this->progressBar->advance();
-            if ($report instanceof Report) {
+                if ($report instanceof ProcessManager) {
+                    if ($output instanceof ConsoleOutput && !$input->getOption('no-interaction')) {
+                        $report = $this->waitForReport($report, $output, $target);
+                    }
+                    else {
+                        while (!$report->hasFinished()) {
+                            $total = $report->length();
+                            $active = count($report->getActive());
+                            $complete = count($report->getCompleted());
+                            $this->progressBar->setMaxSteps($total);
+                            $this->progressBar->setProgress($complete);
+                            $this->progressBar->setMessage(date('H:i:s') . " $active in progress. $complete/$total complete.");
+                            $this->progressBar->display();
+                            sleep(1);
+                            $report->update();
+                        }
+                        $report = $report->resolve();
+                    }
+                }
+    
+                $this->formatReport($report, $console, $input);
                 $exit_codes[] = $report->successful ? 0 : $report->severity->getWeight();
-            } else {
-                // Distinct error code denoting assessment error. Audit errors are < 16.
+            }
+            catch (\Exception $e) {
+                $this->logger->error("{$profile->name} audit on $uri failed: " . $e->getMessage());
+                $console->error("{$profile->name} audit on $uri failed: " . $e->getMessage());
                 $exit_codes[] = 17;
+                throw $e;
+            }
+            catch (\Error $e) {
+                $this->logger->error("{$profile->name} audit on $uri failed: " . $e->getMessage());
+                $console->error("{$profile->name} audit on $uri failed: " . $e->getMessage());
+                $exit_codes[] = 17;
+                throw $e;
+            }
+            finally {
+                $this->progressBar->advance();
             }
         }
 
         $this->progressBar->finish();
         $this->progressBar->clear();
-
-        // if ($input->getOption('report-summary')) {
-        //     $report_filename = strtr($filepath, [
-        //       'uri' => 'multiple_target',
-        //     ]);
-
-        //     $format->setOptions([
-        //       'content' => $format->loadTwigTemplate('report/profile.multiple_target')
-        //     ]);
-        //     $format->setOutput(($filepath != 'stdout') ? new StreamOutput(fopen($report_filename, 'w')) : $output);
-        //     $format->render($profile, $assessment_manager)->write();
-
-        //     if ($filepath != 'stdout') {
-        //         $console->success(sprintf("%s report written to %s", $format->getName(), $report_filename));
-        //     }
-        // }
 
         // Do not use a non-zero exit code when no severity is set (Default).
         $exit_severity = $input->getOption('exit-on-severity');
@@ -283,5 +277,88 @@ class ProfileRunCommand extends DrutinyBaseCommand
         $exit_code = max($exit_codes);
 
         return $exit_code >= $exit_severity ? $exit_code : Command::SUCCESS;
+    }
+
+    /**
+     * Wait for a streaming report to resolve.
+     */
+    protected function waitForReport(ProcessManager $report, ConsoleOutput $output, TargetInterface $target): Report {
+        $table_output = $output->section();
+        $table = new Table($table_output);
+        $table->setHeaders([$target['domain'], 'Status']);
+        // Create a section for each process in the report.
+        /**
+         * @var Array[]
+         */
+        $rows = $report->map(function (Process $process, string $policy) use ($output) {
+            $policies = explode(', ', $policy);
+            $tag = array_shift($policies);
+            if (count($policies)) {
+                $tag .= ' and ' . count($policies) . ' more';
+            }
+            return [$tag, '<fg=yellow>Waiting to start</>'];
+        });
+        $keys = array_keys($rows);
+        $rows = array_values($rows);
+        $table->setRows($rows);
+        $table->render();
+
+        $status = [];
+
+        while (!$report->hasFinished()) {
+            $updated = false;
+
+            $active_pids = [];
+            $active = $report->getActive();
+            foreach ($active as $name => $process) {
+                $row_id = array_search($name, $keys);
+                if (!isset($status[$name])) {
+                    $rows[$row_id][1] = 'Running policy';
+                    $table->setRow($row_id, $rows[$row_id]);
+                    $status[$name] = $process->getPid();
+                    $updated = true;
+                }
+                $active_pids[] = $process->getPid();
+
+                // $stderr = $process->getIncrementalErrorOutput();
+                // if (!empty($stderr)) {
+                //     $lines = array_filter(explode(PHP_EOL, trim($stderr)));
+                //     $rows[$row_id][1] = array_pop($lines);
+                //     $table->setRow($row_id, $rows[$row_id]);
+                //     $process->clearErrorOutput();
+                //     $updated = true;
+                // }
+            }
+            $completed = $report->getCompleted();
+
+            foreach ($completed as $name => $process) {
+                if (is_bool($status[$name])) {
+                    continue;
+                }
+                $row_id = array_search($name, $keys);
+                $rows[$row_id][1] =  $process->isSuccessful() ? '<fg=green>Complete</>' : '<fg=red>An error occured</>';
+                $table->setRow($row_id, $rows[$row_id]);
+                $status[$name] = $process->isSuccessful();
+                $updated = true;
+            }
+
+            if ($table_output instanceof ConsoleSectionOutput && $updated) {
+                $clear_lines = 5 + count($rows);
+                $table_output->clear($clear_lines);
+                $table->render();
+                $table_output->writeln(count($active) . ' Active. ' . count($completed) . ' Completed');
+            }
+            
+            sleep(1);
+            $report->update();
+        }
+
+        $clear_lines = 5 + count($rows);
+        $table_output->clear($clear_lines);
+
+        /**
+         * @var \Drutiny\Report
+         */
+        return $report->resolve();
     }
 }

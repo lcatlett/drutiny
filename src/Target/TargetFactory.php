@@ -26,11 +26,16 @@ class TargetFactory
      */
     public function create(string $target_reference, ?string $uri = null):TargetInterface
     {
-      // By default, assume a target is using drush.
+        // A file reference means to load the target from a dump file.
+        if (file_exists($target_reference)) {
+          return $this->fromExport(TargetExport::fromTemporaryFile($target_reference));
+        }
+
+        // By default, assume a target is using drush.
         $target_name = 'drush';
         $target_data = $target_reference;
 
-      // If a colon is used, then an alternate target maybe used.
+        // If a colon is used, then an alternate target maybe used.
         if (strpos($target_reference, ':') !== false) {
             list($target_name, $target_data) = explode(':', $target_reference, 2);
         }
@@ -51,6 +56,34 @@ class TargetFactory
     {
       $this->targetMap[$type] ?? throw new InvalidTargetException("No such target type '$type'.");
       return $this->container->get($this->targetMap[$type]);
+    }
+
+    public function export(TargetInterface $target) {
+      return TargetExport::create($target);
+    }
+
+    /**
+     * Create a target from an export of properties.
+     */
+    public function fromExport(TargetExport $export) {
+        // By default, assume a target is using drush.
+        $target_name = 'drush';
+
+        // If a colon is used, then an alternate target maybe used.
+        if (strpos($export->targetReference, ':') !== false) {
+            list($target_name, ) = explode(':', $export->targetReference, 2);
+        }
+
+        $target = $this->container->get($this->targetMap[$target_name] 
+          ?? throw new InvalidArgumentException("$target_name is not a valid target tag. Valid tags are: " . implode(', ', array_keys($this->targetMap)))
+        );
+        $target->setTargetName($export->targetReference);
+        $target->loadByProperties($export->properties);
+
+        // This makes the target inherintly accessible by the twigEvaluator 
+        // in other services.
+        $this->twigEvaluator->setContext('target', $target);
+        return $target;
     }
 
     /**

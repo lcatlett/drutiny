@@ -136,9 +136,9 @@ abstract class Audit implements AuditInterface
     /**
      * {@inheritdoc}
      */
-    public function prepare(Policy $policy):void
+    public function prepare(Policy $policy):null|string
     {
-
+        return $this::class;
     }
 
     /**

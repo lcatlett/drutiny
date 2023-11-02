@@ -23,9 +23,10 @@ class StateAnalysis extends AbstractAnalysis {
     /**
      * {@inheritdoc}
      */
-    public function prepare(Policy $policy): void
+    public function prepare(Policy $policy): ?string
     {
         $this->states[] = $policy->parameters->get('state');
+        return __CLASS__;
     }
 
     #[DataProvider]

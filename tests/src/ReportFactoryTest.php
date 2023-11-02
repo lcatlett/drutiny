@@ -9,6 +9,7 @@ use Drutiny\Profile;
 use Drutiny\ProfileFactory;
 use Drutiny\Report\Report;
 use Drutiny\Report\ReportFactory;
+use Error;
 use Exception;
 
 class ReportFactoryTest extends KernelTestCase {
@@ -44,11 +45,14 @@ class ReportFactoryTest extends KernelTestCase {
 
     public function testBadReportCreation()
     {
+        /**
+         * @var \Drutiny\Profile
+         */
         $profile = $this->container->get(ProfileFactory::class)->loadProfileByName('test');
         $target = $target = $this->loadMockTarget();
 
-        $this->expectException(Exception::class);
-        new Report(
+        $this->expectException(Error::class);
+        $report = new Report(
             uri: 'https://phpunit.test',
             profile: $profile,
             target: $target

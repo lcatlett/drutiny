@@ -2,7 +2,10 @@
 
 namespace Drutiny\Console\Command;
 
+use Drutiny\Target\TargetExport;
 use Drutiny\Target\TargetFactory;
+use InvalidArgumentException;
+use League\Csv\InvalidArgument;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Input\InputInterface;
@@ -44,9 +47,10 @@ class TargetMetadataCommand extends DrutinyBaseCommand
             'l',
             InputOption::VALUE_OPTIONAL,
             'Provide URLs to run against the target. Useful for multisite installs. Accepts multiple arguments.',
-            false
+            null
         )
-        ->addOption('format', 'f', InputOption::VALUE_OPTIONAL, 'Choose the output format (json or yaml)');
+        ->addOption('format', 'f', InputOption::VALUE_OPTIONAL, 'Choose the output format (json or yaml)')
+        ->addOption('export', null, InputOption::VALUE_NONE, 'Export the target data to a temp file.');
     }
 
   /**
@@ -57,12 +61,12 @@ class TargetMetadataCommand extends DrutinyBaseCommand
         $this->progressBar->start();
         $this->progressBar->setMessage("Loading target..");
         $this->progressBar->advance();
-        
+     
         $target = $this->targetFactory->create(
           $input->getArgument('target'), 
           $input->getOption('uri')
         );
-
+        
         $this->progressBar->advance();
 
         $io = new SymfonyStyle($input, $output);
@@ -87,6 +91,10 @@ class TargetMetadataCommand extends DrutinyBaseCommand
           'yaml' => Yaml::dump($object),
           default => $io->table(['Property', 'Value'], $rows) ?? '',
         });
+
+        if ($input->getOption('export')) {
+          $io->note("Written export to " . TargetExport::create($target)->toTemporaryFile());
+        }
 
         return 0;
     }

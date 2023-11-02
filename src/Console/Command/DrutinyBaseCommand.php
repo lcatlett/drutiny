@@ -5,7 +5,6 @@ namespace Drutiny\Console\Command;
 use Drutiny\PolicyFactory;
 use Drutiny\ProfileFactory;
 use Drutiny\Target\TargetFactory;
-use Async\ForkManager;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Symfony\Component\Console\Command\Command;
@@ -59,15 +58,6 @@ abstract class DrutinyBaseCommand extends Command
     protected function getTargetFactory(): TargetFactory
     {
         throw new RuntimeException("Please use dependency injection in the constructor method instead for :" . TargetFactory::class);
-    }
-
-    /**
-     * Get utility for managing forks.
-     * @deprecated
-     */
-    protected function getForkManager(): ForkManager
-    {
-        throw new RuntimeException("Please use dependency injection in the constructor method instead for :" . ForkManager::class);
     }
 
     /**

@@ -66,11 +66,6 @@ class AuditResponse implements ExportableInterface
      */
     public function getType():string
     {
-        // // Data type policies cannot 'fail' irrespective of their state.
-        // if (!$this->state->isSuccessful() && $this->policy->type == PolicyType::DATA) {
-        //   return 'data';
-        // }
-
         $type = str_replace('_', '-', strtolower($this->state->name));
         return match ($type) {
           'warning-fail' => 'failure',

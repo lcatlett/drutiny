@@ -2,9 +2,6 @@
 
 namespace Drutiny\Report;
 
-use Async\Exception\ChildExceptionDetected;
-use Async\ForkInterface;
-use Async\ForkManager;
 use DateTime;
 use DateTimeInterface;
 use Drutiny\Audit\AuditInterface;
@@ -13,6 +10,7 @@ use Drutiny\Audit\SyntaxProcessor;
 use Drutiny\AuditFactory;
 use Drutiny\AuditResponse\AuditResponse;
 use Drutiny\AuditResponse\State;
+use Drutiny\Console\ProcessManager;
 use Drutiny\LanguageManager;
 use Drutiny\Policy;
 use Drutiny\Policy\Dependency;
@@ -21,23 +19,26 @@ use Drutiny\Policy\DependencyException;
 use Drutiny\PolicyFactory;
 use Drutiny\Profile;
 use Drutiny\Profile\PolicyDefinition;
+use Drutiny\Target\TargetExport;
 use Drutiny\Target\TargetInterface;
+use Error;
+use Exception;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\Process\Process;
 use Twig\Error\RuntimeError;
 use UnexpectedValueException;
 
 class ReportFactory {
     public function __construct(
         protected LoggerInterface $logger,
-        protected ForkManager $forkManager,
         protected AuditFactory $auditFactory,
         protected PolicyFactory $policyFactory,
         protected SyntaxProcessor $syntaxProcessor,
         protected EventDispatcher $eventDispatcher,
         protected LanguageManager $languageManager,
-        protected ProgressBar $progressBar
+        protected ProgressBar $progressBar,
     )
     {}
 
@@ -54,6 +55,7 @@ class ReportFactory {
         $start = time();
         $report = new Report(
             uri: $target->uri,
+            // results: $this->streamAudit($contexts, $target, $profile->reportingPeriodStart, $profile->reportingPeriodEnd, ...$profile->dependencies)->resolve(),
             results: $this->auditPolicies($contexts, $target, $profile->reportingPeriodStart, $profile->reportingPeriodEnd, ...$profile->dependencies),
             type: ReportType::DEPENDENCIES,
             profile: $profile,
@@ -64,6 +66,7 @@ class ReportFactory {
 
         $report = !$report->successful ? $report : new Report(
             uri: $target->uri,
+            // results: $this->streamAudit($contexts, $target, $profile->reportingPeriodStart, $profile->reportingPeriodEnd, ...$profile->policies)->resolve(),
             results: $this->auditPolicies($contexts, $target, $profile->reportingPeriodStart, $profile->reportingPeriodEnd, ...$profile->policies),
             type: ReportType::ASSESSMENT,
             profile: $profile,
@@ -72,21 +75,23 @@ class ReportFactory {
             language: $this->languageManager->getCurrentLanguage(),
         );
 
+        // Validate the number of results reflects the number of policies that were 
+        // provided by the profile.
+        $expected_results = count($report->type == ReportType::ASSESSMENT ? $profile->policies : $profile->dependencies);
+        if (count($report->results) != $expected_results) {
+            throw new Exception('Incorrect number of ' . $report->type->value . ' report results: ' . count($report->results) . '. Expecting: ' . $expected_results);
+        }
+
         $this->eventDispatcher->dispatch($report, 'report.create');
 
         return $report;
     }
 
-    /**
-     * Audit a batch of policies against a common target using the ForkManager.
-     */
-    private function auditPolicies(array $contexts, TargetInterface $target, DateTime $start, DateTime $end, PolicyDefinition ...$definitions)
+    private function streamAudit(array $contexts, TargetInterface $target, DateTime $start, DateTime $end, PolicyDefinition ...$definitions): ProcessManager
     {
-        $this->forkManager->clearForks();
-
-        $batch = [];
+        $processManager = new ProcessManager($this->logger);
+        $audit_groups = [];
         $early_results = [];
-
         // Dependencies must be met for a policy to be audited.
         // If they generate a response then that response is used 
         // as the policy's AuditResponse and the policy is omitted from auditing.
@@ -94,6 +99,124 @@ class ReportFactory {
             $policy = $definition->getPolicy($this->policyFactory);
             if ($response = $this->getDependencyResponse($contexts, $policy)) {
                 $early_results[] = $response;
+                continue;
+            }
+            $audit_groups[$policy->class][$policy->name] = $definition;
+        }
+        
+        $errors = [];
+
+        $target_filepath = TargetExport::create($target)->toTemporaryFile();
+
+        foreach ($audit_groups as $class => $policies) {
+            $batch = [];
+            $audit = $this->auditFactory->mock($class, $target);
+            $audit->setReportingPeriod($start, $end);
+
+            /**
+             * @var \Drutiny\Profile\PolicyDefinition
+             */
+            foreach ($policies as $policy) {
+                $batch_id = $this->prepareAudit($audit, $policy->getPolicy($this->policyFactory), $errors);
+                if (is_string($batch_id)) {
+                    $batch[$batch_id][$policy->name] = $policy;
+                }
+                elseif (is_null($batch_id)) {
+                    $batch[] = [$policy->name => $policy];
+                }
+            }
+
+            foreach ($batch as $batch_id => $policies) {
+                $opts = array_values(array_map(fn(PolicyDefinition $p) => '--policy-definition=' . base64_encode(serialize($p)), $policies));
+                $opts[] = '--reporting-period-start=' . $start->format('Y-m-d H:i:s');
+                $opts[] = '--reporting-period-end=' . $end->format('Y-m-d H:i:s');
+                $opts[] = '--reporting-timezone=' . $start->format('e');
+                $opts[] = '--no-ansi';
+
+                $process = ProcessManager::create(['policy:audit:batch', $target_filepath, ...$opts]);
+                // $process->setPty(Process::isPtySupported());
+                // $process->setTty(Process::isTtySupported());
+
+                $processManager->add(
+                    process: $process, 
+                    name: implode(', ', array_keys($policies))
+                );
+            }
+            $processManager->update();
+        }
+
+        $processManager->then(function (array $procs) {
+            return array_map(function (Process $proc) {
+                $response = unserialize(base64_decode($proc->getOutput()));
+
+                if ($response == false) {
+                    $this->logger->critical(sprintf('Command %s failed: %s', $proc->getCommandLine(), $proc->getOutput()));
+                    return [];
+                }
+                return $response;
+
+            }, $procs);
+        })->then(function (array $result_sets) {
+            return call_user_func_array('array_merge', array_values($result_sets));
+        });
+
+        return $processManager;
+    }
+
+    public function promise(Profile $profile, TargetInterface $target):Report|ProcessManager {
+        $contexts = $this->buildContexts($target);
+
+        $start = time();
+        $report = new Report(
+            uri: $target->uri,
+            results: $this->auditPolicies($contexts, $target, $profile->reportingPeriodStart, $profile->reportingPeriodEnd, ...$profile->dependencies),
+            type: ReportType::DEPENDENCIES,
+            profile: $profile,
+            target: $target,
+            timing: time() - $start,
+            language: $this->languageManager->getCurrentLanguage(),
+        );
+
+        if (!$report->successful) {
+            $this->eventDispatcher->dispatch($report, 'report.create');
+            return $report;
+        }
+
+        $report = !$report->successful ? $report : new Report(
+            uri: $target->uri,
+            type: ReportType::ASSESSMENT,
+            profile: $profile,
+            target: $target,
+            timing: time() - $start,
+            language: $this->languageManager->getCurrentLanguage(),
+        );
+
+        $processManager = $this->streamAudit($contexts, $target, $profile->reportingPeriodStart, $profile->reportingPeriodEnd, ...$profile->policies);
+        $processManager->then(function (array $results) use ($report) {
+            return $report->with(results: $results);
+        });
+
+        return $processManager;
+    }
+
+    /**
+     * Audit a batch of policies synchonously against a common target.
+     *
+     * @return \Drutiny\AuditResponse\AuditResponse[]
+     */
+    private function auditPolicies(array $contexts, TargetInterface $target, DateTime $start, DateTime $end, PolicyDefinition ...$definitions):array
+    {
+
+        $batch = [];
+        $results = [];
+
+        // Dependencies must be met for a policy to be audited.
+        // If they generate a response then that response is used 
+        // as the policy's AuditResponse and the policy is omitted from auditing.
+        foreach ($definitions as $definition) {
+            $policy = $definition->getPolicy($this->policyFactory);
+            if ($response = $this->getDependencyResponse($contexts, $policy)) {
+                $results[] = $response;
                 continue;
             }
             $batch[$policy->class][$policy->name] = $policy;
@@ -106,34 +229,28 @@ class ReportFactory {
         foreach ($batch as $class => $policies) {
             $audit = $this->auditFactory->mock($class, $target);
             $audit->setReportingPeriod($start, $end);
-            array_walk($policies, fn($policy) => $this->prepareAudit($audit, $policy, $errors));
-
             foreach ($policies as $policy) {
-                $this->logger->info("Auditing $policy->title");
-                // Audit each policy inside its own fork.
-                $this->forkPolicyAudit($policy, $audit, $start, $end)
-                     ->onSuccess(fn (AuditResponse $response) => $this->eventDispatcher->dispatch($response, 'policy.audit.response'))
-                     ->onError(fn($e, $f) => $errors[] = $this->handleForkError($e, $f, $policy));
+                try {
+                    if ($this->prepareAudit($audit, $policy, $errors) === false) {
+                        continue;
+                    }
+                    $this->logger->info("Auditing $policy->title");
+                    $response = $this->policyAudit($policy, $audit, $start, $end);
+                }
+                catch (Error|Exception $e) {
+                    $response = $this->handleError($e, $policy);
+                }
+                finally {
+                    $this->eventDispatcher->dispatch($response, 'policy.audit.response');
+                }
+                $results[] = $response;
             }
         }
 
-        // Wait for audit forks to return... 
-        foreach ($this->forkManager->waitWithUpdates(800) as $remaining) {
-            $this->logger->info(sprintf("%d of %d policy audits remaining for %s.", $remaining, count($definitions), $target->uri));
-            $forks = $this->forkManager->getForks(ForkInterface::STATUS_INPROGRESS);
-            if (!empty($forks)) {
-                $fork = reset($forks);
-                $others_count = count($forks) - 1;
-                $message = sprintf("Awaiting %s%s", $fork->getLabel(), $others_count ? " and $others_count others in progress" : ".");
-                $this->progressBar->setMessage($message);
-                $this->progressBar->display();
-            }
-        }
-        $results = array_merge($this->forkManager->getForkResults(), $early_results);
         $returned = count($results);
         $total = count($definitions);
         $error_count = count($errors);
-        $this->logger->info("Assessment returned $returned/$total with $error_count errors from the fork manager.");
+        $this->logger->info("Assessment returned $returned/$total with $error_count errors.");
         
         // Merge results and errors together as result set.
         return array_merge($errors, $results);
@@ -143,10 +260,14 @@ class ReportFactory {
      * Prepare an audit with a given policy.
      *
      * @param \Drutiny\AuditResponse[] $errors
+     * 
+     * @return null means there was no batching suggested for the policy.
+     * @return string is an identifier to batch the policy with.
+     * @return false is an error and the policy should not be processed further.
      */
-    private function prepareAudit(AuditInterface $audit, Policy $policy, array &$errors):void {
+    private function prepareAudit(AuditInterface $audit, Policy $policy, array &$errors):null|string|bool {
         try {
-            $audit->prepare($policy);
+            return $audit->prepare($policy);
         }
         catch (AuditException $e) {
             $errors[] = new AuditResponse(
@@ -159,24 +280,29 @@ class ReportFactory {
                 timing: 0,
                 timestamp: 0
             );
+            return false;
         }
+        return null;
     }
 
     /**
-     * Build an AuditResponse on fork errors.
+     * Audit a policy.
      */
-    private function handleForkError(ChildExceptionDetected $e, ForkInterface $fork, Policy $policy):AuditResponse
-    {
-        $err_msg = $e->getMessage();
-        $this->logger->error('Fork error: ' . $fork->getLabel().': '.$err_msg);
+    private function policyAudit(Policy $policy, AuditInterface $audit, DateTimeInterface $start, DateTimeInterface $end): AuditResponse {
+        $audit->setParameter('reporting_period_start', $start);
+        $audit->setParameter('reporting_period_end', $end);
+        return $audit->execute($policy);
+    }
 
-
-        // Capture the error as a policy error outcome.
+    /**
+     * Handle and error occuring when trying to build an AuditResponse.
+     */
+    private function handleError(Error|Exception $e, Policy $policy):AuditResponse {
         $response = new AuditResponse(
             policy: $policy,
             state: State::ERROR,
             tokens: [
-                'exception' => $err_msg,
+                'exception' => $e->getMessage(),
                 'exception_type' => get_class($e),
             ],
             timing: 0,
@@ -184,18 +310,6 @@ class ReportFactory {
         );
         $this->eventDispatcher->dispatch($response, 'policy.audit.response');
         return $response;
-    }
-
-    private function forkPolicyAudit(Policy $policy, AuditInterface $audit, DateTimeInterface $start, DateTimeInterface $end):ForkInterface
-    {
-        // Backward compatibility with 3.4 and earlier.
-        $audit->setParameter('reporting_period_start', $start);
-        $audit->setParameter('reporting_period_end', $end);
-
-        $fork = $this->forkManager->create();
-        $fork->setLabel($policy->name);
-        $fork->run(fn() => $audit->execute($policy));
-        return $fork;
     }
 
     /**

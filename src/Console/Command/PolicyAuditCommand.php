@@ -10,6 +10,7 @@ use Drutiny\Report\ReportFactory;
 use Drutiny\Report\StoreFactory;
 use Drutiny\Target\TargetFactory;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -71,6 +72,7 @@ class PolicyAuditCommand extends DrutinyBaseCommand
             'Provide URLs to run against the target. Useful for multisite installs. Accepts multiple arguments.',
             false
         )
+        ->addOption('pipe', null, InputOption::VALUE_NONE, 'Output in pipe-mode for internal Drutiny use.')
         ->addOption(
             'exit-on-severity',
             'x',
@@ -141,6 +143,11 @@ class PolicyAuditCommand extends DrutinyBaseCommand
         $report = $this->reportFactory->create($profile, $target);
 
         $response = $report->results[$name];
+
+        if ($input->getOption('pipe')) {
+          $output->write(base64_encode(serialize($response)));
+          return Command::SUCCESS;
+        }
 
         $style = new SymfonyStyle($input, $output);
         if ($response->state->isIrrelevant()) {

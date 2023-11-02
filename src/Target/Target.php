@@ -5,6 +5,7 @@ namespace Drutiny\Target;
 use Drutiny\Entity\DataBag;
 use Drutiny\Entity\Exception\DataNotFoundException;
 use Drutiny\LocalCommand;
+use Drutiny\Target\Exception\TargetLoadingException;
 use Drutiny\Target\Service\ServiceFactory;
 use Drutiny\Target\Service\ServiceInterface;
 use Drutiny\Target\Transport\LocalTransport;
@@ -53,11 +54,36 @@ abstract class Target implements \ArrayAccess, TargetInterface
     final public function load(string $id, ?string $uri = null):void
     {
         $this->parse($id, $uri);
+        $this->finaliseLoad();
+    }
+
+    /**
+     * Load target by properties instead of by ID.
+     */
+    final public function loadByProperties(array $properties) {
+        foreach ($properties as $key => $value) {
+            $this[$key] = $value;
+        }
+        $this->finaliseLoad();
+    }
+
+    /**
+     * Finalise the loading process.
+     */
+    private function finaliseLoad() {
+        $this->transport = $this->loadTransport();
         $event = new GenericEvent('target.load', [
             'target' => $this
         ]);
         $this->eventDispatcher->dispatch($event, $event->getSubject());
         $this->rebuildEnvVars();
+    }
+
+    /**
+     * Override this method to change the transport the target defaults to.
+     */
+    protected function loadTransport(): TransportInterface {
+        return new LocalTransport($this->localCommand);
     }
 
     /**

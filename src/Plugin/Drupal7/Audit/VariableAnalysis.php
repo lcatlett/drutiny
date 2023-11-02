@@ -23,10 +23,11 @@ class VariableAnalysis extends AbstractAnalysis
     /**
      * {@inheritDoc}
      */
-    public function prepare(Policy $policy): void
+    public function prepare(Policy $policy): ?string
     {
         $this->keys[] = $policy->parameters->get('key');
         $this->keys = array_unique($this->keys);
+        return __CLASS__;
     }
 
     #[DataProvider]

@@ -4,13 +4,16 @@ namespace Drutiny\Report;
 
 use Drutiny\Attribute\ArrayType;
 use Drutiny\AuditResponse\AuditResponse;
+use Drutiny\Console\ProcessManager;
 use Drutiny\Helper\MergeUtility;
 use Drutiny\Policy\Severity;
 use Drutiny\Profile;
 use Drutiny\Sandbox\ReportingPeriodTrait;
 use Drutiny\Target\TargetInterface;
 use Exception;
+use RuntimeException;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
+use Symfony\Component\Process\Process;
 
 #[Autoconfigure(autowire: false)]
 class Report {
@@ -36,13 +39,6 @@ class Report {
         public readonly string $language = 'und',
     )
     {
-        // Validate the number of results reflects the number of policies that were 
-        // provided by the profile.
-        $expected_results = count($type == ReportType::ASSESSMENT ? $profile->policies : $profile->dependencies);
-        if (count($results) != $expected_results) {
-            throw new Exception('Incorrect number of ' . $this->type->value . ' report results: ' . count($results) . '. Expecting: ' . $expected_results);
-        }
-
         $this->setReportingPeriod($profile->reportingPeriodStart, $profile->reportingPeriodEnd);
 
         $data = random_bytes(16);
@@ -75,13 +71,41 @@ class Report {
         })->state->isSuccessful();
     }
 
+    public function resolve(ProcessManager $processManager): self {
+        if (count($this->results)) {
+            throw new RuntimeException("Report already has results. Cannot resolve results from processManager.");
+        }
+
+        while (!$processManager->hasFinished()) {
+            $processManager->update();
+            if (!$processManager->hasFinished()) {
+                sleep(1);
+            }
+        }
+
+        /**
+         * @var Array[Drutiny\AuditResponse\AuditResponse[]]
+         */
+        $results = $processManager->map(function (Process $process):array {
+            return unserialize(base64_decode($process->getOutput()));
+        });
+
+        return $this->with(results: array_merge(...$results));
+    }
+
     /**
      * Produce report object variation with altered properties.
      */
     public function with(...$properties):self
     {
         $args = MergeUtility::arrayMerge(get_object_vars($this), $properties);
-        unset($args['uuid']);
+
+        $keys = ['uri', 'profile', 'target', 'type', 'results', 'timing', 'language'];
+        foreach ($args as $key => $arg) {
+            if (!in_array($key, $keys)) {
+                unset($args[$key]);
+            }
+        }
         return new static(...$args);
     }
 

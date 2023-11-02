@@ -136,8 +136,10 @@ interface AuditInterface
      * may like to conduct data gathering in more effecient manners.
      * This prepare function is called for all policies that utilse the
      * same class.
+     * 
+     * @return string|null a common identifier to batch policies on or null.
      */
-    public function prepare(Policy $policy):void;
+    public function prepare(Policy $policy):?string;
 
     public function setReportingPeriod(DateTimeInterface $start, DateTimeInterface $end):self;
 }
