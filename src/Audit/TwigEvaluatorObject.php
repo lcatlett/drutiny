@@ -71,6 +71,7 @@ class TwigEvaluatorObject {
          */
         protected function runPolicyAudit(string $name, TwigEvaluatorFunction $function, TargetInterface $target, array $contexts):mixed {
             $audit = $this->auditFactory->mock($function->use_audit, $target);
+            $audit->setReportingPeriod(new \DateTime, new \DateTime);
             $tokens = [];
             foreach ($contexts as $key => $value) {
                 // Cannot use as policy parameters.

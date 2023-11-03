@@ -2,30 +2,21 @@
 
 namespace Drutiny\Audit;
 
+use Drutiny\Attribute\DataProvider;
+use Drutiny\Attribute\Parameter;
+use Drutiny\Attribute\Type;
 use Drutiny\AuditFactory;
 use Drutiny\PolicyFactory;
-use Drutiny\Sandbox\Sandbox;
 
+#[Parameter('policy', 'The name of the policy to evaluate', Parameter::REQUIRED, Type::STRING)]
 class AuditResponseAnalysis extends AbstractAnalysis {
 
-    protected PolicyFactory $policyFactory;
-    protected AuditFactory $auditFactory;
-
-    public function configure():void {
-        parent::configure();
-        $this->addParameter(
-            'policy',
-            static::PARAMETER_REQUIRED,
-            'The name of the policy to evaluate'
-        );
-        $this->policyFactory = $this->container->get(PolicyFactory::class);
-        $this->auditFactory = $this->container->get(AuditFactory::class);
-    }
-
-    protected function gather(Sandbox $sandbox) {
+    #[DataProvider]
+    protected function gather(PolicyFactory $policyFactory, AuditFactory $auditFactory) {
         $name = $this->getParameter('policy');
-        $policy = $this->policyFactory->loadPolicyByName($name);
-        $audit = $this->auditFactory->get($policy, $this->target);
+        $policy = $policyFactory->loadPolicyByName($name);
+        $audit = $auditFactory->get($policy, $this->target);
+        $audit->setReportingPeriod($this->reportingPeriodStart, $this->reportingPeriodEnd);
         $response = $audit->execute($policy);
         $this->set('response', $response);
     }

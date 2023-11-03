@@ -9,6 +9,7 @@ use Drutiny\Attribute\Version;
 use Drutiny\Audit;
 use Drutiny\AuditResponse\State;
 use Drutiny\Entity\DataBag;
+use Drutiny\Policy;
 use Drutiny\Policy\Severity;
 use Drutiny\Sandbox\Sandbox;
 use InvalidArgumentException;
@@ -35,6 +36,16 @@ use Twig\Error\RuntimeError;
 #[Version('2.0')]
 class AbstractAnalysis extends Audit
 {
+
+    public function prepare(Policy $policy): ?string
+    {
+      // If the policy is using this class directly
+      // then the policy can be batched with others.
+      // Set the class as the batch ID.
+      return $policy->class == AbstractAnalysis::class ? 
+        AbstractAnalysis::class : $policy->class;
+    }
+
     /**
      * Call the 'gather' method with injected arguments.
      */
