@@ -2,7 +2,6 @@
 
 namespace Drutiny\Audit\Drupal;
 
-use Drutiny\Sandbox\Sandbox;
 use Composer\Semver\Comparator;
 use Composer\Semver\Semver;
 use Drutiny\Attribute\DataProvider;
