@@ -57,7 +57,10 @@ class AbstractAnalysis extends Audit
       $methods = [];
       foreach ($reflection->getMethods() as $method) {
         foreach ($method->getAttributes(DataProvider::class) as $attr) {
-          $methods[] = $method;
+          $methods[] = [
+            'weight' => $attr->newInstance()->weight, 
+            'method' => $method
+          ];
           break;
         }
       }
@@ -68,8 +71,19 @@ class AbstractAnalysis extends Audit
         return;
       }
       elseif (empty($methods)) {
-        $methods[] = $reflection->getMethod('gather');
+        $methods[] = ['weight' => 0, 'method' => $reflection->getMethod('gather')];
       }
+
+      // Sort the methods. Lighter weight methods go to the top.
+      usort($methods, function ($a, $b) {
+        if ($a['weight'] == $b['weight']) {
+          return 0;
+        }
+        return $a['weight'] > $b['weight'] ? 1 : -1;
+      });
+
+      // Map to just methods.
+      $methods = array_map(fn($a) => $a['method'], $methods);
 
       foreach ($methods as $method) {
         $args = [];
