@@ -7,6 +7,7 @@ use Drutiny\Attribute\Parameter;
 use Drutiny\Attribute\Type;
 use Drutiny\Audit\Exception\AuditException;
 use Drutiny\AuditFactory;
+use Drutiny\AuditResponse\State;
 use Drutiny\Entity\DataBag;
 use Drutiny\Sandbox\Sandbox;
 use InvalidArgumentException;
@@ -47,7 +48,7 @@ class AuditAnalysisPipeline extends AbstractAnalysis {
             }
             catch (RuntimeError $e) {
                 $tokens = $audit->dataBag->all();
-                throw new AuditException("Failed to evaluate pipeline: $name ({$pipeline->class}).\n" . $e->getMessage() . "\nTokens: " . print_r($tokens, 1), 0, $e);
+                throw new AuditException("Failed to evaluate pipeline: $name ({$pipeline->class}).\n" . $e->getMessage() . "\nTokens: " . print_r($tokens, 1), State::ERROR, $e);
             }
         }
     }
