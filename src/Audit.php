@@ -5,6 +5,7 @@ namespace Drutiny;
 use DateTime;
 use DateTimeImmutable;
 use DateTimeInterface;
+use Drutiny\Attribute\Deprecated;
 use Drutiny\Attribute\Parameter;
 use Drutiny\Attribute\Type;
 use Drutiny\Audit\AuditInterface;
@@ -28,6 +29,7 @@ use Error;
 use Exception;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface;
+use Reflection;
 use ReflectionClass;
 use Symfony\Contracts\Cache\CacheInterface;
 use Symfony\Component\Console\Exception\InvalidArgumentException;
@@ -72,6 +74,10 @@ abstract class Audit implements AuditInterface
         $this->registerParameters();
         $this->configure();
         $this->verbosity = $output->getVerbosity();
+
+        $reflect = new ReflectionClass($this);
+        $attrs = $reflect->getAttributes(Deprecated::class);
+        $this->deprecated = !empty($attrs);
     }
 
     /**
