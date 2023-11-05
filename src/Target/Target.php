@@ -5,7 +5,6 @@ namespace Drutiny\Target;
 use Drutiny\Entity\DataBag;
 use Drutiny\Entity\Exception\DataNotFoundException;
 use Drutiny\LocalCommand;
-use Drutiny\Target\Exception\TargetLoadingException;
 use Drutiny\Target\Service\ServiceFactory;
 use Drutiny\Target\Service\ServiceInterface;
 use Drutiny\Target\Transport\LocalTransport;
