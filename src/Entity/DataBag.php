@@ -2,6 +2,7 @@
 
 namespace Drutiny\Entity;
 
+use ArrayAccess;
 use ArrayIterator;
 use Drutiny\Entity\Exception\DataNotFoundException;
 use IteratorAggregate;
@@ -10,7 +11,7 @@ use Traversable;
 /**
  * Holds data.
  */
-class DataBag implements ExportableInterface, IteratorAggregate
+class DataBag implements ExportableInterface, IteratorAggregate, ArrayAccess
 {
     protected array $data = [];
 
@@ -155,5 +156,37 @@ class DataBag implements ExportableInterface, IteratorAggregate
     public function remove(string $name):void
     {
         unset($this->data[$name]);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function offsetExists(mixed $offset): bool
+    {
+        return $this->has($offset);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function offsetGet(mixed $offset): mixed
+    {
+        return $this->get($offset);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function offsetSet(mixed $offset, mixed $value): void
+    {
+        $this->set($offset, $value);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function offsetUnset(mixed $offset): void
+    {
+        $this->remove($offset);
     }
 }
