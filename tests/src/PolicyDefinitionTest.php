@@ -3,15 +3,26 @@
 
 namespace DrutinyTests;
 
+use Drutiny\Audit\AbstractAnalysis;
 use Drutiny\Policy;
 use Drutiny\PolicyFactory;
+use Drutiny\PolicySource\LocalFs;
 use Drutiny\Profile\PolicyDefinition;
 
 
 class PolicyDefinitionTest extends KernelTestCase {
+    protected PolicyFactory $policyFactory;
+    protected LocalFs $policySource;
+
+    protected function setup(): void {
+      parent::setup();
+      $this->policyFactory = $this->container->get(PolicyFactory::class);
+      $this->policySource = $this->container->get(LocalFs::class);
+    }
+
     public function testPolicyDefinitionBuilding()
     {
-      $orig_policy = $this->container->get(PolicyFactory::class)->loadPolicyByName('Test:Pass');
+      $orig_policy =$this->policyFactory->loadPolicyByName('Test:Pass', $this->policySource);
       assert($orig_policy instanceof Policy);
 
       $definition = new PolicyDefinition(name: 'Test:Pass');
@@ -44,7 +55,7 @@ class PolicyDefinitionTest extends KernelTestCase {
 
     public function testDefinitionFromPolicy()
     {
-        $orig_policy = $this->container->get(PolicyFactory::class)->loadPolicyByName('Test:Pass');
+        $orig_policy =$this->policyFactory->loadPolicyByName('Test:Pass', $this->policySource);
         assert($orig_policy instanceof Policy);
 
         $definition = $orig_policy->getDefinition();

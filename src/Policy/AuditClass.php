@@ -7,6 +7,7 @@ use Drutiny\Attribute\Version;
 use Drutiny\Policy\Compatibility\IncompatibleVersionException;
 use Drutiny\Policy\Compatibility\NoRuntimeVersionException;
 use Drutiny\Policy\Compatibility\RuntimeOutdatedException;
+use InvalidArgumentException;
 use ReflectionClass;
 use ReflectionException;
 
@@ -45,8 +46,10 @@ class AuditClass {
 
     public static function fromBuilt(string $requirement): static {
         list($name, $version) = explode(':', $requirement, 2);
+        $fromClass = self::fromClass($name);
+
         // When building from a requirement string, the actually version doesn't matter.
-        return new static($name, new Version($version));
+        return new static($name, new Version($version, $fromClass->version->compatibilty));
     }
 
     public function export(): array|string {
@@ -72,6 +75,10 @@ class AuditClass {
             return true;
         }
 
+        if (!$this->version->compatible) {
+            throw new IncompatibleVersionException($this, "{$this->name}:{$this->version->version} is not compatible with constraint: {$this->version->compatibilty}");
+        }
+
         $runtime = static::fromClass($this->name);
 
         // If we require a version but a version is not present in the runtime
@@ -80,14 +87,14 @@ class AuditClass {
             throw new NoRuntimeVersionException($this, "Runtime {$runtime->name} requires version {$this->version->compatibilty} but none is specified. An upgrade is required.");
         }
 
-        // Test if the runtime audit class is compatible with the policy version.
-        if ($runtime->version->compatibleWith($this->version->version)) {
-            return true;
-        }
-
         // If the policy requires a later version then we need to upgrade.
         if (Comparator::greaterThan($this->version->version, $runtime->version->version)) {
             throw new RuntimeOutdatedException($this, "Runtime {$runtime->name} requires version {$this->version->compatibilty} but {$runtime->version->version} is specified. An upgrade is required.");
+        }
+
+        // Test if the runtime audit class is compatible with the policy version.
+        if ($runtime->version->compatibleWith($this->version->version)) {
+            return true;
         }
         
         // Policy is too old and cannot run on this runtime.

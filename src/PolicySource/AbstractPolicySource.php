@@ -25,8 +25,8 @@ abstract class AbstractPolicySource implements PolicySourceInterface {
 
     final public function load(array $definition): Policy
     {
-        $key = hash('md5', $this->source->name.json_encode($definition));
         if ($this->source->cacheable) {
+            $key = hash('md5', $this->source->name.json_encode($definition));
             return $this->cache->get($key, fn() => $this->doLoad($definition));
         }
         return $this->doLoad($definition);
@@ -48,7 +48,6 @@ abstract class AbstractPolicySource implements PolicySourceInterface {
                 $args[$arg->name] = $definition[$arg->name];
             }
         }
-
         return new Policy(...$args);
       }
       catch (TypeError $e) {

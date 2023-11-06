@@ -5,11 +5,12 @@ namespace DrutinyTests;
 use Drutiny\Policy;
 use Drutiny\AuditFactory;
 use Drutiny\Audit\TwigEvaluator;
-use Drutiny\Target\NullTarget;
 use Drutiny\Target\TargetFactory;
 
 
-
+/**
+ * Test policy.depends field.
+ */
 class DependencyTest extends KernelTestCase {
 
     public function testBase():void

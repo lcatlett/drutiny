@@ -14,6 +14,7 @@ use InvalidArgumentException;
 class Version {
     public readonly string $version;
     public readonly string $compatibilty;
+    public readonly bool $compatible;
 
     /**
      * @throws \UnexpectedValueException
@@ -33,9 +34,8 @@ class Version {
 
         $this->compatibilty = $versionParser->parseConstraints($compatibilty)->getPrettyString();
 
-        if (!$this->compatibleWith($this->version)) {
-            throw new InvalidArgumentException("{$this->version} is not compatible with constraint: {$this->compatibilty}.");
-        }
+        $this->compatible = $this->compatibleWith($this->version);
+//            throw new InvalidArgumentException("{$this->version} is not compatible with constraint: {$this->compatibilty}.");
     }
 
     /**

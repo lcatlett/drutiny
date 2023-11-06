@@ -222,6 +222,7 @@ class PolicyTest extends KernelTestCase {
     );
 
     $this->expectException(IncompatibleVersionException::class);
+    
     $policy->audit_build_info[0]->isCompatible();
   }
 }

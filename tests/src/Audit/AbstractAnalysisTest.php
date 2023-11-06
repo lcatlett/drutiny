@@ -9,10 +9,11 @@ use Drutiny\Policy;
 use Drutiny\Policy\Severity;
 use Drutiny\PolicyFactory;
 use Drutiny\Target\TargetFactory;
+use Drutiny\Target\TargetInterface;
 use DrutinyTests\KernelTestCase;
 
 class AbstractAnalysisTest extends KernelTestCase {
-    protected $target;
+    protected TargetInterface $target;
 
     protected function setUp(): void
     {
