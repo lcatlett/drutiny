@@ -80,12 +80,17 @@ class AuditClass {
             throw new NoRuntimeVersionException($this, "Runtime {$runtime->name} requires version {$this->version->compatibilty} but none is specified. An upgrade is required.");
         }
 
+        // Test if the runtime audit class is compatible with the policy version.
         if ($runtime->version->compatibleWith($this->version->version)) {
             return true;
         }
+
+        // If the policy requires a later version then we need to upgrade.
         if (Comparator::greaterThan($this->version->version, $runtime->version->version)) {
             throw new RuntimeOutdatedException($this, "Runtime {$runtime->name} requires version {$this->version->compatibilty} but {$runtime->version->version} is specified. An upgrade is required.");
         }
+        
+        // Policy is too old and cannot run on this runtime.
         throw new IncompatibleVersionException($this, "Runtime {$runtime->name} requires version {$runtime->version->compatibilty} but {$this->version->version} is specified in your policy. This policy is too old for your runtime.");
     }
 }
