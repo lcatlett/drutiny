@@ -28,6 +28,13 @@ Policy:
     use_audit: Drutiny\Audit\AuditResponseAnalysis
     expression: response.hasWarning
     return: bool
+  omits:
+    description: A given policy warns an audit against the given target.
+    arguments:
+      $policy_name: policy
+    use_audit: Drutiny\Audit\AuditResponseAnalysis
+    expression: response.isIrrelevant
+    return: bool
   result:
     description: Render a policy result.
     expression: policy_result(response, assessment)
