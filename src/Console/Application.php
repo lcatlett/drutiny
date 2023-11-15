@@ -2,6 +2,7 @@
 
 namespace Drutiny\Console;
 
+use Monolog\ErrorHandler;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Application as BaseApplication;
 use Symfony\Component\Console\Command\Command;
@@ -24,12 +25,13 @@ class Application extends BaseApplication
     public function __construct(
       string $name, 
       string $version,
-      protected EventDispatcher $eventDispatcher,
+      protected EventDispatcher $dispatcher,
       protected LoggerInterface $logger,
       protected ContainerInterface $container
     )
     {
         parent::__construct($name, $version);
+        $this->setDispatcher($dispatcher);
     }
 
     /**
@@ -49,7 +51,7 @@ class Application extends BaseApplication
         'name' => $this->getName(),
         'version' => $this->getVersion(),
       ]);
-      $this->eventDispatcher->dispatch($event, $event->getSubject());
+      $this->dispatcher->dispatch($event, $event->getSubject());
       return parent::doRun($input, $output);
     }
 
@@ -58,6 +60,7 @@ class Application extends BaseApplication
      */
     protected function doRunCommand(Command $command, InputInterface $input, OutputInterface $output)
     {
+        ErrorHandler::register($this->container->get(LoggerInterface::class)->withName('php'));
         $startTimer = microtime(TRUE);
         switch ($output->getVerbosity()) {
           case OutputInterface::VERBOSITY_VERBOSE:
@@ -73,13 +76,6 @@ class Application extends BaseApplication
             $this->container->get('logger.logfile')->setLevel('WARNING');
             break;
         }
-
-        $event = new GenericEvent('command.run', [
-          'command' => $command,
-          'input' => $input,
-          'output' => $output,
-        ]);
-        $this->eventDispatcher->dispatch($event, $event->getSubject());
 
         try {
           if (!$command instanceof ListCommand) {
@@ -98,7 +94,7 @@ class Application extends BaseApplication
               'exitCode' => $returnCode,
               'runtime' => ($endTimer-$startTimer),
             ]);
-            $this->eventDispatcher->dispatch($event, $event->getSubject());
+            $this->dispatcher->dispatch($event, $event->getSubject());
 
             return $returnCode;
           }
