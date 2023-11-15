@@ -114,7 +114,7 @@ class Kernel
         $this->initialized = true;
         $this->cleanOldContainers();
 
-        ErrorHandler::register($this->container->get(LoggerInterface::class)->withName('php'));
+        //ErrorHandler::register($this->container->get(LoggerInterface::class)->withName('php'));
 
         return $this->container;
     }
