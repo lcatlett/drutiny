@@ -22,6 +22,8 @@ Class MonologProgressBarHandler extends AbstractProcessingHandler {
   protected Terminal $terminal;
   protected OutputInterface $output;
 
+  public bool $disabled = false;
+
   public function __construct(ProgressBar $progressBar, OutputInterface $output, Terminal $terminal, $level = Logger::NOTICE, bool $bubble = true)
   {
       parent::__construct($level, $bubble);
@@ -46,7 +48,7 @@ Class MonologProgressBarHandler extends AbstractProcessingHandler {
       $message = substr($record->formatted, 0, min($this->terminal->getWidth(), strlen($record->formatted)));
       $this->progressBar->setMessage($message);
 
-      if ($record['level'] >=  Logger::NOTICE) {
+      if (!$this->disabled && ($record['level'] >=  Logger::NOTICE)) {
         $this->progressBar->display();
       }
   }
