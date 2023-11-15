@@ -2,6 +2,7 @@
 
 namespace Drutiny\Console\Command;
 
+use Drutiny\Attribute\Autoload;
 use Drutiny\LanguageManager;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputInterface;
@@ -11,10 +12,12 @@ use Symfony\Component\Console\Input\InputInterface;
  */
 trait LanguageCommandTrait
 {
+    #[Autoload(early: true)]
     protected LanguageManager $languageManager;
-  /**
-   * @inheritdoc
-   */
+    
+    /**
+     * @inheritdoc
+     */
     protected function configureLanguage()
     {
         $this
