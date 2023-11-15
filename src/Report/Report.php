@@ -2,6 +2,8 @@
 
 namespace Drutiny\Report;
 
+use DateTimeInterface;
+use DateTimeZone;
 use Drutiny\Attribute\ArrayType;
 use Drutiny\AuditResponse\AuditResponse;
 use Drutiny\Console\ProcessManager;
@@ -37,6 +39,7 @@ class Report {
         array $results = [],
         public readonly ?int $timing = null,
         public readonly string $language = 'und',
+        public readonly DateTimeInterface $created = new \DateTime(timezone: new DateTimeZone('UTC')),
     )
     {
         $this->setReportingPeriod($profile->reportingPeriodStart, $profile->reportingPeriodEnd);
