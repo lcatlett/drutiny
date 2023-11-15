@@ -113,7 +113,12 @@ class TshTransport extends SshTransport {
           continue;
         }
         if ($key == 'Valid until' && $cluster !== null) {
-          $clusters[$cluster] = new DateTime(substr(trim($value), 0, strpos(trim($value), ' [')));
+          $value = trim($value);
+          $value = explode(' ', $value, 5);
+          $value = array_splice($value, 0, 4);
+          $value = new DateTime(implode(' ', $value));
+
+          $clusters[$cluster] = $value;
           $cluster = null;
         }
       }
