@@ -94,7 +94,8 @@ class PluginSetupCommand extends Command
                 Question::DEFAULT => $io->ask($ask, $default_value)
             };
             if (!call_user_func($field->validation, $value)) {
-                $io->error("Input failed validation");
+                $type = gettype($value);
+                $io->error("Input '$value' ($type) failed validation ({$field->validation})");
                 continue;
             }
             break;
