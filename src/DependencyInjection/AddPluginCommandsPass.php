@@ -2,14 +2,17 @@
 
 namespace Drutiny\DependencyInjection;
 
+use Drutiny\Attribute\CompilerPass;
 use Drutiny\Console\Application;
 use Drutiny\Console\Command\PluginCollectionCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
+use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
 
+#[CompilerPass(type: PassConfig::TYPE_OPTIMIZE)]
 class AddPluginCommandsPass implements CompilerPassInterface {
     public function process(ContainerBuilder $container)
     {

@@ -2,17 +2,8 @@
 
 namespace Drutiny;
 
-use Drutiny\Attribute\AsSource;
-use Drutiny\Attribute\AsStore;
-use Drutiny\Attribute\Name;
+use Drutiny\Attribute\CompilerPass;
 use Drutiny\Console\Application;
-use Drutiny\DependencyInjection\AddConsoleCommandPass;
-use Drutiny\DependencyInjection\AddPluginCommandsPass;
-use Drutiny\DependencyInjection\AddSourcesCachePass;
-use Drutiny\DependencyInjection\InstalledPluginPass;
-use Drutiny\DependencyInjection\PluginArgumentsPass;
-use Drutiny\DependencyInjection\TagCollectionPass;
-use Drutiny\DependencyInjection\TwigEvaluatorPass;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\Config\Loader\DelegatingLoader;
 use Symfony\Component\Config\Loader\LoaderResolver;
@@ -20,19 +11,17 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
-use Symfony\Component\EventDispatcher\DependencyInjection\RegisterListenersPass;
 use Symfony\Component\EventDispatcher\GenericEvent;
-use Drutiny\DependencyInjection\TwigLoaderPass;
-use Drutiny\DependencyInjection\UseServiceAttributePass;
-use Monolog\ErrorHandler;
 use ProjectServiceContainer;
 use Psr\EventDispatcher\StoppableEventInterface;
-use Psr\Log\LoggerInterface;
+use ReflectionClass;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\Dumper\PhpDumper;
 use Symfony\Component\Finder\Finder;
+use Symfony\Component\Yaml\Yaml;
+use Twig\Error\RuntimeError;
 
 class Kernel
 {
@@ -171,25 +160,39 @@ class Kernel
 
         $loader = $this->getContainerLoader($container);
 
-        $container->addCompilerPass(new RegisterListenersPass('event_dispatcher', 'kernel.event_listener', 'drutiny.event_subscriber'));
-        $container->addCompilerPass(new TwigLoaderPass);
-        $container->addCompilerPass(new AddConsoleCommandPass);
-        $container->addCompilerPass(new TagCollectionPass('cache', 'cache.registry'));
-        $container->addCompilerPass(new TagCollectionPass('http.middleware', 'http.middleware.registry'));
-        $container->addCompilerPass(new TagCollectionPass('source.cache', 'source.cache.registry'));
-        $container->addCompilerPass(new TagCollectionPass('format', 'format.registry'));
-        $container->addCompilerPass(new TagCollectionPass('store', 'store.registry', AsStore::class));
-        $container->addCompilerPass(new TagCollectionPass('service', 'service.registry'));
-        $container->addCompilerPass(new TagCollectionPass('target', 'target.registry'));
-        $container->addCompilerPass(new TagCollectionPass('policy.source', 'policy.source.registry', AsSource::class));
-        $container->addCompilerPass(new TagCollectionPass('profile.source', 'profile.source.registry', AsSource::class));
-        $container->addCompilerPass(new TagCollectionPass('domain_list', 'domain_list.registry', Name::class));
-        $container->addCompilerPass(new PluginArgumentsPass());
-        $container->addCompilerPass(new TwigEvaluatorPass());
-        $container->addCompilerPass(new InstalledPluginPass(), PassConfig::TYPE_OPTIMIZE);
-        $container->addCompilerPass(new AddPluginCommandsPass(), PassConfig::TYPE_OPTIMIZE);
-        $container->addCompilerPass(new AddSourcesCachePass());
-        $container->addCompilerPass(new UseServiceAttributePass());
+        $dirs = $this->findExtensionDirectories();
+
+        foreach ($dirs as $dir) {
+            $filepath = $dir . '/compiler.drutiny.yml';
+            if (!file_exists($filepath)) {
+                continue;
+            }
+            $compiler = Yaml::parseFile($filepath);
+
+            if (!is_array($compiler) || !isset($compiler['compiler_pass']) || !is_array($compiler['compiler_pass'])) {
+                throw new RuntimeError("Invalid format for $filepath. Must contain compiler_pass declaration as an array.");
+            }
+
+            foreach ($compiler['compiler_pass'] as $index => $params) {
+                if (is_string($params)) {
+                    $params = ['class' => $params];
+                }
+                if (!is_array($params)) {
+                    throw new RuntimeError("Invalid syntax in $filepath in compiler_pass at index $index: must be an object. " . ucfirst(gettype($params)) . ' given.');
+                }
+                $class_name = $params['class'] ?? throw new RuntimeError("No class parameter defined at index $index in $filepath.");
+                $args = $params['args'] ?? [];
+
+                if (!is_array($args)) {
+                    throw new RuntimeError("Args must be an array at index $index in $filepath.");
+                }
+                
+                $reflection = new ReflectionClass($class_name);
+                $attributes = $reflection->getAttributes(CompilerPass::class);
+                $attribute = isset($attributes[0]) ? $attributes[0]->newInstance() : new CompilerPass();
+                $attribute->configure($container, $reflection->newInstance(...$args));
+            }
+        }
 
         foreach ($this->compilers as [$pass, $type, $priority]) {
             $container->addCompilerPass($pass, $type, $priority);
@@ -199,7 +202,7 @@ class Kernel
         $container->setParameter('drutiny_core_dir', \dirname(__DIR__));
         $container->setParameter('project_dir', $this->getProjectDir());
         $container->setParameter('extension.files', $config_files);
-        $container->setParameter('extension.dirs', $this->findExtensionDirectories());
+        $container->setParameter('extension.dirs', $dirs);
 
         // Create config loader.
         foreach (array_reverse($config_files) as $config_file) {

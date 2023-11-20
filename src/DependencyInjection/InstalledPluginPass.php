@@ -2,7 +2,9 @@
 
 namespace Drutiny\DependencyInjection;
 
+use Drutiny\Attribute\CompilerPass;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
+use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 /**
@@ -10,6 +12,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
  * 
  * This allows plugins to be left uninstalled if unused.
  */
+#[CompilerPass(type: PassConfig::TYPE_OPTIMIZE)]
 class InstalledPluginPass implements CompilerPassInterface
 {
     public function process(ContainerBuilder $container)

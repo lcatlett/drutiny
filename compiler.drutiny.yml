@@ -1,0 +1,40 @@
+compiler_pass:
+  event_dispatcher: Symfony\Component\EventDispatcher\DependencyInjection\RegisterListenersPass
+  twig: Drutiny\DependencyInjection\TwigLoaderPass
+  command: Drutiny\DependencyInjection\AddConsoleCommandPass
+  cache:
+    class: Drutiny\DependencyInjection\TagCollectionPass
+    args: ['cache', 'cache.registry']
+  http.middleware:
+    class: Drutiny\DependencyInjection\TagCollectionPass
+    args: ['http.middleware', 'http.middleware.registry']
+  source.cache:
+    class: Drutiny\DependencyInjection\TagCollectionPass
+    args: ['source.cache', 'source.cache.registry']
+  format:
+    class: Drutiny\DependencyInjection\TagCollectionPass
+    args: ['format', 'format.registry']
+  service:
+    class: Drutiny\DependencyInjection\TagCollectionPass
+    args: ['service', 'service.registry']
+  store:
+    class: Drutiny\DependencyInjection\TagCollectionPass
+    args: ['store', 'store.registry', Drutiny\Attribute\AsStore]
+  target:
+    class: Drutiny\DependencyInjection\TagCollectionPass
+    args: ['target', 'target.registry']
+  policy:
+    class: Drutiny\DependencyInjection\TagCollectionPass
+    args: ['policy.source', 'policy.source.registry', Drutiny\Attribute\AsSource]
+  profile:
+    class: Drutiny\DependencyInjection\TagCollectionPass
+    args: ['profile.source', 'profile.source.registry', Drutiny\Attribute\AsSource]
+  domain:
+    class: Drutiny\DependencyInjection\TagCollectionPass
+    args: ['domain_list', 'domain_list.registry',  Drutiny\Attribute\Name]
+  plugin.arguments:
+    class: Drutiny\DependencyInjection\PluginArgumentsPass
+  twig.eval: Drutiny\DependencyInjection\TwigEvaluatorPass
+  plugin: Drutiny\DependencyInjection\InstalledPluginPass
+  sources: Drutiny\DependencyInjection\AddSourcesCachePass
+  service.attributes: Drutiny\DependencyInjection\UseServiceAttributePass

@@ -7,7 +7,9 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Application as BaseApplication;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Command\ListCommand;
+use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
@@ -32,6 +34,14 @@ class Application extends BaseApplication
     {
         parent::__construct($name, $version);
         $this->setDispatcher($dispatcher);
+    }
+
+    protected function getDefaultInputDefinition(): InputDefinition {
+      $definition = parent::getDefaultInputDefinition();
+      $definition->addOption(
+        new InputOption('dtag', null, InputOption::VALUE_OPTIONAL, 'Tag for internal use.')
+      );
+      return $definition;
     }
 
     /**
