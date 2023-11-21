@@ -131,6 +131,7 @@ class ReportFactory {
                 $opts[] = '--reporting-timezone=' . $profile->reportingPeriodStart->format('e');
                 $opts[] = '--language=' . $profile->language;
                 $opts[] = '--no-ansi';
+                $opts[] = '--dtag=' . $profile->name;
 
                 $process = ProcessManager::create(['policy:audit:batch', $target_filepath, ...$opts]);
 
@@ -196,7 +197,9 @@ class ReportFactory {
 
         $processManager = $this->streamAudit($contexts, $profile, $target, ...$profile->policies);
         $processManager->then(function (array $results) use ($report) {
-            return $report->with(results: $results);
+            $new_report = $report->with(results: $results);
+            $this->eventDispatcher->dispatch($new_report, 'report.create');
+            return $new_report;
         });
 
         return $processManager;
