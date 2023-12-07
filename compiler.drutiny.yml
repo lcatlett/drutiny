@@ -32,8 +32,8 @@ compiler_pass:
   domain:
     class: Drutiny\DependencyInjection\TagCollectionPass
     args: ['domain_list', 'domain_list.registry',  Drutiny\Attribute\Name]
-  plugin.arguments:
-    class: Drutiny\DependencyInjection\PluginArgumentsPass
+  plugin.arguments: Drutiny\DependencyInjection\PluginArgumentsPass
+  plugin.command: Drutiny\DependencyInjection\AddPluginCommandsPass
   twig.eval: Drutiny\DependencyInjection\TwigEvaluatorPass
   plugin: Drutiny\DependencyInjection\InstalledPluginPass
   sources: Drutiny\DependencyInjection\AddSourcesCachePass
