@@ -2,39 +2,19 @@
 
 namespace Drutiny\Console\Command;
 
-use Composer\Semver\Comparator;
-use Drutiny\Attribute\Plugin;
-use Drutiny\Attribute\PluginField;
-use Drutiny\Http\Client;
-use Drutiny\Plugin as DrutinyPlugin;
-use Drutiny\Plugin\FieldType;
+use Drutiny\Console\UpdateManager;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\Process\Process;
 
 /**
  * Self update command.
  */
-#[Plugin(name: 'github')]
-#[PluginField(
-    name: 'personal_access_token',
-    description: "github personal oauth token",
-    type: FieldType::CREDENTIAL
-  )]
-class SelfUpdateCommand extends DrutinyBaseCommand
+class SelfUpdateCommand extends AbstractBaseCommand
 {
-    public function __construct(
-      protected LoggerInterface $logger,
-      protected DrutinyPlugin $plugin,
-      protected Client $drutinyHttpClient
-    )
-    {
-      parent::__construct();
-    }
-    public const GITHUB_API_URL = 'https://api.github.com';
-    public const GITHUB_ACCEPT_VERSION = 'application/vnd.github.v3+json';
+    protected LoggerInterface $logger;
+    protected UpdateManager $updateManager;
 
     /**
      * {@inheritdoc}
@@ -49,74 +29,14 @@ class SelfUpdateCommand extends DrutinyBaseCommand
     /**
      * {@inheritdoc}
      */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function doExecute(InputInterface $input, OutputInterface $output):int
     {
-        $io = new SymfonyStyle($input, $output);
+      $exit = $this->updateManager->checkForUpdates($input, $output, []);
 
-        $current_version = $this->getApplication()->getVersion();
-
-        $composer_json = json_decode(file_get_contents(DRUTINY_LIB . '/composer.json'), true);
-
-        $headers = [
-          'User-Agent' => $this->getApplication()->getName() . ' drutiny-phar/' . $current_version,
-          'Accept' => self::GITHUB_ACCEPT_VERSION,
-          'Accept-Encoding' => 'gzip',
-        ];
-
-        try {
-            $headers['Authorization'] = 'token ' . $this->plugin->personal_access_token;
-        } catch (\Exception $e) {
-            $io->warning($e->getMessage());
-        }
-
-        $client = $this->drutinyHttpClient->create([
-          'base_uri' => self::GITHUB_API_URL,
-          'headers' => $headers,
-          'decode_content' => 'gzip',
-        ]);
-
-        $response = $client->get('repos/' . $composer_json['name'] . '/releases');
-        $releases = json_decode($response->getBody(), true);
-
-        $latest_release = current($releases);
-        $new_version = $latest_release['tag_name'];
-
-        if (!Comparator::greaterThan($new_version, $current_version)) {
-            $io->success("No new updates.");
-            return 0;
-        }
-        $this->logger->notice('New update available: ' . $new_version);
-
-        if (!$io->confirm('Would you like to download and install the newest version ('.$new_version.')?')) {
-            return 0;
-        }
-        $asset = $io->choice('Which version would you like to download?', array_map(fn ($a) => $a['name'], $latest_release['assets']));
-
-        $download = array_filter($latest_release['assets'], function ($a) use ($asset) {
-            return $a['name'] == $asset;
-        });
-        $download = reset($download);
-
-        $tmpfile = tempnam(sys_get_temp_dir(), $download['name']);
-        $resource = fopen($tmpfile, 'w');
-
-        $this->logger->notice("Downloading {$download['name']}...");
-
-        $response = $client->get('repos/' . $composer_json['name'] . '/releases/assets/' . $download['id'], [
-          'headers' => [
-            'Accept' => $download['content_type'],
-          ],
-        ]);
-
-        fwrite($resource, $response->getBody());
-        fclose($resource);
-
-        chmod($tmpfile, 0766);
-
-        $process = new Process([$tmpfile, '--version']);
-        $this->logger->notice("{$download['name']} downloaded to $tmpfile.");
-        $status = $process->setTty(true)->setPty(true)->run();
-        unlink($tmpfile);
-        return $status;
+      if ($exit === Command::INVALID) {
+        $output->writeln("<info>No updates available.</info>");
+        return Command::SUCCESS;
+      }
+      return $exit;
     }
 }
