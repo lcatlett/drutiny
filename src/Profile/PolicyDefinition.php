@@ -54,6 +54,20 @@ class PolicyDefinition {
     }
 
     /**
+     * Create and load a policy.
+     */
+    public static function fromPolicy(Policy $policy): static {
+        return new static(
+            name: $policy->name,
+            parameters: $policy->parameters->all(),
+            build_parameters: $policy->build_parameters->all(),
+            weight: $policy->weight,
+            severity: $policy->severity->value,
+            policy: $policy
+        );
+    }
+
+    /**
      * Get the policy for the profile.
      */
     public function getPolicy(PolicyFactory $factory):Policy
