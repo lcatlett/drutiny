@@ -32,7 +32,7 @@ class ProfileSourceLocalFs extends AbstractProfileSource
 
           $this->finder
               ->files()
-              ->depth('==1')
+              ->depth('<=1')
               ->in($dirs)
               ->name('*.profile.yml');
         }
