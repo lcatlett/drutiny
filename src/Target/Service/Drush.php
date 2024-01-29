@@ -28,7 +28,8 @@ class Drush implements ServiceInterface
       'sqlq' => 'sqlq',
       'updatedbStatus' => 'updatedb:status',
       'variableGet' => 'vget',
-      'purgeDiagnostics' => 'p:diagnostics'
+      'purgeDiagnostics' => 'p:diagnostics',
+      'coreRequirements' => 'core:requirements',
     ];
     public function __construct(protected TransportInterface $transport, protected LoggerInterface $logger)
     {
