@@ -7,6 +7,7 @@ use Drutiny\Audit\AbstractAnalysis;
 use Drutiny\Helper\TextCleaner;
 use Drutiny\Policy;
 use Drutiny\Policy\Dependency;
+use Symfony\Component\Process\Exception\ProcessFailedException;
 
 /**
  * Generic module is enabled check.
@@ -23,15 +24,45 @@ class ModuleAnalysis extends AbstractAnalysis
     #[DataProvider]
     public function listModules():void
     {
-        $list = $this->target->getService('drush')
-          ->pmList([
-            'format' => 'json',
-            'type' => 'module',
-            'fields' => 'project,package,path,status,version,display_name,type,name'
-          ])
-          ->run(function ($output) {
-              return TextCleaner::decodeDirtyJson($output);
-          });
+        try {
+          $list = $this->target->getService('drush')
+            ->pmList([
+              'format' => 'json',
+              'type' => 'module',
+              'fields' => 'project,package,path,status,version,display_name,type,name'
+            ])
+            ->run(function ($output) {
+                return TextCleaner::decodeDirtyJson($output);
+            });
+        }
+        catch (ProcessFailedException $e) {
+          // E.g. The requested field, 'project', is not defined.
+          // Retry without requesting specific fields.
+          if (str_contains($e->getProcess()->getErrorOutput(), 'The requested field')) {
+            $list = $this->target->getService('drush')
+            ->pmList([
+              'format' => 'json',
+              'type' => 'module',
+            ])
+            ->run(function ($output) {
+                return TextCleaner::decodeDirtyJson($output);
+            });
+            foreach ($list as $name => &$data) {
+              // Pad with missing fields.
+              $data += [
+                'project' => '',
+                'package' => '',
+                'path' => '',
+                'status' => '',
+                'version' => '',
+                'display_name' => '',
+                'type' => '',
+                'name' => '',
+              ];
+            }
+          }
+        }
+        
         $this->set('modules', $list);
     }
 }
