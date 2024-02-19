@@ -11,6 +11,7 @@ use Drutiny\Report\RenderedReport;
 use Drutiny\Report\Report;
 use League\CommonMark\ConverterInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Console\Output\BufferedOutput;
 use Symfony\Component\Console\Output\OutputInterface;
 use Twig\Environment;
 use Twig\Error\RuntimeError;
@@ -65,7 +66,12 @@ class JSON extends FilesystemFormat implements FilesystemFormatInterface
     public function render(Report $report):RenderedReport
     {
         $this->twig->getExtension(CoreExtension::class)->setTimezone($report->reportingPeriodStart->getTimezone());
-        $this->buffer->write(json_encode($this->prepareContent($report)));
+        $this->buffer->write(json_encode(
+          $this->prepareContent($report),
+          JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE
+        ),
+        false,
+        BufferedOutput::OUTPUT_RAW);
         return new RenderedReport($report->getName(), $this->buffer);
     }
 

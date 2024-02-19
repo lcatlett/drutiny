@@ -57,7 +57,7 @@ class TwigEvaluator {
                 $expression = preg_replace('/(\n(\s*)?)/', ' ', $expression);
             }
 
-            $code = '{{ ('.$expression.')|json_encode()|raw }}';
+            $code = '{{ ('.$expression.')|json_encode(constant("JSON_UNESCAPED_SLASHES") b-or constant("JSON_UNESCAPED_UNICODE"))|raw }}';
             $template = $this->twig->createTemplate($code);
             $contexts = array_merge($this->globalContexts, $contexts);
             $output = $this->twig->render($template, $contexts);

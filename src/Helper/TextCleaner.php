@@ -8,7 +8,7 @@ class TextCleaner {
     /**
      * Clean a JSON object or array reponse.
      */
-    public static function decodeDirtyJson(string $output): array|object
+    public static function decodeDirtyJson(string $output): mixed
     {
         $has_array = strpos($output, '[');
         $has_object = strpos($output, '{');
