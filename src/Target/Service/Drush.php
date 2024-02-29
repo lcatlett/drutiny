@@ -162,8 +162,11 @@ class Drush implements ServiceInterface
                 continue;
             }
             $delimiter = $is_short ? ' ' : "=";
+            // Allow values that use envars to not be escaped here.
+            $value = str_starts_with($value, '$') ? $value : escapeshellarg($value);
+
             // Key/value option. E.g. --format='json'
-            $args[] = $opt.$delimiter.escapeshellarg($value);
+            $args[] = $opt.$delimiter.$value;
         }
 
         array_unshift($args, $this->bin, $this->supportedCommandMap[$cmd]);

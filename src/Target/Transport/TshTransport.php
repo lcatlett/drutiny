@@ -2,11 +2,6 @@
 
 namespace Drutiny\Target\Transport;
 
-use DateTime;
-use Drutiny\Helper\ProcessUtility;
-use Drutiny\Target\Exception\InvalidTargetException;
-use Drutiny\Target\Exception\TargetLoadingException;
-use Psr\Cache\CacheItemInterface;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
@@ -17,7 +12,7 @@ class TshTransport extends SshTransport {
 
   const ERROR_AMBIGUOUS_HOST_MSG = 'ambiguous host could match multiple nodes';
 
-  protected string $telesyncRegion = '';
+  protected string $tshProxy = '';
 
   /**
    * {@inheritdoc}
@@ -74,19 +69,14 @@ class TshTransport extends SshTransport {
     }
 
     // Support for telesync region.
-    if (isset($options['telesync.region'])) {
-      $this->telesyncRegion = $options['telesync.region'];
+    if (isset($options['tsh.proxy'])) {
+      $this->tshProxy = $options['tsh.proxy'];
     }
-    unset($options['telesync.region']);
+    unset($options['tsh.proxy']);
 
     // If telesync is enabled, then specify an explicit proxy.
-    if (!empty($this->telesyncRegion)) {
-      $activeRegions = $this->getActiveTelesyncRegions();
-      // This means telesync is connected to a different region and we'd have to change that.
-      if (!empty($activeRegions) && !in_array($this->telesyncRegion, array_keys($activeRegions))) {
-        throw new TargetLoadingException("Cannot access target on current telesync clusters: " . implode(', ', array_keys($activeRegions)) . ". You must connect to '{$this->telesyncRegion}' instead.");
-      }
-      $args[] = '--proxy=' . $this->telesyncRegion;
+    if (!empty($this->tshProxy)) {
+      $args[] = '--proxy=' . $this->tshProxy;
     }
     
     foreach ($options as $key => $value) {
@@ -95,42 +85,5 @@ class TshTransport extends SshTransport {
     }
     $args[] = $host;
     return implode(' ', $args);
-  }
-
-  /**
-   * Get a list of active regions.
-   */
-  protected function getActiveTelesyncRegions():array
-  {
-    // Add telesyncRegion to the cache ID.
-    return $this->localCommand->run(Process::fromShellCommandline("telesync status | egrep '(Cluster:)|(Valid until:)' # {$this->telesyncRegion}"), function (string $output, CacheItemInterface $cache):array {
-      $clusters = [];
-      $cluster = null;
-      foreach (array_filter(array_map('trim', explode("\n", $output))) as $row) {
-        list($key, $value) = explode(':', $row, 2);
-        if ($key == 'Cluster') {
-          $cluster = trim($value);
-          continue;
-        }
-        if ($key == 'Valid until' && $cluster !== null) {
-          $value = trim($value);
-          $value = explode(' ', $value, 5);
-          $value = array_splice($value, 0, 4);
-          $value = new DateTime(implode(' ', $value));
-
-          $clusters[$cluster] = $value;
-          $cluster = null;
-        }
-      }
-
-      $now = new DateTime();
-
-      $valid = array_filter($clusters, fn($c) => $c > $now);
-
-      $expiry = empty($valid) ? new DateTime('+1 second') : min(max($valid), new DateTime('+60 seconds'));
-      $cache->expiresAt($expiry);
-
-      return $valid;
-    });
   }
 }

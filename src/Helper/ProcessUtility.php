@@ -5,6 +5,10 @@ namespace Drutiny\Helper;
 use Symfony\Component\Process\Process;
 
 class ProcessUtility {
+
+    /**
+     * Copy the Process configuration from one process to another.
+     */
     public static function copyConfiguration(Process $from, Process $to):void {
         $to->setEnv($from->getEnv());
         $to->setWorkingDirectory($from->getWorkingDirectory());
@@ -15,7 +19,10 @@ class ProcessUtility {
         $to->setInput($from->getInput());
     }
 
-    public static function mergeEnv(Process $process, $vars):void
+    /**
+     * Merge the environment vars of a process with provided vars.
+     */
+    public static function mergeEnv(Process $process, array $vars):void
     {
         $process->setEnv(array_merge($vars, $process->getEnv()));
     }
