@@ -39,6 +39,7 @@ class AuditAnalysisPipeline extends AbstractAnalysis {
                 $tokens = $this->dataBag->all();
                 $tokens['parameters'] = new DataBag;
                 $audit->dataBag->add($tokens);
+                $audit->prepare($this->policy->with(parameters: $pipeline->parameters));
     
                 $this->set($pipeline->name, $audit->getGatheredData($pipeline->parameters, $sandbox)->all());
 
