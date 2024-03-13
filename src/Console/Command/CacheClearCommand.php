@@ -2,6 +2,7 @@
 
 namespace Drutiny\Console\Command;
 
+use Drutiny\CacheFactory;
 use Drutiny\Settings;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -14,15 +15,11 @@ use Symfony\Contracts\Cache\CacheInterface;
 /**
  *
  */
-class CacheClearCommand extends Command
+class CacheClearCommand extends AbstractBaseCommand
 {
-    public function __construct(
-      protected ContainerInterface $container,
-      protected Settings $settings,
-      protected CacheInterface $cache)
-    {
-      parent::__construct();
-    }
+    protected CacheFactory $cacheFactory;
+    protected Settings $settings;
+
 
     /**
      * @inheritdoc
@@ -56,7 +53,7 @@ class CacheClearCommand extends Command
     /**
      * @inheritdoc
      */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function doExecute(InputInterface $input, OutputInterface $output):int
     {
         $io = new SymfonyStyle($input, $output);
         $registry = $this->settings->get('cache.registry');
@@ -65,34 +62,36 @@ class CacheClearCommand extends Command
 
         global $kernel;
 
+        // Rebuild kernel caches which are not stored in cache registry.
         register_shutdown_function(function () use ($kernel) {
           $kernel->refresh();
         });
 
-        $cid = $input->getOption('cid');
+        $status = static::SUCCESS;
 
-        foreach ($registry as $id) {
-          $service = $this->container->get($id);
-          empty($cid) ? $service->clear() : $service->delete($cid);
-          $io->success("Cleared '$id' cache.");
-        } 
-
-        $dir = $this->container->getParameter('twig.cache');
-
+        $dir = $this->settings->get('twig.cache');
         if (!file_exists($dir)) {
-          $io->info('Cache is already cleared: ' . $dir);
-          return 0;
+          $io->comment('Cache is already cleared: ' . $dir);
         }
-        if (!is_writable($dir)) {
-          $io->error(sprintf('Cannot clear cache: %s is not writable.', $dir));
-          return 0;
-        }
-        exec(sprintf('rm -rf %s', $dir), $output, $status);
-        if ($status === 0) {
+        else {
+          if (!is_writable($dir)) {
+            $io->error(sprintf('Cannot clear cache: %s is not writable.', $dir));
+            $status = static::FAILURE;
+          }
+          exec(sprintf('rm -rf %s', $dir), $output, $status);
           $io->success('Cache is cleared: ' . $dir);
-          return 0;
         }
-        $io->error(sprintf('Cannot clear cache from %s. An error occured.', $dir));
-        return 0;
+
+        if ($input->getOption('twig-only')) {
+          return $status;
+        }
+
+        $this->cacheFactory->clearAll();
+
+        foreach ($this->cacheFactory->caches as $cid) {
+          $io->success($cid . ' is cleared.');
+        }
+
+        return $status;
     }
 }

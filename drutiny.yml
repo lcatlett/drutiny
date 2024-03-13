@@ -122,7 +122,7 @@ services:
       alias: cache.filesystem
 
     policy.store:
-      tags: ['source.cache']
+      tags: ['source.cache', 'cache']
       class: Symfony\Component\Cache\Adapter\FilesystemAdapter
       arguments: ['policy.store', '%sources.ttl%', '%policy.sources.fs%']
       calls:
@@ -130,7 +130,7 @@ services:
         - [prune]
 
     profile.store:
-      tags: ['source.cache']
+      tags: ['source.cache', 'cache']
       class: Symfony\Component\Cache\Adapter\FilesystemAdapter
       arguments: ['profile.store', '%sources.ttl%', '%profile.sources.fs%']
       calls:
