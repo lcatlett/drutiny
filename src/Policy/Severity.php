@@ -46,7 +46,7 @@ enum Severity:string {
     static public function fromValue(string|int|null $value): self {
         return match (gettype($value)) {
             'string' => self::from($value),
-            'int' => self::fromInt($value),
+            'integer' => self::fromInt($value),
             default => self::getDefault(),
         };
     }
