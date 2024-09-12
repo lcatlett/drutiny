@@ -17,7 +17,12 @@ class Drush implements ServiceInterface
     protected string $url;
     protected string $bin;
 
-    protected const LAUNCHERS = ['../vendor/drush/drush/drush', 'drush-launcher', 'drush.launcher', 'drush'];
+    protected const LAUNCHERS = [
+        '../vendor/drush/drush/drush', 
+        'drush-launcher', 
+        'drush.launcher', 
+        'drush'
+    ];
     protected $supportedCommandMap = [
       'configGet' => 'config:get',
       'pmList' => 'pm:list',
@@ -36,7 +41,8 @@ class Drush implements ServiceInterface
         // Load and cache the remote bin path for Drush.
         $cmd = Process::fromShellCommandline('which ' . implode(' || which ', static::LAUNCHERS));
         $this->bin = $this->transport->send($cmd, function ($output) {
-            return trim($output);
+            // error_reporting = E_ALL & ~E_NOTICE & ~E_DEPRECATED
+            return '/usr/bin/env php -d error_reporting=24567 ' . trim($output);
         });
     }
 
