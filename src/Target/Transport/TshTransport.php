@@ -13,7 +13,7 @@ class TshTransport extends SshTransport {
 
   const ERROR_AMBIGUOUS_HOST_MSG = 'ambiguous host could match multiple nodes';
 
-  protected string $tshProxy = '';
+  protected $tshConfig = [];
 
   /**
    * {@inheritdoc}
@@ -92,6 +92,11 @@ class TshTransport extends SshTransport {
     return $processor ? $processor($output, $item) : $output;
   }
 
+  public function setTshConfig(string $option, string $value) {
+    $this->tshConfig[$option] = $value;
+    return $this;
+  }
+
   /**
    * Formulate an SSH command. E.g. ssh -o User=foo hostname.bar
    */
@@ -112,15 +117,8 @@ class TshTransport extends SshTransport {
       unset($options['User']);
     }
 
-    // Support for telesync region.
-    if (isset($options['tsh.proxy'])) {
-      $this->tshProxy = $options['tsh.proxy'];
-    }
-    unset($options['tsh.proxy']);
-
-    // If telesync is enabled, then specify an explicit proxy.
-    if (!empty($this->tshProxy)) {
-      $args[] = '--proxy=' . $this->tshProxy;
+    foreach ($this->tshConfig as $key => $value) {
+      $args[] = sprintf('--' . $key . '=%s', $value);
     }
     
     foreach ($options as $key => $value) {
